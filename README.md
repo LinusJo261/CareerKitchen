@@ -1,7 +1,13 @@
 # Career Kitchen backend
 
-Persistent FastAPI backend for the separately developed v0 Next.js frontend.
-There is no replacement frontend in this repository.
+Persistent FastAPI backend for the v0-developed Next.js frontend.
+
+Repository layout:
+
+- `apps/api` — FastAPI backend (this README)
+- `apps/web` — Next.js frontend, a pnpm workspace package (`@career-kitchen/web`).
+  Run `pnpm install && pnpm dev` from the repo root. On Vercel, set the project
+  Root Directory to `apps/web`.
 
 The API implements candidate/employer onboarding, organization verification and
 team ACLs, versioned vacancies and requirements, reciprocal decision cards,

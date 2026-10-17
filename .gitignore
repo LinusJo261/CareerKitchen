@@ -19,3 +19,6 @@ node_modules/
 .DS_Store
 Thumbs.db
 
+.next/
+*.tsbuildinfo
+next-env.d.ts
