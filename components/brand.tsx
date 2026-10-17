@@ -1,4 +1,37 @@
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-export function Brand({compact=false}:{compact?:boolean}){return <Link href="/" aria-label="Career Kitchen home" className="flex items-center gap-2.5 text-primary"><span className="brand-mark" aria-hidden="true"/>{!compact&&<span className="text-xl font-semibold tracking-[-.065em] text-foreground">career kitchen<span className="text-primary">.</span></span>}</Link>}
-export function CompanyMark({name,className}:{name:string;className?:string}){return <span aria-hidden="true" className={cn('flex size-11 shrink-0 items-center justify-center rounded-xl bg-secondary text-primary text-xl font-semibold',className)}>{name==='Forma'?'f':name==='Layers'?'≋':name==='Northstar'?'✳':name.slice(0,1)}</span>}
+
+/** The mark is a tiny order ticket: perforated top, serif monogram. */
+export function BrandMark({ className }: { className?: string }) {
+  return (
+    <span aria-hidden="true" className={cn('ticket flex h-8 w-7 shrink-0 items-end justify-center bg-primary pb-1 text-primary-foreground', className)}>
+      <span className="font-serif text-[15px] leading-none italic" style={{ fontVariationSettings: "'opsz' 72, 'WONK' 1" }}>
+        ck
+      </span>
+    </span>
+  )
+}
+
+export function Brand({ compact = false, className }: { compact?: boolean; className?: string }) {
+  return (
+    <Link href="/" aria-label="Career Kitchen — Front of House" className={cn('group flex items-center gap-2.5', className)}>
+      <BrandMark />
+      {!compact && (
+        <span className="font-serif text-[21px] leading-none tracking-tight">
+          Career <span className="italic">Kitchen</span>
+        </span>
+      )}
+    </Link>
+  )
+}
+
+export function CompanyMark({ name, className }: { name: string; className?: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn('flex size-11 shrink-0 items-center justify-center rounded-sm border border-foreground/15 bg-background font-serif text-xl italic text-primary', className)}
+    >
+      {name.slice(0, 1)}
+    </span>
+  )
+}

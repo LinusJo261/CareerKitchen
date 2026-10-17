@@ -124,3 +124,62 @@ export interface FrontendAdapter {
   update(updater: (current: DemoState) => DemoState, expectedRevision: number): Promise<DemoState>
   reset(): Promise<DemoState>
 }
+
+/* ---------- The Pass (employer-side matching) ---------- */
+/** How a fact is known. `confirmed` = attested or stated by the person; `inferred` = derived from profile signals; `unknown` = not yet known. */
+export type Provenance = 'confirmed' | 'inferred' | 'unknown'
+export type RecipeWeight = 'must' | 'nice' | 'off'
+export type Arrangement = 'Hybrid · NYC 2 days' | 'Remote (US)'
+export interface RecipeItem { id: string; label: string; weight: RecipeWeight }
+export interface PassOrder {
+  id: string
+  vacancyId: string
+  ticket: string
+  title: string
+  company: string
+  recipe: RecipeItem[]
+  arrangement: Arrangement
+  /** Salary ceiling in thousands of USD. */
+  ceiling: number
+  /** Taste tests (verification requests) available for this order. */
+  verificationBudget: number
+}
+export interface Signal { status: Provenance; meets: boolean; note: string; evidence?: string }
+export interface PassCandidate {
+  id: string
+  ticket: string
+  name: string
+  title: string
+  location: string
+  years: number
+  summary: string
+  /** Position suggested by global allocation for this round. Advisory only. */
+  allocationRank: number
+  signals: Record<string, Signal>
+  arrangement: { value: 'Remote only' | 'Hybrid' | 'Either'; status: Provenance }
+  /** Compensation floor in thousands of USD, null when unknown. */
+  floor: { value: number | null; status: Provenance }
+  priorities: string[]
+  questions: string[]
+  evidence: { label: string; issuer: string; status: 'Verified' | 'Self-reported' }[]
+}
+export interface TasteTest {
+  id: string
+  candidateId: string
+  topic: string
+  /** Recipe item id, or 'floor' / 'arrangement'. */
+  subject: string
+  question: string
+  status: 'Awaiting reply' | 'Answered'
+  answer?: string
+  sent: string
+}
+export interface PassState {
+  order: PassOrder
+  candidates: PassCandidate[]
+  tasteTests: TasteTest[]
+  /** Candidate ids the employer chose to bring to the pass beyond the service limit. */
+  pinned: string[]
+  introductions: Record<string, 'Requested' | 'Passed'>
+  log: { id: string; text: string; time: string }[]
+}

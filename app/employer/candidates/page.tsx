@@ -1,7 +1,7 @@
-import { ReviewPage } from '@/components/workspace/opportunities'
+import { PassBoard } from '@/components/pass/pass-board'
 
-export const metadata = { title: 'Candidates' }
+export const metadata = { title: 'The Pass' }
 
 export default function Page() {
-  return <ReviewPage role="employer" />
+  return <PassBoard />
 }

@@ -1,19 +1,181 @@
-'use client'
+import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowRight, ArrowUpRight, Check, CheckCheck, ShieldCheck, Sparkles, MoveRight, Menu, Plus, CircleCheck, SlidersHorizontal, HeartHandshake, LockKeyhole } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
-import { Brand, CompanyMark } from './brand'
-import { initialState } from '@/lib/demo/fixtures'
-import { useState } from 'react'
+import { Brand } from './brand'
+import { ProvenanceGlyph, ProvenanceLegend } from './pass/provenance'
 import { cn } from '@/lib/utils'
-export function Landing(){const [audience,setAudience]=useState<'candidate'|'employer'>('candidate');return <>
-<header className="page-width flex h-24 items-center justify-between"><Brand/><nav className="hidden items-center gap-8 text-sm md:flex" aria-label="Main navigation"><a href="#how-it-works" className="hover:text-primary">How it works</a><a href="#for-you" className="hover:text-primary">For candidates</a><a href="#for-teams" className="hover:text-primary">For employers</a></nav><div className="hidden items-center gap-5 md:flex"><Link href="/sign-in" className="text-sm">Log in</Link><Button asChild><Link href="/get-started">Get started <ArrowUpRight data-icon="inline-end"/></Link></Button></div><Sheet><SheetTrigger asChild><Button variant="ghost" size="icon" className="md:hidden" aria-label="Open navigation"><Menu/></Button></SheetTrigger><SheetContent><SheetTitle>Career Kitchen</SheetTitle><nav className="flex flex-col gap-5 p-6"><Link href="/candidate">For candidates</Link><Link href="/employer">For employers</Link><Link href="/sign-in">Log in</Link><Link href="/get-started">Get started</Link></nav></SheetContent></Sheet></header>
-<main><section className="page-width grid items-center gap-14 pb-20 pt-14 lg:grid-cols-[1.05fr_1fr] lg:gap-8 lg:pb-24 lg:pt-20"><div className="rise"><div className="mb-7 flex items-center gap-2.5 text-sm text-primary"><span className="size-1.5 rounded-full bg-primary"/> A more human way to hire</div><h1 className="max-w-2xl text-[clamp(3.1rem,5.1vw,4.65rem)] font-medium leading-[1.08] tracking-[-.065em]">Good things happen<br className="hidden xl:block"/> when the <span className="text-primary">right<br className="hidden xl:block"/> people meet.</span></h1><p className="mt-6 max-w-md text-lg leading-relaxed text-muted-foreground">Not another job board. A thoughtful way to connect people and opportunities — with less searching, and more possibility.</p><div className="mt-8 flex flex-wrap items-center gap-3"><Button asChild size="lg"><Link href="/candidate">Find opportunities <ArrowRight data-icon="inline-end"/></Link></Button><Button asChild size="lg" variant="outline"><Link href="/employer">Hire talent <ArrowUpRight data-icon="inline-end"/></Link></Button></div><div className="mt-6 flex items-center gap-2 text-sm text-muted-foreground"><Check className="size-4 text-primary"/> Built around people. Not applications.</div></div><MatchingVisual/></section>
-<section className="border-y bg-card/50"><div className="page-width flex flex-col items-start justify-between gap-7 py-7 md:flex-row md:items-center"><p className="max-w-52 text-sm text-muted-foreground">A little less noise.<br/><span className="font-medium text-foreground">A lot more intention.</span></p>{[{icon:HeartHandshake,text:'Interest goes both ways'},{icon:SlidersHorizontal,text:'Your priorities come first'},{icon:ShieldCheck,text:'Your information, your choice'}].map(({icon:Icon,text})=><div key={text} className="flex items-center gap-3"><Icon className="size-5 text-primary"/><span className="text-sm">{text}</span></div>)}</div></section>
-<section id="how-it-works" className="page-width py-24"><div className="flex flex-col justify-between gap-6 md:flex-row md:items-end"><div><p className="eyebrow mb-4">A better kind of introduction</p><h2 className="text-4xl font-medium leading-tight md:text-[44px]">Less chasing.<br/>More finding your people.</h2></div><p className="max-w-sm text-muted-foreground">The next chapter shouldn’t start with a hundred applications. Just a few good conversations.</p></div><div className="mt-12 grid gap-8 md:grid-cols-3">{[{icon:SlidersHorizontal,title:'Start with what matters.',text:'Your ambitions, your strengths, your non-negotiables. Tell us what a great next step looks like for you.'},{icon:Sparkles,title:'Meet a few, well chosen.',text:'A considered set of relevant introductions, not an endless feed. Enough choice to move forward. Space to think.'},{icon:HeartHandshake,title:'Make the next move, together.',text:'When you both say yes, a conversation begins. Clear expectations and shared interest from the very start.'}].map(({icon:Icon,title,text})=><article key={title} className="border-t pt-7"><Icon className="mb-6 size-6 text-primary"/><h3 className="text-xl font-medium tracking-tight">{title}</h3><p className="mt-3 text-sm text-muted-foreground">{text}</p></article>)}</div></section>
-<section id="for-you" className="border-y bg-secondary/40"><div className="page-width py-20"><div className="mb-12 flex flex-col items-start justify-between gap-5 md:flex-row md:items-end"><div><p className="eyebrow mb-4">Room for what’s next</p><h2 className="text-4xl font-medium">A clear view. A calmer next step.</h2></div><div className="flex rounded-lg border bg-background p-1" role="tablist" aria-label="Workspace preview"><button role="tab" aria-selected={audience==='candidate'} onClick={()=>setAudience('candidate')} className={cn('rounded-md px-4 py-2 text-sm',audience==='candidate'&&'bg-primary text-primary-foreground')}>For candidates</button><button role="tab" aria-selected={audience==='employer'} onClick={()=>setAudience('employer')} className={cn('rounded-md px-4 py-2 text-sm',audience==='employer'&&'bg-primary text-primary-foreground')}>For employers</button></div></div><div className="grid gap-12 lg:grid-cols-[.7fr_1fr]"><div className="flex flex-col items-start justify-center gap-6"><h3 className="text-3xl font-medium leading-tight">{audience==='candidate'?'Your next role. Not your second job.':'Great hiring starts with shared interest.'}</h3><p className="max-w-sm text-muted-foreground">{audience==='candidate'?'See what needs your attention, know where you stand, and explore opportunities that respect what matters to you.':'Spend less time sorting applications and more time getting to know people who could make a difference.'}</p><ul className="flex flex-col gap-4 text-sm">{['A small, focused set of introductions','Clear terms before the first conversation','Progress you can actually follow'].map(t=><li className="flex gap-3" key={t}><Check className="size-4 text-primary"/>{t}</li>)}</ul><Button asChild variant="outline"><Link href={`/${audience}`}>Explore the {audience} demo <ArrowRight data-icon="inline-end"/></Link></Button></div><div className="panel overflow-hidden shadow-lg shadow-foreground/5"><div className="flex items-center justify-between border-b px-6 py-4"><Brand/><span className="text-xs text-muted-foreground">FICTIONAL DEMO</span></div><div className="p-6 md:p-8"><div className="flex items-center justify-between"><h3 className="text-2xl font-medium">{audience==='candidate'?'Good morning, Alex.':'Your team’s next chapter.'}</h3><span className="size-8 rounded-full bg-accent text-center text-sm leading-8">A</span></div><p className="mt-2 text-sm text-muted-foreground">A few good opportunities. A little forward momentum.</p><div className="mt-7 flex justify-between border-y py-5">{['Ready to review','Mutual matches','Upcoming interview'].map((s,i)=><div key={s}><p className="text-2xl font-medium">{[3,2,1][i]}</p><p className="mt-1 text-xs text-muted-foreground">{s}</p></div>)}</div><div className="mt-5 flex items-center gap-4"><CompanyMark name="Forma"/><div className="flex-1"><p className="text-sm font-medium">{audience==='candidate'?'Senior Product Designer':'Jamie Chen'}</p><p className="mt-1 text-xs text-muted-foreground">{audience==='candidate'?'Forma · New York, NY · Hybrid':'Senior Product Designer · 7 years experience'}</p></div><ArrowUpRight className="size-5 text-primary"/></div></div></div></div></div></section>
-<section id="for-teams" className="page-width grid gap-12 py-24 md:grid-cols-2"><div><p className="eyebrow mb-5">Good alignment, from the start</p><h2 className="max-w-md text-4xl font-medium leading-tight">Fewer unknowns.<br/>More common ground.</h2><p className="mt-5 max-w-md text-muted-foreground">Compensation. Flexibility. What the role really needs. Bring the important things into the open before investing your time.</p><Link href="/employer/pact" className="mt-7 inline-flex items-center gap-2 text-sm font-medium text-primary">Meet agreement-first hiring <ArrowRight className="size-4"/></Link></div><div className="panel p-8"><div className="flex items-center justify-between"><span className="flex items-center gap-2 text-sm font-medium"><CheckCheck className="size-5 text-primary"/> On the same page</span><span className="text-xs text-muted-foreground">PACT</span></div><div className="mt-6 flex flex-col gap-5">{['Compensation, clearly defined','Working arrangements, understood','Qualifications, thoughtfully verified','Next steps, mutually agreed'].map(t=><div className="flex items-center gap-3 text-sm" key={t}><CircleCheck className="size-4 text-primary"/>{t}</div>)}</div><p className="mt-6 border-t pt-5 text-xs text-muted-foreground">Clarity creates a foundation. Agreement readiness is not an offer or a guarantee of employment.</p></div></section>
-<section className="page-width pb-20"><div className="rounded-2xl bg-primary px-8 py-14 text-primary-foreground md:px-14"><div className="flex flex-col justify-between gap-8 md:flex-row md:items-center"><div><p className="mb-4 flex items-center gap-2 text-sm opacity-80"><LockKeyhole className="size-4"/> Thoughtful by design. Private by default.</p><h2 className="text-4xl font-medium leading-tight">Your next chapter<br/>starts with a connection.</h2></div><div className="flex flex-col gap-4"><Button variant="secondary" size="lg" asChild><Link href="/get-started">Let’s find your people <ArrowRight data-icon="inline-end"/></Link></Button><span className="text-center text-xs opacity-70">Explore the demo. See a different way forward.</span></div></div></div></section>
-</main><footer className="page-width flex flex-col justify-between gap-6 border-t py-8 md:flex-row md:items-center"><Brand/><p className="text-xs text-muted-foreground">© 2026 Career Kitchen. More possibility, less noise.</p><div className="flex gap-5 text-sm text-muted-foreground"><Link href="/candidate/privacy">Privacy</Link><Link href="/get-started">Explore the demo <ArrowUpRight className="inline size-3.5"/></Link></div></footer></>}
-function MatchingVisual(){return <div className="relative mx-auto flex w-full max-w-[510px] flex-col items-center rounded-[24px] border border-border/60 bg-secondary/40 px-5 py-9 md:px-8 md:py-11 rise" style={{animationDelay:'100ms'}}><div className="mb-7 flex w-full items-center justify-between"><span className="text-xs font-medium tracking-[.13em] text-primary">THOUGHTFULLY CONNECTED</span><span className="flex items-center gap-1.5 text-xs text-muted-foreground"><span className="size-1.5 rounded-full bg-primary"/> A little more aligned</span></div><div className="panel z-10 w-[91%] -rotate-3 p-5 shadow-sm"><div className="flex items-center gap-3"><div className="flex size-12 items-center justify-center rounded-full bg-accent text-lg text-accent-foreground">AM</div><div><p className="font-medium">Alex Morgan</p><p className="text-sm text-muted-foreground">Product designer. Big-picture thinker.</p></div></div><div className="mt-5 flex flex-wrap gap-2"><span className="rounded-md bg-muted px-2.5 py-1.5 text-xs">Design with purpose</span><span className="rounded-md bg-muted px-2.5 py-1.5 text-xs">Room to grow</span><span className="rounded-md bg-muted px-2.5 py-1.5 text-xs">A great team</span></div></div><div className="flex w-full items-center justify-center py-6"><span className="connection-line"/><div className="mx-4 flex size-14 items-center justify-center rounded-2xl border border-primary/20 bg-background text-primary shadow-sm"><span className="brand-mark"/></div><span className="connection-line"/></div><div className="panel w-[91%] rotate-2 p-5 shadow-sm"><div className="flex items-center justify-between"><div className="flex items-center gap-3"><CompanyMark name="Forma"/><div><p className="font-medium">A team building something good.</p><p className="text-sm text-muted-foreground">Forma <span className="mx-1">·</span> Senior Product Designer</p></div></div></div><div className="mt-5 flex items-center justify-between border-t pt-4"><span className="text-xs text-muted-foreground">{initialState.opportunities[0].salary}</span><span className="text-xs text-primary">Hybrid · New York</span></div></div><div className="z-10 -mt-1 flex items-center gap-2 rounded-full border border-primary/15 bg-background px-4 py-2.5 text-xs text-primary shadow-sm"><HeartHandshake className="size-4"/> Mutual interest. Real possibility.</div><p className="mt-6 text-xs text-muted-foreground">Not more connections. The right ones.</p><span className="mt-2 text-[10px] uppercase tracking-widest text-muted-foreground/70">Illustrative demo</span></div>}
+
+const courses = [
+  {
+    station: 'Mise en Place',
+    title: 'Everyone preps first.',
+    text: 'Candidates set out what they want and what they will not compromise on. Employers write the recipe: requirements, preferences, and real constraints.',
+  },
+  {
+    station: 'The Pass',
+    title: 'A short rail, not an endless feed.',
+    text: 'Global allocation balances the whole market so each order sees a few tickets worth reading — and every other qualified person stays on the bench, one click away.',
+  },
+  {
+    station: 'Taste Test',
+    title: 'Ask before you assume.',
+    text: 'Each order has a small verification budget. Unknowns become questions to the candidate, and answers become confirmed facts.',
+  },
+  {
+    station: 'The Table',
+    title: 'Introductions, when both say yes.',
+    text: 'Nobody is introduced until both sides opt in. Then the conversation moves to the table.',
+  },
+]
+
+const demoLines: { label: string; status: 'confirmed' | 'inferred' | 'unknown'; word: string }[] = [
+  { label: 'Ships design systems', status: 'confirmed', word: 'Yes' },
+  { label: 'B2B SaaS experience', status: 'inferred', word: 'Yes' },
+  { label: 'Hybrid, 2 days NYC', status: 'unknown', word: '?' },
+]
+
+function SampleTicket({ className, name, title, stamp }: { className?: string; name: string; title: string; stamp: 'Ready' | 'To verify' }) {
+  return (
+    <div className={cn('ticket-shadow relative w-60 shrink-0 pt-4', className)}>
+      <span aria-hidden="true" className="absolute top-0 left-1/2 z-10 h-6 w-12 -translate-x-1/2 rounded-b-[3px] bg-steel" />
+      <div className="ticket px-5 pt-7 pb-5">
+        <div className="flex items-center justify-between">
+          <span className="font-mono text-[11px] tracking-[0.14em] text-muted-foreground uppercase">Sample</span>
+          <span className={cn('stamp', stamp === 'Ready' ? 'border-primary text-primary' : 'border-paprika-ink text-paprika-ink')}>{stamp}</span>
+        </div>
+        <p className="mt-2 font-serif text-2xl leading-tight">{name}</p>
+        <p className="text-sm text-muted-foreground">{title}</p>
+        <div className="rule-dashed my-4" />
+        <ul className="flex flex-col gap-2">
+          {demoLines.map((l, i) => (
+            <li key={l.label} className="flex items-center gap-2.5 text-sm">
+              <span className={l.status === 'unknown' ? 'text-muted-foreground' : 'text-primary'}>
+                <ProvenanceGlyph status={stamp === 'Ready' && i === 2 ? 'confirmed' : l.status} />
+              </span>
+              <span className="flex-1 truncate">{l.label}</span>
+              <span className="font-mono text-xs">{stamp === 'Ready' && i === 2 ? 'Yes' : l.word}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  )
+}
+
+export function Landing() {
+  return (
+    <>
+      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 focus:bg-card focus:px-3 focus:py-2">Skip to content</a>
+      <header className="page-width flex h-20 items-center justify-between gap-6">
+        <Brand />
+        <nav aria-label="Main" className="hidden items-center gap-8 text-sm md:flex">
+          <a href="#service" className="hover:text-primary">How service works</a>
+          <a href="#candidates" className="hover:text-primary">For candidates</a>
+          <a href="#employers" className="hover:text-primary">For employers</a>
+        </nav>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" asChild><Link href="/sign-in">Sign in</Link></Button>
+          <Button asChild><Link href="/get-started">Get started</Link></Button>
+        </div>
+      </header>
+
+      <main id="main">
+        <section aria-labelledby="hero" className="page-width pt-10 pb-20 md:pt-16">
+          <div className="flex items-center gap-4 font-mono text-[11px] tracking-[0.16em] text-muted-foreground uppercase">
+            <span>Front of House</span>
+            <span className="h-px flex-1 bg-border" aria-hidden="true" />
+            <span>Now seating</span>
+          </div>
+          <h1 id="hero" className="display mt-8 text-[clamp(3.4rem,10vw,9.5rem)] leading-[0.88] text-balance">
+            Fewer plates.<br />
+            <span className="text-primary italic">Better</span> service.
+          </h1>
+          <div className="mt-10 grid gap-10 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] md:items-end">
+            <p className="max-w-md text-lg leading-relaxed text-pretty">
+              Career Kitchen is a two-sided matching kitchen. Instead of a board with a thousand listings, each side receives a small set of mutually relevant introductions — prepared, checked, and sent to the pass.
+            </p>
+            <div className="flex flex-wrap gap-3 md:justify-end">
+              <Button size="lg" asChild><Link href="/onboarding/candidate">Find your next role<ArrowRight data-icon="inline-end" /></Link></Button>
+              <Button size="lg" variant="outline" asChild><Link href="/employer/pass">See The Pass</Link></Button>
+            </div>
+          </div>
+        </section>
+
+        <section aria-label="The kitchen" className="relative">
+          <div className="page-width">
+            <div className="relative aspect-[16/7] overflow-hidden rounded-sm border">
+              <Image src="/images/the-pass.png" alt="Order tickets clipped to a steel rail above a kitchen pass" fill priority sizes="(min-width: 1280px) 1200px, 100vw" className="object-cover" />
+            </div>
+          </div>
+        </section>
+
+        <section id="service" aria-labelledby="service-title" className="page-width py-24">
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+            <div>
+              <p className="eyebrow">The menu of service</p>
+              <h2 id="service-title" className="mt-3 text-5xl leading-tight text-balance">How a match leaves the kitchen.</h2>
+            </div>
+            <ol className="flex flex-col">
+              {courses.map((c) => (
+                <li key={c.station} className="grid gap-2 border-t py-6 md:grid-cols-[160px_minmax(0,1fr)]">
+                  <p className="font-mono text-[11px] tracking-[0.14em] text-paprika-ink uppercase">{c.station}</p>
+                  <div>
+                    <h3 className="font-serif text-2xl">{c.title}</h3>
+                    <p className="mt-1 leading-relaxed text-muted-foreground">{c.text}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        <section id="employers" aria-labelledby="employers-title" className="bg-primary text-primary-foreground">
+          <div className="page-width grid gap-12 py-24 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center">
+            <div>
+              <p className="font-mono text-[11px] tracking-[0.16em] uppercase opacity-75">For employers · The Pass</p>
+              <h2 id="employers-title" className="mt-3 text-5xl leading-tight text-balance">Change the recipe. Watch the rail respond.</h2>
+              <p className="mt-5 max-w-md leading-relaxed opacity-85">
+                Every ticket shows what is confirmed, what is inferred, and what nobody knows yet. Allocation makes suggestions; you choose who to meet.
+              </p>
+              <ProvenanceLegend className="mt-6 text-primary-foreground/80 [&_dt]:text-primary-foreground" />
+              <Button variant="secondary" size="lg" className="mt-8" asChild><Link href="/employer/pass">Open the demo pass<ArrowRight data-icon="inline-end" /></Link></Button>
+            </div>
+            <div className="text-foreground" aria-hidden="true">
+              <div className="rail" />
+              <div className="-mt-1 flex justify-center gap-5 overflow-hidden px-2">
+                <SampleTicket name="Maya Chen" title="Product Designer" stamp="Ready" className="-rotate-1" />
+                <SampleTicket name="Daniel Okafor" title="Senior Designer" stamp="To verify" className="hidden rotate-1 sm:block" />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="candidates" aria-labelledby="candidates-title" className="page-width grid gap-12 py-24 md:grid-cols-2">
+          <div>
+            <p className="eyebrow">For candidates · Today&apos;s Menu</p>
+            <h2 id="candidates-title" className="mt-3 text-5xl leading-tight text-balance">A short menu, chosen for you.</h2>
+          </div>
+          <div className="flex flex-col gap-5">
+            <p className="text-lg leading-relaxed text-pretty">
+              No infinite scroll, no applying into silence. You see a handful of roles that fit what you told us — with the reasons written out — and say yes only to the ones you want.
+            </p>
+            <ul className="flex flex-col border-t">
+              {['Your salary floor and location stay private until you share them', 'Employers can only ask questions through a taste test, which you can decline', 'Introductions need both sides to say yes'].map((t) => (
+                <li key={t} className="flex gap-3 border-b py-3 text-sm"><span className="mt-1.5 text-primary"><ProvenanceGlyph status="confirmed" /></span>{t}</li>
+              ))}
+            </ul>
+            <Button size="lg" className="self-start" asChild><Link href="/candidate/opportunities">Preview Today&apos;s Menu<ArrowRight data-icon="inline-end" /></Link></Button>
+          </div>
+        </section>
+      </main>
+
+      <footer className="double-rule">
+        <div className="page-width flex flex-wrap items-center justify-between gap-4 py-8 text-sm text-muted-foreground">
+          <Brand />
+          <p>Demo build. All people, companies, and interactions shown are sample data.</p>
+        </div>
+      </footer>
+    </>
+  )
+}
