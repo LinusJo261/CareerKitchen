@@ -1,7 +1,7 @@
-import { ReviewPage } from '@/components/workspace/opportunities'
+import { TodaysMenu } from '@/components/candidate/todays-menu'
 
-export const metadata = { title: 'Opportunities' }
+export const metadata = { title: "Today's Menu" }
 
 export default function Page() {
-  return <ReviewPage role="candidate" />
+  return <TodaysMenu />
 }
