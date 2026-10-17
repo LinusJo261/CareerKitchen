@@ -1,143 +1,104 @@
-# Career Kitchen
+# Career Kitchen backend
 
-### Better matches. Fewer applications. A smarter job market.
+Persistent FastAPI backend for the separately developed v0 Next.js frontend.
+There is no replacement frontend in this repository.
 
-**Career Kitchen** is a two-sided hiring platform that reimagines job matching as a global optimization problem.
+The API implements candidate/employer onboarding, organization verification and
+team ACLs, versioned vacancies and requirements, reciprocal decision cards,
+double opt-in, bounded attention, waiting/expiry/replenishment, PACT, scoped
+evidence disclosure and revocation, chat and private attachments, interviews,
+offers, independently attested starts, notifications, abuse reports, and privacy
+jobs. PostgreSQL owns state, transactions, locks, idempotency, audit and the durable
+worker queue. Supabase provides production identity and private storage.
 
-Traditional job platforms help candidates discover opportunities and employers filter applications. Career Kitchen takes a different approach: rather than optimizing each recommendation independently, it coordinates matching across the entire market to identify high-quality, mutually beneficial opportunities while reducing unnecessary applications and hiring friction.
+The original reciprocal formulas remain available. Cold start uses explicitly
+nonprobabilistic relevance routing. R99, WITNESS and adaptive exposure are research
+components. The initial `FEATURE_MODE=SHADOW` records read-only diagnostics while
+the baseline executes live matching; advanced execution is disabled and reliability
+is `CANNOT_CERTIFY`.
 
-**Built for DubHacks 2026.**
+Start with [implementation status](docs/STATUS.md), [v0 integration](docs/v0-integration.md),
+[API contracts](docs/api.md), and [deployment](docs/deployment.md). The complete
+supplied blueprint is preserved under `blueprint/`.
 
----
+## Run locally
 
-## The Problem
+Python 3.12 and PostgreSQL 17 are the tested runtime. Windows PowerShell:
 
-Hiring has become increasingly inefficient.
-
-**For candidates:**
-- Hundreds of applications with uncertain outcomes
-- Limited visibility into genuine employer interest
-- Increasing competition from automated applications
-- Time wasted pursuing opportunities unlikely to materialize
-
-**For employers:**
-- Overwhelming application volumes
-- Expensive and time-consuming screening
-- Difficulty identifying candidates with genuine interest
-- Strong candidates overlooked amid application congestion
-
-Most platforms attempt to improve search, ranking, or screening. But better individual recommendations do not necessarily create a better overall hiring market.
-
-## Our Solution
-
-**What if, instead of helping everyone apply to more jobs, we could help everyone apply to fewer, better ones?**
-
-Career Kitchen approaches hiring as a coordinated, two-sided matching system.
-
-Our system combines:
-
-1. **Global Allocation** — Optimize opportunities across candidates and employers rather than independently ranking candidates for each job.
-2. **Reciprocal Matching** — Account for both candidate preferences and employer requirements.
-3. **Budgeted Verification** — Prioritize uncertain predictions whose verification could meaningfully improve allocation decisions.
-4. **Market Repair** — Reallocate opportunities when matches fail, preferences change, or positions are filled.
-5. **Application Efficiency** — Reduce unnecessary interactions while preserving access to promising opportunities.
-
-The objective is not simply to generate matches. It is to make the entire hiring process more efficient.
-
-## How It Works
-
-```text
-Candidates + Employers
-          |
-          v
-  Profile & Preference Analysis
-          |
-          v
-  Reciprocal Compatibility Model
-          |
-          v
-  Global Matching Optimization
-          |
-          v
-  Budgeted Verification
-          |
-          v
-  Curated Opportunities
-          |
-          v
-  Employer & Candidate Decisions
-          |
-          v
-  Local Market Repair
-          |
-          +----> Updated Allocation
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -c requirements.lock -e ".[dev]"
+Copy-Item .env.example .env
+# Replace placeholders; select Supabase or explicitly enable loopback development auth.
+docker compose up -d postgres
+.\.venv\Scripts\python.exe -m alembic upgrade head
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-Instead of allowing application volume to grow without coordination, Career Kitchen uses feedback from both sides to continually improve the allocation of opportunities.
+Run the persistent worker in another terminal:
 
-## What Makes Career Kitchen Different?
+```powershell
+.\.venv\Scripts\python.exe -m app.workers.runner
+```
 
-| Traditional Job Platforms | Career Kitchen |
-|---|---|
-| Independent recommendations | Market-wide coordinated allocation |
-| High application volume | Curated, limited opportunities |
-| Primarily one-sided ranking | Reciprocal candidate-employer modeling |
-| Reactive filtering | Proactive allocation |
-| Independent matching decisions | Adaptive matching with market repair |
+This implementation workspace already has an ignored `.venv`, random local `.env`
+secrets, and a local PostgreSQL instance on port 55432. Those machine-local files
+are excluded from version control and distribution. Fresh machines can use
+Compose PostgreSQL with the native loopback API; see the deployment guide for
+container authentication and production configuration.
 
-Career Kitchen is designed to complement existing hiring infrastructure while changing how candidates and opportunities are allocated.
+Interactive API reference: [local Swagger UI](http://127.0.0.1:8000/docs).
+Liveness: `/v1/health`; readiness: `/v1/ready`. Hosted readiness requires a private
+credential. Production authentication validates Supabase signatures, issuer,
+audience, expiry, session identity and provider-confirmed email; all application
+roles and vacancy permissions are resolved from PostgreSQL.
 
-## Our Technical Approach
+## Fictional development market
 
-At the core of Career Kitchen is an optimization framework that balances:
+```powershell
+.\.venv\Scripts\python.exe -m scripts.seed_demo
+# Subsequent resets target only the recognized local fictional demo database:
+.\.venv\Scripts\python.exe -m scripts.seed_demo --reset
+.\.venv\Scripts\python.exe -m scripts.serve_demo
+```
 
-- Candidate-employer compatibility
-- Mutual interest and acceptance likelihood
-- Employer hiring requirements
-- Candidate opportunity constraints
-- Market congestion
-- Uncertainty and verification costs
-- Overall market efficiency
+Run `python -m scripts.serve_demo --worker` in another terminal to replenish demo
+cards. This uses the separate `career_kitchen_demo` database, with 30 fictional
+candidates, three fictional organizations, and ten fictional vacancies.
 
-Our goal is to maximize successful, mutually beneficial matches under limited application and evaluation budgets.
+Accounts: `candidate-01` through `candidate-30`, `employer`, `verifier`, and
+`operations`, all at `@fictional.example.invalid`. These are local fixture
+identities, not Supabase accounts or real verifications. For a repeatable real HTTP
+check, follow the [fresh-fixture smoke procedure](docs/demo.md). Get a short-lived token
+with `python -m scripts.demo_token candidate-01`, then use Swagger's **Authorize**
+button. Tokens are printed only when this CLI is explicitly run; never commit
+them. No password/login endpoint or development role-assignment endpoint exists.
 
-Unlike a simple recommendation engine, the allocation model considers how assigning one opportunity affects the availability of others.
+## Verify and generate contracts
 
-## Technology
+```powershell
+.\.venv\Scripts\python.exe -m pytest
+.\.venv\Scripts\python.exe -m ruff check apps/api scripts
+.\.venv\Scripts\python.exe -m mypy apps/api/app
+.\.venv\Scripts\python.exe scripts/validate_migrations.py
+.\.venv\Scripts\python.exe scripts/export_openapi.py --check
+```
 
-Our planned architecture includes:
+The migration check creates and drops its own temporary test database. Integration
+and concurrency tests use isolated PostgreSQL schemas in `career_kitchen_test`;
+they never use SQLite to claim locking correctness. Client generation and strict
+TypeScript checks are documented in `packages/api-client/README.md`.
 
-- **Frontend:** Next.js, React, Tailwind CSS
-- **Backend:** Python, FastAPI
-- **Optimization:** Google OR-Tools
-- **Database & Authentication:** Supabase
-- **Frontend Deployment:** Vercel
-- **Backend Deployment:** Railway
+All writes require `Authorization` and `Idempotency-Key`. Resource changes carry
+the documented expected version; stale writes return 412. Handle 409/412 by
+refreshing state and obtaining a new human decision. Messages and documents remain
+behind live participant/disclosure authorization even when object IDs are known.
 
-*The implementation and deployment details will be updated as development progresses.*
+## External setup
 
-## Evaluation
-
-Career Kitchen is designed to be evaluated using measurable outcomes:
-
-- Job fill rate
-- Successful matches per application
-- Applications required per successful hire
-- Candidate and employer satisfaction
-- Allocation efficiency
-- Matching computation time
-- Robustness to uncertain predictions
-
-We aim to compare our matching architecture against independent ranking and sequential matching baselines under equivalent simulation conditions.
-
-## Our Vision
-
-**The best hiring platform should not be the one that generates the most applications. It should be the one that makes unnecessary applications obsolete.**
-
-We envision a labor market where candidates spend less time applying, employers spend less time screening, and opportunities reach people who are genuinely well-suited and interested.
-
-Career Kitchen is an experiment in making that future possible.
-
----
-
-**Career Kitchen — Built at DubHacks 2026.**
+No Supabase project, Railway service or GitHub remote was supplied. Configure
+the server-only variables in `.env.example` before deployment. Real binary
+document uploads require ClamAV; external email/calendar/payment providers and
+prospective model validation require separate setup. The backend does not claim
+delivery, payment, verification, employment or reliability from an absent provider.
+See `docs/STATUS.md` for the precise verification boundary.

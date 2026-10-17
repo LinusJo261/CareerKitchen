@@ -1,0 +1,1 @@
+"""Persistent PostgreSQL outbox workers."""

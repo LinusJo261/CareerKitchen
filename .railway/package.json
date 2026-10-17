@@ -1,0 +1,7 @@
+{
+  "name": "career-kitchen-infrastructure",
+  "private": true,
+  "type": "module",
+  "dependencies": { "railway": "3.12.0" }
+}
+

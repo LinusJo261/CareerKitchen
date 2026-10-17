@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "career-kitchen-api"
+version = "0.1.0"
+description = "Career Kitchen persistent hiring marketplace backend"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "uvicorn[standard]>=0.34,<1",
+  "pydantic>=2.10,<3",
+  "pydantic-settings>=2.7,<3",
+  "sqlalchemy>=2.0.36,<3",
+  "psycopg[binary]>=3.2,<4",
+  "alembic>=1.14,<2",
+  "PyJWT[crypto]>=2.10,<3",
+  "cryptography>=50,<51",
+  "httpx>=0.28,<1",
+  "python-multipart>=0.0.20,<1",
+  "pypdf>=6.21.1,<7",
+  "email-validator>=2.2,<3",
+  "ortools>=9.12,<10",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3,<10", "pytest-cov>=6,<8", "ruff>=0.9,<1", "mypy>=1.14,<2", "pip-audit>=2.7,<3"]
+
+[tool.setuptools.packages.find]
+where = ["apps/api"]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["apps/api/tests"]
+pythonpath = ["apps/api", "."]
+addopts = "-ra"
+markers = ["postgres: requires a real PostgreSQL test database", "concurrency: concurrent PostgreSQL invariant tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 110
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501", "B008"]
+
+[tool.mypy]
+python_version = "3.11"
+files = ["apps/api/app"]
+check_untyped_defs = true
+ignore_missing_imports = true
+

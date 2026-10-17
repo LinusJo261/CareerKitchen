@@ -1,0 +1,43 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: career_kitchen
+      POSTGRES_USER: career_kitchen
+      POSTGRES_PASSWORD: ${LOCAL_DATABASE_PASSWORD:?Set a local database password}
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U career_kitchen -d career_kitchen"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  api:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://career_kitchen:${LOCAL_DATABASE_PASSWORD}@postgres:5432/career_kitchen
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - private-storage:/app/.local/storage
+  worker:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://career_kitchen:${LOCAL_DATABASE_PASSWORD}@postgres:5432/career_kitchen
+    command: ["python", "-m", "app.workers.runner"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - private-storage:/app/.local/storage
+volumes:
+  postgres-data:
+  private-storage:
+
