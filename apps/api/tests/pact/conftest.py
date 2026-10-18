@@ -22,9 +22,9 @@ def pact_engine():
     admin = create_engine(url, isolation_level="AUTOCOMMIT")
     with admin.connect() as connection:
         connection.execute(text(f'CREATE SCHEMA "{schema}"'))
-    engine = create_engine(url, connect_args={"options": f"-c search_path={schema},public"})
-    Base.metadata.create_all(engine)
+    engine = create_engine(url, connect_args={"options": f"-c search_path={schema}"})
     try:
+        Base.metadata.create_all(engine)
         yield engine
     finally:
         engine.dispose()

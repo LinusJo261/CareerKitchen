@@ -75,7 +75,8 @@ consent revocation.
   event ID. The separate running worker consumed it and recorded a `ShadowRun`
   with zero planner side effects.
 
-Docker image execution, GitHub-hosted CI execution and hosted Supabase/Railway
-end-to-end checks have not been run. The deployment configuration and workflows
-are provided for those environments; local verification does not establish cloud
-availability or hiring-model reliability.
+GitHub-hosted CI has been exercised; current check outcomes and CI fixes are
+recorded on the [repository pull requests](https://github.com/LinusJo261/CareerKitchen/pulls).
+Docker image execution and hosted Supabase/Railway end-to-end checks have not
+been run. Local and CI verification do not establish cloud availability or
+hiring-model reliability.
