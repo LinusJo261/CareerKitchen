@@ -1,0 +1,4 @@
+# Offline matching/satisfaction experiments only; not API/worker dependencies.
+# Install into .venv-research. datasets includes pyarrow and huggingface-hub.
+datasets>=5.1,<6
+numpy>=2,<3

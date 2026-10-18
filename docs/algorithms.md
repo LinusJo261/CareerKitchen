@@ -1,5 +1,44 @@
 # Career Kitchen matching implementation
 
+## Live reciprocal compatibility baseline
+
+The live `services.clearing.reconcile` path now uses
+`reciprocal.score_reciprocal`, version `reciprocal-compatibility-v1`. The older
+four-weight heuristic and supplied-probability formulas below remain available
+for research/replay; they are not this live path's scoring formula.
+
+Hard feasibility, including confirmed candidate terms/privacy acceptance, runs
+before scoring and again under issuance locks. Confirmed candidate skills match
+preferred requirement keys with case/whitespace normalization and curated skill
+aliases. Employer fit averages role compatibility and optional skill coverage;
+when no preferences exist, skill coverage is not applicable and is excluded.
+Candidate fit averages stated acceptable role, employment type and work mode.
+Pair relevance is the geometric mean of the two fits. Directional attention and
+congestion costs remain separate, with no new probabilities or model training.
+
+Current candidate fields express acceptable sets, not ranked preferences; eligible
+pairs therefore currently have candidate fit one. Experience and evidence lack
+structured optional scoring targets and are explicitly unknown, not assigned zero
+or inferred from prose. Essential evidence checks remain mandatory. This baseline
+does not yet implement richer ranked preferences, semantic skill inference,
+global allocation, or a trained predictor. Equal applicable weights are versioned
+engineering choices, not empirical coefficients.
+
+Each issued pair/exposure retains the sanitized scoring inputs, timestamp,
+candidate/vacancy versions, feature hash, weights version, both fits, both
+directional scores and price snapshot. No raw private compensation, resume or
+evidence contents enter this trace. Existing immutable exposure timestamps and
+decision cards/events retain issue, response, expiry and cancellation separately.
+Issuance is not proof of viewing; no view event is currently available. A future
+training exporter must exclude unresolved/expired/cancelled cards from explicit
+rejection labels, respect consent/retention, and account for exposure selection.
+No training exporter or dataset is created by this change.
+
+Focused reciprocal tests can run without external services:
+`PYTHONPATH=apps/api python -m unittest discover -s apps/api/tests/algorithm -p test_reciprocal.py -v`.
+The PostgreSQL integration assertion is in `test_core_api.py`; it requires the
+configured test database and full development dependencies.
+
 The matching package is a pure Python planning boundary. It receives frozen,
 sanitized snapshots and returns proposals. It has no database, storage, billing,
 identity, messaging, network, or notification dependency. The authenticated service
