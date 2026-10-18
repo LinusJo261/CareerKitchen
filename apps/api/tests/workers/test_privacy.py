@@ -4,7 +4,6 @@ from types import SimpleNamespace
 from uuid import UUID
 
 import pytest
-from app.api import deps
 from app.core.auth import VerifiedIdentity
 from app.core.errors import AppError
 from app.core.security import decrypt, encrypt
@@ -28,6 +27,8 @@ from app.services.common import Actor, digest, emit, utcnow
 from app.workers import runner
 from sqlalchemy import func, select
 from starlette.requests import Request
+
+from app.api import deps
 
 
 def request_operation(m, kind):
