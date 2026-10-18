@@ -4,7 +4,13 @@ The existing Next.js pages connect to FastAPI through server-side route handlers
 `GET /api/workspace` assembles authorized data for the selected workspace;
 `POST /api/workspace/commands` translates explicit actions into versioned API
 requests. The shared SWR hook refreshes after successful changes, on focus and
-periodically; it never presents fixture records as live state. The runnable contract is
+periodically; it never presents fixture records as live state.
+
+The [Gemini navigation chat contract](navigation-chat.md) describes the read-only
+`POST /v1/navigation/chat` endpoint used by Career Chef, including server
+configuration, user consent, authentication, and retry behavior.
+
+The runnable contract is
 `docs/openapi.json`; Swagger is available at `/docs`, ReDoc at `/redoc`, and the
 generated TypeScript interfaces are in `packages/api-client/src/schema.ts`.
 

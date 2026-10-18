@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { DM_Mono, DM_Sans, Fraunces } from 'next/font/google'
 import { Providers } from '@/components/providers'
+import { CareerChefProvider } from '@/components/navigation/career-chef-provider'
 import './globals.css'
 
 const fraunces = Fraunces({
@@ -46,7 +47,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="font-sans">
-        <Providers>{children}</Providers>
+        <Providers><CareerChefProvider>{children}</CareerChefProvider></Providers>
       </body>
     </html>
   )
