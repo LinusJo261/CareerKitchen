@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 
 const courses = [
   {
-    station: "Mise en Place",
+    station: "Profile",
     title: "Everyone preps first.",
     text: "Start with what matters. Candidates share their goals and must-haves; employers set out the role, requirements, and working arrangements.",
   },

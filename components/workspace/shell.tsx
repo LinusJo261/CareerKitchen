@@ -52,7 +52,7 @@ const stations: Record<Role, Station[]> = {
     },
     { path: 'matches', name: 'The Table', action: 'Your introductions' },
     { path: 'evidence', name: 'Taste Tests', action: 'Questions & evidence' },
-    { path: 'profile', name: 'Mise en Place', action: 'Profile & preferences' },
+    { path: 'profile', name: 'Profile', action: 'Profile & preferences' },
   ],
   employer: [
     { path: 'vacancies', name: 'Open Orders', action: 'Your positions' },
@@ -265,9 +265,9 @@ export function Shell({
                 <nav aria-label="Stations" className="flex flex-col">
                   {stationLinks(true)}
                 </nav>
-                <p className="eyebrow px-6 pt-6 pb-2">Back office</p>
+                <p className="eyebrow px-6 pt-6 pb-2">Menu</p>
                 <nav
-                  aria-label="Back office"
+                  aria-label="Workspace menu"
                   className="flex flex-col px-3 pb-6"
                 >
                   {backOffice[role].map(([p, l]) => (
@@ -337,7 +337,7 @@ export function Shell({
                     employer && 'text-flour hover:bg-flour/10 hover:text-flour',
                   )}
                 >
-                  <span className="hidden sm:inline">Back office</span>
+                  <span className="hidden sm:inline">Menu</span>
                   <ChevronDown
                     className="hidden sm:block"
                     data-icon="inline-end"
@@ -347,7 +347,7 @@ export function Shell({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-60">
                 <DropdownMenuLabel className="eyebrow">
-                  Back office
+                  Menu
                 </DropdownMenuLabel>
                 <DropdownMenuGroup>
                   {backOffice[role].map(([p, l]) => (
