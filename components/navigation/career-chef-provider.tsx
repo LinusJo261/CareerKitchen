@@ -18,6 +18,7 @@ function useCareerChefState() {
   const [error, setError] = useState<string | null>(null)
   const [connection, setConnection] = useState<Connection>(null)
   const [checking, setChecking] = useState(false)
+  const [view, setView] = useState<'guide' | 'ai'>('guide')
   const activeRequest = useRef<AbortController | null>(null)
   const checkingRequest = useRef<AbortController | null>(null)
 
@@ -112,7 +113,7 @@ function useCareerChefState() {
     setLoading(false)
   }
 
-  return { messages, draft, setDraft, consent, setConsent, token, setToken, pending, loading, error, connection, checking, checkConnection, send, retry: () => { if (pending) void request(pending) }, reset }
+  return { messages, draft, setDraft, consent, setConsent, token, setToken, pending, loading, error, connection, checking, checkConnection, send, retry: () => { if (pending) void request(pending) }, reset, view, setView }
 }
 
 type CareerChefState = ReturnType<typeof useCareerChefState>

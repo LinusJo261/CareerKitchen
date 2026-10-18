@@ -14,10 +14,10 @@ export function BrandMark({ className }: { className?: string }) {
 
 export function Brand({ compact = false, className }: { compact?: boolean; className?: string }) {
   return (
-    <Link href="/" aria-label="Career Kitchen — Front of House" className={cn('group flex items-center gap-2.5', className)}>
+    <Link href="/" aria-label="Career Kitchen home" className={cn('group flex w-fit items-center gap-2.5 rounded-sm', className)}>
       <BrandMark />
       {!compact && (
-        <span className="font-serif text-[21px] leading-none tracking-tight">
+        <span className="font-serif text-[21px] leading-none tracking-tight whitespace-nowrap">
           Career <span className="italic">Kitchen</span>
         </span>
       )}

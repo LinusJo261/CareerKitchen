@@ -8,14 +8,14 @@ import { Textarea } from '@/components/ui/textarea'
 import { Field, FieldDescription, FieldLabel } from '@/components/ui/field'
 import { Spinner } from '@/components/ui/spinner'
 import { ProvenanceGlyph, ProvenanceLegend, provenanceLabel, stateTone, stateWord } from './provenance'
-import { VerdictStamp } from './candidate-ticket'
+import { compensationAlignment, VerdictStamp } from './candidate-ticket'
 import { evaluate, passActions, tasteTestsLeft, type Uncertainty } from '@/lib/demo/pass'
 import { cn } from '@/lib/utils'
 import type { PassState } from '@/lib/contracts'
 
-const draftQuestion = (u: Uncertainty) =>
+const draftQuestion = (u: Uncertainty, ceiling: number) =>
   u.subject === 'floor'
-    ? 'Could you share the base salary floor you would need for this role? It stays private to this order.'
+    ? `Would the advertised base salary budget, up to $${ceiling}k, meet your expectations? Your exact minimum stays private.`
     : u.subject === 'arrangement'
       ? 'This role is hybrid with two office days in NYC. Would that work for you?'
       : `Could you tell us a little about your experience with this: “${u.label.toLowerCase()}”?`
@@ -39,17 +39,17 @@ function InspectorBody({ state, candidateId, onClose }: { state: PassState; cand
   const askable = ev.uncertainties.filter((u) => !tests.some((t) => t.subject === u.subject))
   const [subject, setSubject] = useState(askable[0]?.subject ?? '')
   const chosen = askable.find((u) => u.subject === subject) ?? askable[0]
-  const [question, setQuestion] = useState(chosen ? draftQuestion(chosen) : '')
+  const [question, setQuestion] = useState(chosen ? draftQuestion(chosen, state.order.ceiling) : '')
   const decision = state.introductions[c.id]
 
   function choose(u: Uncertainty) {
     setSubject(u.subject)
-    setQuestion(draftQuestion(u))
+    setQuestion(draftQuestion(u, state.order.ceiling))
   }
   function send() {
     if (!chosen || !question.trim()) return
     if (passActions.sendTasteTest(c.id, chosen.subject, chosen.label, question.trim())) {
-      toast.success(`Taste test sent to ${c.name}`, { description: 'Demo reply arrives in a few seconds.' })
+      toast.success(`Demo taste test for ${c.name}`, { description: 'A scripted reply arrives in a few seconds. No one was contacted.' })
       const next = askable.find((u) => u.subject !== chosen.subject)
       if (next) choose(next)
       else setSubject('')
@@ -60,7 +60,7 @@ function InspectorBody({ state, candidateId, onClose }: { state: PassState; cand
     <div className="flex min-h-full flex-col">
       <header className="border-b bg-primary px-6 pt-8 pb-6 text-primary-foreground md:px-10">
         <p className="font-mono text-[11px] tracking-[0.14em] uppercase opacity-75">
-          Ticket {state.order.ticket}-{c.ticket} · Mutual fit for {state.order.title}
+          Demo ticket {state.order.ticket}-{c.ticket} · Role alignment for {state.order.title}
         </p>
         <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -102,7 +102,7 @@ function InspectorBody({ state, candidateId, onClose }: { state: PassState; cand
               </li>
               <li className="flex gap-3 text-sm">
                 <span className="mt-1 text-primary"><ProvenanceGlyph status={c.floor.status} /></span>
-                <span className="flex-1"><span className="font-medium">Compensation</span> — ceiling ${state.order.ceiling}k; {c.floor.value ? `their floor $${c.floor.value}k` : 'their floor is not shared yet'}.</span>
+                <span className="flex-1"><span className="font-medium">Compensation</span> — your ceiling ${state.order.ceiling}k; {compensationAlignment[ev.terms.floor].toLowerCase()}. The candidate’s exact minimum stays private.</span>
               </li>
             </ul>
           </div>
@@ -137,7 +137,7 @@ function InspectorBody({ state, candidateId, onClose }: { state: PassState; cand
               <h3 id="taste" className="font-serif text-2xl">Taste test</h3>
               <span className="font-mono text-[11px] tracking-[0.12em] uppercase">{left} of {state.order.verificationBudget} left on this order</span>
             </div>
-            <p className="mt-1 text-sm opacity-80">Ask {c.name.split(' ')[0]} to clarify one open question. Answers become confirmed information.</p>
+            <p className="mt-1 text-sm opacity-80">Explore one open question for {c.name.split(' ')[0]}. Replies are scripted examples and do not verify a real person.</p>
 
             {askable.length > 0 && left > 0 ? (
               <div className="mt-5 flex flex-col gap-4">
@@ -162,10 +162,10 @@ function InspectorBody({ state, candidateId, onClose }: { state: PassState; cand
                 <Field>
                   <FieldLabel htmlFor="taste-question">Your question</FieldLabel>
                   <Textarea id="taste-question" value={question} onChange={(e) => setQuestion(e.target.value)} rows={3} className="bg-card" />
-                  <FieldDescription className="text-accent-foreground/75">Keep it to one question. {c.name.split(' ')[0]} can decline to answer.</FieldDescription>
+                  <FieldDescription className="text-accent-foreground/75">Keep it to one question. Candidates can decline; this demo uses scripted replies.</FieldDescription>
                 </Field>
                 <Button className="self-start" onClick={send} disabled={!question.trim()}>
-                  <Send data-icon="inline-start" />Send taste test
+                  <Send data-icon="inline-start" />Try demo taste test
                 </Button>
               </div>
             ) : (
@@ -220,7 +220,7 @@ function InspectorBody({ state, candidateId, onClose }: { state: PassState; cand
             <Button variant="outline" disabled={ev.verdict === 'held'} onClick={() => { passActions.decide(c.id, c.name, 'Passed'); toast(`Passed on ${c.name}`); onClose() }}>
               Pass for this order
             </Button>
-            <Button disabled={ev.verdict === 'held'} onClick={() => { passActions.decide(c.id, c.name, 'Requested'); toast.success(`Introduction requested with ${c.name}`, { description: 'They will see it on their Table and can accept or decline.' }) }}>
+            <Button disabled={ev.verdict === 'held'} onClick={() => { passActions.decide(c.id, c.name, 'Requested'); toast.success(`Demo introduction requested with ${c.name}`, { description: 'No one was contacted. An introduction requires the candidate’s agreement too.' }) }}>
               Request introduction
             </Button>
           </div>

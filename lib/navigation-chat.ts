@@ -47,8 +47,8 @@ export function navigationError(value: unknown, status: number): string {
     const error = value.error
     if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string' && error.message.length <= 500) return error.message
   }
-  if (status === 401 || status === 403) return 'Connect a valid session in Connection details to use Career Chef.'
+  if (status === 401 || status === 403) return 'Connect a valid session in Session connection to use Career Chef.'
   if (status === 429) return 'The kitchen is busy. Wait a moment, then retry your question.'
-  if (status === 503) return 'Career Chef is unavailable. Check the API connection and server-side Gemini configuration.'
+  if (status === 503) return 'Career Chef is temporarily unavailable. Please retry your question shortly.'
   return 'Your question could not be completed. Please retry.'
 }

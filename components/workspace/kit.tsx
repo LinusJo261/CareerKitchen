@@ -8,12 +8,12 @@ import { cn } from '@/lib/utils'
 export function PageHeader({ eyebrow, title, description, actions }: { eyebrow?: string; title: string; description?: string; actions?: React.ReactNode }) {
   return (
     <div className="rise mb-8 flex flex-wrap items-end justify-between gap-4">
-      <div className="max-w-2xl">
+      <div className="min-w-0 max-w-2xl">
         {eyebrow && <p className="eyebrow mb-3">{eyebrow}</p>}
-        <h1 className="text-4xl font-normal text-balance md:text-5xl">{title}</h1>
+        <h1 className="text-4xl font-normal text-balance break-words md:text-5xl">{title}</h1>
         {description && <p className="mt-3 text-pretty text-muted-foreground">{description}</p>}
       </div>
-      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      {actions && <div className="flex max-w-full flex-wrap items-center gap-2">{actions}</div>}
     </div>
   )
 }
@@ -52,11 +52,11 @@ export function Progression({ steps, current, className }: { steps: readonly str
         const active = i === current
         return (
           <li key={step} className="flex flex-1 items-center gap-2" aria-current={active ? 'step' : undefined}>
-            <span className={cn('flex size-6 shrink-0 items-center justify-center rounded-full border text-[11px] font-medium transition-colors', done && 'border-primary bg-primary text-primary-foreground', active && 'border-primary text-primary', !done && !active && 'text-muted-foreground')}>
+            <span aria-hidden="true" className={cn('flex size-6 shrink-0 items-center justify-center rounded-full border text-[11px] font-medium transition-colors', done && 'border-primary bg-primary text-primary-foreground', active && 'border-primary text-primary', !done && !active && 'text-muted-foreground')}>
               {done ? <Check className="size-3.5" /> : i + 1}
             </span>
-            <span className={cn('hidden text-xs whitespace-nowrap md:inline', active ? 'font-medium text-foreground' : 'text-muted-foreground')}>{step}</span>
-            {i < steps.length - 1 && <span className={cn('connection-line', done && 'bg-primary')} />}
+            <span className={cn('sr-only text-xs md:not-sr-only md:whitespace-nowrap', active ? 'font-medium text-foreground' : 'text-muted-foreground')}>{step}<span className="sr-only">{done ? ', completed' : active ? ', current step' : ', upcoming'}</span></span>
+            {i < steps.length - 1 && <span aria-hidden="true" className={cn('connection-line', done && 'bg-primary')} />}
           </li>
         )
       })}
@@ -67,7 +67,7 @@ export function Progression({ steps, current, className }: { steps: readonly str
 export function WorkspaceSkeleton() {
   return (
     <div aria-busy="true" aria-label="Loading workspace" className="flex flex-col gap-6">
-      <Skeleton className="h-10 w-72" />
+      <Skeleton className="h-10 w-72 max-w-full" />
       <Skeleton className="h-4 w-96 max-w-full" />
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
         {[0, 1, 2].map((i) => <Skeleton key={i} className="h-64 rounded-xl" />)}
@@ -79,7 +79,7 @@ export function WorkspaceSkeleton() {
 export function Initials({ name, className }: { name: string; className?: string }) {
   return (
     <span aria-hidden="true" className={cn('flex size-10 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-medium text-accent-foreground', className)}>
-      {name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+      {name.trim().split(/\s+/).filter(Boolean).map((n) => n[0]).join('').slice(0, 2)}
     </span>
   )
 }

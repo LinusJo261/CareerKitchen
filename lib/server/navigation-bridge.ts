@@ -41,25 +41,45 @@ function localToken(env: Environment) {
   return `${header}.${claims}.${signature}`
 }
 
-function sameOrigin(request: Request) {
-  const origin = request.headers.get('origin')
+function websiteAddress(request: Request): URL | null {
   // Next can normalize request.url to localhost while the browser uses 127.0.0.1.
   // Use the incoming Host authority, never a caller-selected forwarded host.
-  const expected = new URL(request.url)
-  const host = request.headers.get('host')
-  if (host) expected.host = host
-  return (!origin || origin === expected.origin) &&
+  try {
+    const address = new URL(request.url)
+    const host = request.headers.get('host')
+    if (host !== null) {
+      // URL.host assignments can silently ignore malformed authorities. Parse a
+      // separate URL and reject path/credential delimiters before trusting it.
+      if (!host || /[\\/?#@\s]/.test(host)) return null
+      return new URL(`${address.protocol}//${host}`)
+    }
+    return address
+  } catch {
+    return null
+  }
+}
+
+function localWebsite(request: Request): boolean {
+  const address = websiteAddress(request)
+  return address !== null && loopback.has(address.hostname) &&
+    loopback.has(new URL(request.url).hostname)
+}
+
+function sameOrigin(request: Request) {
+  const expected = websiteAddress(request)
+  const origin = request.headers.get('origin')
+  return expected !== null && (!origin || origin === expected.origin) &&
     request.headers.get('sec-fetch-site') !== 'cross-site'
 }
 
 // Injectable dependencies keep authentication and proxy behavior testable without Google calls.
 export function createNavigationBridge(env: Environment, fetcher: typeof fetch = fetch) {
   return {
-    async GET() {
+    async GET(request: Request) {
       let authentication = 'session'
       try {
         const base = apiBase(env)
-        authentication = localAuthentication(env, base) ? 'local' : 'session'
+        authentication = localAuthentication(env, base) && localWebsite(request) ? 'local' : 'session'
         const health = await fetcher(new URL('v1/health', base), {
           cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(3000),
         })
@@ -79,9 +99,9 @@ export function createNavigationBridge(env: Environment, fetcher: typeof fetch =
       let useLocal: boolean
       try {
         base = apiBase(env)
-        useLocal = localAuthentication(env, base) && loopback.has(new URL(request.url).hostname)
+        useLocal = localAuthentication(env, base) && localWebsite(request)
       } catch {
-        return fail(503, 'CHAT_UNAVAILABLE', 'Career Chef API connection is not configured correctly.')
+        return fail(503, 'CHAT_UNAVAILABLE', 'Career Chef is temporarily unavailable. Please try again shortly.')
       }
       const supplied = request.headers.get('authorization')
       if (supplied && (!/^Bearer [^\s]+$/.test(supplied) || supplied.length > 16400)) {
@@ -127,6 +147,9 @@ export function createNavigationBridge(env: Environment, fetcher: typeof fetch =
           },
           body, signal: AbortSignal.timeout(40000),
         })
+        if (upstream.status === 404 || upstream.status === 405) {
+          return fail(503, 'CHAT_UNAVAILABLE', 'AI chat is not available on the connected service. Quick guides are still available.')
+        }
         const payload: unknown = await upstream.json()
         if (!upstream.ok) {
           // Never reflect provider, validation input, stack traces, or authentication details.
@@ -134,22 +157,22 @@ export function createNavigationBridge(env: Environment, fetcher: typeof fetch =
             typeof payload.error === 'object' && payload.error && 'code' in payload.error &&
             typeof payload.error.code === 'string' ? payload.error.code : 'CHAT_UNAVAILABLE'
           const messages: Record<string, string> = {
-            CHAT_UNAVAILABLE: 'Career Chef is unavailable. Check the server Gemini key, model and quota, then retry.',
+            CHAT_UNAVAILABLE: 'Career Chef is temporarily unavailable. Please retry your question shortly.',
             UNAUTHORIZED: 'Connect a session access token to chat.',
             INVALID_TOKEN: 'Your session has expired or is invalid. Connect a fresh access token.',
             AUTH_UNAVAILABLE: 'The authentication service is unavailable. Try again shortly.',
             RATE_LIMITED: 'Too many messages. Wait a minute, then retry.',
             IDEMPOTENCY_CONFLICT: 'This request key was already used. Start a new message.',
             VALIDATION_ERROR: 'Check your message, Google consent and conversation length.',
-            ORIGIN_FORBIDDEN: 'The API origin is not allowed. Check the server CORS configuration.',
+            ORIGIN_FORBIDDEN: 'Career Chef cannot connect from this website right now. Please try again later.',
           }
           const known = Object.hasOwn(messages, code)
           return fail(upstream.status, known ? code : 'CHAT_UNAVAILABLE',
-            known ? messages[code] : 'Career Chef could not process this request. Check your session and server configuration.')
+            known ? messages[code] : 'Career Chef could not complete your question. Please try again shortly.')
         }
         return Response.json(payload, { status: upstream.status, headers: responseHeaders })
       } catch {
-        return fail(503, 'API_UNAVAILABLE', 'Career Chef could not reach the API. Start the API server, then retry.')
+        return fail(503, 'API_UNAVAILABLE', 'Career Chef could not connect. Please retry your saved question shortly.')
       }
     },
   }

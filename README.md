@@ -1,7 +1,10 @@
-# Career Kitchen backend
+# Career Kitchen
 
-Persistent FastAPI backend for the separately developed v0 Next.js frontend.
-There is no replacement frontend in this repository.
+Persistent FastAPI backend and a Next.js interactive preview of Career Kitchen.
+The candidate and employer workspaces use fictional, in-memory demo data; they
+do not create accounts or persist hiring actions to the API. Career Chef includes
+public onboarding guides and an optional, consent-based Gemini chat through the
+server-side API bridge. See [website and API testing](docs/career-chef-testing.md).
 
 The API implements candidate/employer onboarding, organization verification and
 team ACLs, versioned vacancies and requirements, reciprocal decision cards,
@@ -24,7 +27,7 @@ archived blueprint is not present in this checkout.
 ## Test Career Chef
 
 Career Chef answers navigation questions using Gemini at `POST /v1/navigation/chat`.
-The existing Next.js website includes a floating **Ask Chef** chatbox and a standalone
+The Next.js website includes a floating **Career Chef** assistant and a standalone
 test page at `http://127.0.0.1:3000/career-chef`. See [website and API testing](docs/career-chef-testing.md).
 Test API messages separately in Swagger at `http://127.0.0.1:8000/docs`;
 the answer appears in `data.reply`. The [API walkthrough](docs/navigation-chat.md)

@@ -11,7 +11,7 @@ const dmMono = DM_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '
 export const metadata: Metadata = {
   title: { default: 'Career Kitchen — A few introductions, made with care.', template: '%s · Career Kitchen' },
   description:
-    'Career Kitchen is a two-sided career matching platform. Global allocation, budgeted verification, and employer-scoped repair produce a small set of mutually relevant introductions.',
+    'A few thoughtful career introductions, made with care. Explore opportunities, prepare your hiring team, and meet when both sides say yes.',
 }
 
 export const viewport: Viewport = {
@@ -25,7 +25,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`bg-background ${fraunces.variable} ${dmSans.variable} ${dmMono.variable}`} suppressHydrationWarning>
+    <html lang="en" data-scroll-behavior="smooth" className={`bg-background ${fraunces.variable} ${dmSans.variable} ${dmMono.variable}`} suppressHydrationWarning>
       <body className="font-sans">
         <Providers><CareerChefProvider>{children}</CareerChefProvider></Providers>
       </body>

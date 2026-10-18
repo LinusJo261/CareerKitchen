@@ -155,21 +155,21 @@ export function ProfilePage() {
 
 export function EvidencePage() {
   const { data, update } = useDemo()
-  const submit = (id: string) => update((s) => ({ ...s, evidence: s.evidence.map((e) => e.id === id ? { ...e, status: 'Pending', issuer: 'Submitted · awaiting verification' } : e) }), 'Submitted for verification.')
+  const submit = (id: string) => update((s) => ({ ...s, evidence: s.evidence.map((e) => e.id === id ? { ...e, status: 'Pending', issuer: 'Demo request · pending verification' } : e) }), 'Demo verification request recorded. No documents were sent.')
   return (
     <>
-      <PageHeader eyebrow="Your credentials" title="Qualification evidence" description="Evidence is verified once and shared only where you grant consent." />
+      <PageHeader eyebrow="Your credentials" title="Qualification evidence" description="Explore sample evidence statuses and consent. Demo requests stay in this session." />
       <ul className="panel max-w-3xl divide-y">
         {data.evidence.map((e) => (
           <li key={e.id} className="flex flex-wrap items-center gap-4 p-5">
             <span className="flex size-10 items-center justify-center rounded-lg bg-secondary text-primary">{e.status === 'Verified' ? <BadgeCheck className="size-5" /> : <FileCheck2 className="size-5" />}</span>
             <div className="flex-1"><p className="font-medium">{e.name}</p><p className="text-sm text-muted-foreground">{e.issuer}</p></div>
             <Badge variant={e.status === 'Verified' ? 'secondary' : 'outline'}>{e.status}</Badge>
-            {e.status === 'Not shared' && <Button size="sm" variant="outline" onClick={() => submit(e.id)}>Submit for verification</Button>}
+            {e.status === 'Not shared' && <Button size="sm" variant="outline" onClick={() => submit(e.id)}>Try verification request</Button>}
           </li>
         ))}
       </ul>
-      <p className="mt-4 max-w-3xl text-xs text-muted-foreground">Verification is performed by Career Kitchen’s backend. A “Verified” status confirms the evidence itself, not an employer decision.</p>
+      <p className="mt-4 max-w-3xl text-xs text-muted-foreground">“Verified” labels are fictional sample records. This demo does not upload evidence or perform real verification.</p>
     </>
   )
 }

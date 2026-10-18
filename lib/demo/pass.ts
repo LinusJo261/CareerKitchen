@@ -154,7 +154,7 @@ const replies: Record<string, Record<string, { answer: string; meets: boolean; f
   pc1: { code: { answer: 'I prototype interactions in Framer and can read React well enough to pair.', meets: true } },
   pc2: {
     research: { answer: 'I partner with research but have run about a dozen interviews myself this year.', meets: true },
-    floor: { answer: 'My floor is $160k base.', meets: true, floor: 160 },
+    floor: { answer: 'My compensation expectations have been confirmed privately.', meets: true, floor: 160 },
     arrangement: { answer: 'Two days in the office works for me.', meets: true, arrangement: 'Hybrid' },
   },
   pc3: { systems: { answer: 'Yes — I led our system from the first audit through v2.', meets: true } },
@@ -167,7 +167,7 @@ const replies: Record<string, Record<string, { answer: string; meets: boolean; f
   pc6: {
     b2b: { answer: 'Yes, the CRM was sold to mid-market sales teams.', meets: true },
     code: { answer: 'Some — I build small prototypes in SwiftUI.', meets: true },
-    floor: { answer: 'Around $155k base would work.', meets: true, floor: 155 },
+    floor: { answer: 'My compensation expectations have been confirmed privately.', meets: true, floor: 155 },
   },
   pc7: {},
 }
@@ -215,10 +215,10 @@ export function evaluate(order: PassOrder, c: PassCandidate): Evaluation {
   let floor: Evaluation['terms']['floor'] = 'fits'
   if (c.floor.value === null || c.floor.status === 'unknown') {
     floor = 'open'
-    uncertainties.push({ subject: 'floor', label: 'Compensation floor', detail: 'Not shared yet' })
+    uncertainties.push({ subject: 'floor', label: 'Compensation alignment', detail: 'Compatibility with your budget is not confirmed' })
   } else if (c.floor.value > order.ceiling) {
-    if (c.floor.status === 'confirmed') { floor = 'conflict'; conflicts.push(`Floor $${c.floor.value}k is above your $${order.ceiling}k ceiling`) }
-    else { floor = 'open'; uncertainties.push({ subject: 'floor', label: 'Compensation floor', detail: 'Inferred above your ceiling' }) }
+    if (c.floor.status === 'confirmed') { floor = 'conflict'; conflicts.push('Compensation expectations do not align with this role’s budget. The candidate’s exact minimum stays private.') }
+    else { floor = 'open'; uncertainties.push({ subject: 'floor', label: 'Compensation alignment', detail: 'Budget compatibility needs confirmation' }) }
   }
   const must = lines.filter((l) => l.weight === 'must')
   const nice = lines.filter((l) => l.weight === 'nice')

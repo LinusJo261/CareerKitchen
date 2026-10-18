@@ -30,6 +30,12 @@ export function VerdictStamp({ verdict }: { verdict: Evaluation['verdict'] }) {
   return <span className="stamp border-muted-foreground text-muted-foreground">Held</span>
 }
 
+export const compensationAlignment: Record<Evaluation['terms']['floor'], string> = {
+  fits: 'Aligns with your budget',
+  conflict: 'Outside your budget',
+  open: 'Alignment to confirm',
+}
+
 interface Props {
   ev: Evaluation
   order: PassOrder
@@ -102,11 +108,12 @@ export function CandidateTicket({ ev, order, index, suggested, decision, pending
               <dd className="flex-1">{c.arrangement.value === 'Either' ? 'Hybrid or remote' : c.arrangement.value}</dd>
             </div>
             <div className="flex items-center gap-2.5">
-              <dt className="sr-only">Compensation floor</dt>
-              <span className={ev.terms.floor === 'open' ? 'text-muted-foreground' : 'text-primary'}><ProvenanceGlyph status={c.floor.status} /></span>
-              <dd className="flex-1">{c.floor.value ? `Floor $${c.floor.value}k` : 'Floor not shared'}</dd>
+              <dt className="sr-only">Compensation alignment</dt>
+              <span className={ev.terms.floor === 'open' ? 'text-muted-foreground' : ev.terms.floor === 'conflict' ? 'text-paprika-ink' : 'text-primary'}><ProvenanceGlyph status={c.floor.status} /></span>
+              <dd className="flex-1">{compensationAlignment[ev.terms.floor]}</dd>
             </div>
           </dl>
+          <p className="mt-2 text-xs text-muted-foreground">The candidate’s exact minimum stays private.</p>
 
           <p className="mt-4 font-mono text-[11px] tracking-[0.08em] uppercase">
             {pendingTests > 0 ? (

@@ -4,8 +4,10 @@ The [Gemini navigation chat contract](navigation-chat.md) describes the read-onl
 `POST /v1/navigation/chat` endpoint for a separately implemented chatbox, including
 server configuration, user consent, authentication, and retry behavior.
 
-No frontend has been created or redesigned. Connect the existing Next.js pages to
-this API through a server-side backend-for-frontend (BFF). The runnable contract is
+The existing Next.js frontend is an interactive preview with fictional, in-memory
+workspace data. Career Chef's optional AI conversation uses a server-side bridge;
+the other workflows still need an authenticated backend-for-frontend (BFF)
+integration before they can operate on real accounts. The runnable contract is
 `docs/openapi.json`; Swagger is available at `/docs`, ReDoc at `/redoc`, and the
 generated TypeScript interfaces are in `packages/api-client/src/schema.ts`.
 
@@ -128,7 +130,7 @@ currently require authorized manual delivery; notification records persist even
 when outbound email is unconfigured. Billing cannot affect matching rank.
 Account erasure retains necessary audit history and may need provider review.
 
-When the v0 source arrives, map its existing pages/forms/buttons to these contracts
-and preserve its UI. Live Vercel cookies, Supabase redirects, provider delivery,
-and deployment smoke tests require that source and real service credentials.
+Map the existing pages/forms/buttons to these contracts while preserving the UI.
+Live Vercel cookies, Supabase redirects, provider delivery, and deployment smoke
+tests require real service configuration and credentials.
 
