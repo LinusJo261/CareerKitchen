@@ -41,7 +41,7 @@ from app.db.models import (
 )
 from app.schemas import core as s
 from app.schemas import responses as r
-from app.services import clearing, profiles, workflow
+from app.services import clearing, matching_learning, profiles, workflow
 from app.services.common import (
     Actor,
     digest,
@@ -1209,6 +1209,7 @@ def request_deletion(db: Session = DB, actor: Actor = AUTH):
     if candidate:
         lock_scopes(db, f"candidate:{candidate.id}")
         candidate = load(db, Candidate, candidate.id, lock=True)
+        matching_learning.set_learning_consent(db, actor, candidate, False, candidate.version)
         candidate.state, candidate.version = "DEACTIVATED", candidate.version + 1
         for cycle in db.scalars(
             select(PairCycle).where(PairCycle.candidate_id == candidate.id, PairCycle.closed_at.is_(None))

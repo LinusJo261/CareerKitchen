@@ -14,14 +14,17 @@ class PlanningBudgetExceeded(RuntimeError):
 @dataclass(frozen=True, slots=True)
 class PlannerLimits:
     max_seconds: float = 1.0
-    max_operations: int = 100_000
+    max_operations: int = 1_000_000
     max_edges: int = 20_000
     exchange_steps: int = 20
 
     def __post_init__(self) -> None:
         finite(self.max_seconds, "max_seconds")
-        if min(self.max_operations, self.max_edges, self.exchange_steps) < 0:
-            raise ValueError("planner limits must be nonnegative")
+        if any(
+            type(value) is not int or value < 0
+            for value in (self.max_operations, self.max_edges, self.exchange_steps)
+        ):
+            raise ValueError("planner count limits must be nonnegative integers")
 
 
 class PlanningBudget:

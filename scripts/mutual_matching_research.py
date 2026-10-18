@@ -11,7 +11,7 @@ from pathlib import Path
 
 import numpy as np
 
-from scripts.mutual_matching_features import FEATURE_NAMES, validate_features
+from scripts.mutual_matching_features import FEATURE_NAMES, validate_feature_provenance, validate_features
 from scripts.satisfaction_model import SatisfactionModel, TabularEncoder, fit_model
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -70,9 +70,15 @@ def _text(value: object, name: str) -> str:
 def validate_manifest(manifest: dict) -> None:
     if set(manifest) != {"schema_version", "target", "feature_version", "horizon_days", "source"}:
         raise ValueError("Unexpected manifest fields")
-    if manifest["schema_version"] != 1 or manifest["target"] != TARGET:
+    if type(manifest["schema_version"]) is not int or manifest["target"] != TARGET:
         raise ValueError("Expected explicit mutual opt-in target, not satisfaction or synthetic relevance")
-    if manifest["feature_version"] != FEATURE_VERSION:
+    if not isinstance(manifest["feature_version"], str) or (
+        manifest["schema_version"],
+        manifest["feature_version"],
+    ) not in {
+        (1, FEATURE_VERSION),
+        (2, "mutual-pair-features-v2"),
+    }:
         raise ValueError("Unsupported feature version")
     if type(manifest["horizon_days"]) is not int or not 1 <= manifest["horizon_days"] <= 365:
         raise ValueError("Declare a horizon_days between 1 and 365 before training")
@@ -108,16 +114,26 @@ def _decision(value: dict, first_exposed: datetime, observed: datetime) -> dict:
     return {"status": status, "issued_at": issued, "answered_at": answered}
 
 
-def label_record(raw: dict, horizon_days: int) -> tuple[dict, str | None]:
+def label_record(
+    raw: dict, horizon_days: int, feature_version: str = FEATURE_VERSION
+) -> tuple[dict, str | None]:
     """Validate a frozen snapshot and derive a label from observed decisions only."""
-    if not isinstance(raw, dict) or set(raw) != ROW_KEYS:
+    expected_keys = ROW_KEYS | (
+        {"feature_provenance"} if feature_version == "mutual-pair-features-v2" else set()
+    )
+    if not isinstance(raw, dict) or set(raw) != expected_keys:
         raise ValueError("Introduction records must use exactly the documented snapshot/outcome fields")
     for name in ("cycle_id", "candidate_id", "vacancy_id", "organization_id", "policy_version"):
         _text(raw[name], name)
     for name in ("candidate_version", "vacancy_version"):
         if type(raw[name]) is not int or raw[name] < 1:
             raise ValueError("Snapshot profile and vacancy versions must be positive integers")
-    features = validate_features(raw["features"])
+    features = validate_features(raw["features"], feature_version)
+    feature_provenance = (
+        validate_feature_provenance(raw["feature_provenance"], features)
+        if feature_version == "mutual-pair-features-v2"
+        else {"text_relevance_model_id": None}
+    )
     as_of, exposed, observed = (
         timestamp(raw[name])
         for name in (
@@ -155,6 +171,7 @@ def label_record(raw: dict, horizon_days: int) -> tuple[dict, str | None]:
             )
         },
         "features": features,
+        "feature_provenance": feature_provenance,
         "first_exposed_at": exposed,
         "observed_at": observed,
     }
@@ -188,7 +205,7 @@ def load_records(path: Path, manifest: dict) -> tuple[list[dict], dict]:
             if not line.strip():
                 continue
             raw = json.loads(line)
-            record, reason = label_record(raw, manifest["horizon_days"])
+            record, reason = label_record(raw, manifest["horizon_days"], manifest["feature_version"])
             if record["cycle_id"] in seen:
                 raise ValueError("Duplicate introduction cycle; export one frozen row per cycle")
             seen.add(record["cycle_id"])

@@ -47,7 +47,7 @@ def test_init_creates_independent_secrets_without_replacing_existing_file(tmp_pa
     assert values["AUTH_MODE"] == "local"
     assert values["ALLOW_DEV_AUTH"] == "true"
     assert values["GEMINI_API_KEY"] == ""
-    assert values["FEATURE_MODE"] == "SHADOW"
+    assert values["FEATURE_MODE"] == "LIVE"
     assert ":55432/career_kitchen" in values["DATABASE_URL"]
     with pytest.raises(local_dev.LocalSetupError, match="already exists"):
         local_dev.initialize(target)

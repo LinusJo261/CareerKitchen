@@ -6,7 +6,7 @@ from itertools import combinations
 from math import ceil, isclose, log1p, prod
 
 from .runtime import PlanningBudget, PlanningBudgetExceeded
-from .types import probability
+from .types import boolean, probability
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,6 +47,7 @@ class ScenarioModel:
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "scenarios", tuple(self.scenarios))
+        boolean(self.conditional_independence_asserted, "conditional_independence_asserted")
         if not self.version or not self.scenarios:
             raise ValueError("version and nonempty scenarios are required")
         if not isclose(sum(item.weight for item in self.scenarios), 1.0, abs_tol=1e-9, rel_tol=0):

@@ -52,7 +52,7 @@ def initialize(path: Path, port: int = 55432) -> None:
         "READINESS_TOKEN": secrets.token_urlsafe(48),
         "CORS_ORIGINS": "http://localhost:8000,http://127.0.0.1:8000,http://localhost:3000,http://127.0.0.1:3000",
         "TRUSTED_HOSTS": "localhost,127.0.0.1,testserver",
-        "FEATURE_MODE": "SHADOW",
+        "FEATURE_MODE": "LIVE",
         "STORAGE_BACKEND": "local",
         "GEMINI_API_KEY": "",
         "GEMINI_MODEL": Settings.model_fields["gemini_model"].default,

@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import secrets
-from datetime import timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
 from hmac import compare_digest
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, cast, func, literal, or_, select
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Session
 
 from app.core.errors import AppError
@@ -32,7 +33,12 @@ from app.db.models import (
     WaitingItem,
 )
 from app.matching.attention import MarketPrices
-from app.matching.reciprocal import ReciprocalFeatures, score_reciprocal, skill_coverage
+from app.matching.learning import apply_learned_score
+from app.matching.live import AttentionCapacity, LiveProposal, allocate_live
+from app.matching.reciprocal import ReciprocalFeatures, score_reciprocal, skill_coverage, skill_overlap
+from app.matching.text_alignment import professional_text_alignment
+from app.matching.types import Side
+from app.services import matching_learning
 from app.services.common import (
     Actor,
     digest,
@@ -45,6 +51,50 @@ from app.services.common import (
 )
 
 POST_MATCH = {"MUTUAL_MATCH", "INTERVIEWING", "OFFERED", "OFFER_ACCEPTED", "START_CONFIRMED"}
+
+
+def compatibility_features(
+    candidate: Candidate,
+    vacancy: Vacancy,
+    confirmed_skills: tuple[tuple[str, tuple[str, ...]], ...],
+    preferred: tuple[str, ...],
+    as_of: datetime,
+    *,
+    text_learning_enabled: bool = False,
+) -> ReciprocalFeatures:
+    """Shared live/shadow feature contract for an already eligibility-checked pair.
+
+    Missing experience/evidence targets stay unknown. Only confirmed taxonomy
+    skills and stated preferences enter deterministic compatibility. Consented
+    self-declared text alignment is an additional frozen learning input, never
+    a verified credential or an eligibility gate.
+    """
+    precision, jaccard = skill_overlap(confirmed_skills, preferred)
+    if type(text_learning_enabled) is not bool:
+        raise ValueError("Text learning capture requires an explicit consent boolean")
+    text_value, extractor_id = (
+        professional_text_alignment(
+            candidate.headline, candidate.summary or "", vacancy.title, vacancy.description
+        )
+        if text_learning_enabled
+        else (None, None)
+    )
+    return ReciprocalFeatures(
+        candidate_id=candidate.id,
+        vacancy_id=vacancy.id,
+        candidate_version=candidate.version,
+        vacancy_version=vacancy.version,
+        as_of=as_of.isoformat(),
+        employer_skills=skill_coverage(confirmed_skills, preferred),
+        candidate_role=float(vacancy.role_family in candidate.role_families),
+        candidate_work_mode=float(vacancy.work_mode in candidate.work_modes),
+        candidate_employment_type=float(vacancy.employment_type in candidate.employment_types),
+        eligible=True,
+        skill_precision=precision,
+        skill_jaccard=jaccard,
+        text_relevance=text_value,
+        text_relevance_model_id=extractor_id,
+    )
 
 
 def feasible(db: Session, candidate: Candidate, vacancy: Vacancy) -> tuple[bool, list[str]]:
@@ -154,6 +204,35 @@ def waiting_count(
     return db.scalar(query) or 0
 
 
+def receiving_count(
+    db: Session, side: str, candidate_id: str | None = None, vacancy_id: str | None = None
+) -> int:
+    """Include pending first-side decisions which can enter this receiving queue.
+
+    First-side Interested replaces this reservation with a second-side card or
+    WaitingItem under the same participant locks. Pass, expiry and cancellation
+    release it. Counting persisted ACTIVE status matches active_count semantics.
+    """
+    first = "EMPLOYER" if side == "CANDIDATE" else "CANDIDATE"
+    query = (
+        select(func.count())
+        .select_from(DecisionCard)
+        .join(PairCycle, PairCycle.id == DecisionCard.pair_cycle_id)
+        .where(
+            DecisionCard.status == "ACTIVE",
+            DecisionCard.side == first,
+            PairCycle.first_mover == first,
+            PairCycle.closed_at.is_(None),
+        )
+    )
+    query = (
+        query.where(PairCycle.candidate_id == candidate_id)
+        if candidate_id
+        else query.where(PairCycle.vacancy_id == vacancy_id)
+    )
+    return waiting_count(db, side, candidate_id, vacancy_id) + (db.scalar(query) or 0)
+
+
 def _has_capacity(db: Session, candidate: Candidate, vacancy: Vacancy, side: str) -> bool:
     return (
         active_count(db, candidate_id=candidate.id) < min(10, candidate.cap)
@@ -240,7 +319,7 @@ def issue_first(
     # Bound the receiving waiting queue before creating additional first-side work.
     other = "EMPLOYER" if first_mover == "CANDIDATE" else "CANDIDATE"
     if (
-        waiting_count(
+        receiving_count(
             db,
             other,
             **({"candidate_id": candidate.id} if other == "CANDIDATE" else {"vacancy_id": vacancy.id}),
@@ -250,6 +329,11 @@ def issue_first(
         raise AppError(409, "WAITING_FULL", "The receiving attention queue is full")
     if not _has_capacity(db, candidate, vacancy, first_mover):
         raise AppError(409, "CAP_FULL", "Decision capacity is full")
+    if isinstance((score_trace or {}).get("learning_snapshot"), dict):
+        lock_scopes(db, matching_learning.COORDINATION_SCOPE)
+    score_trace = matching_learning.capture_learning_consent(
+        score_trace or {}, candidate, load(db, Organization, vacancy.org_id)
+    )
     cycle = PairCycle(
         candidate_id=candidate.id,
         vacancy_id=vacancy.id,
@@ -445,6 +529,7 @@ def answer(db: Session, actor: Actor, decision_id: str, interested: bool, data) 
                 )
                 emit(db, actor, "pair.waiting", cycle)
     emit(db, actor, "decision.interested" if interested else "decision.passed", card, org_id=vacancy.org_id)
+    matching_learning.record_observation(db, actor, cycle)
     return {
         "pair_cycle_id": cycle.id,
         "pair_state": cycle.state,
@@ -516,9 +601,23 @@ def release_waiting(db: Session, actor: Actor) -> int:
 def reconcile(
     db: Session, actor: Actor, vacancy_ids: list[str] | None = None, pool_limit: int = 200
 ) -> list[dict]:
-    """Bounded indexed retrieval; no dense candidate-by-job matrix or public search."""
+    """Retrieve bounded eligible pairs, optimize attention, execute under locks."""
     proposals = []
-    query = select(Vacancy).where(Vacancy.state == "ACTIVE").order_by(Vacancy.id).limit(50)
+    candidate_capacities = {}
+    vacancy_capacities = {}
+    learned_model, learning_reason = matching_learning.current_scoring_model(db)
+    planned_model_id = learned_model.model_id if learned_model else None
+    now = utcnow()
+    query = (
+        select(Vacancy)
+        .where(
+            Vacancy.state == "ACTIVE",
+            Vacancy.openings_remaining > 0,
+            or_(Vacancy.deadline_at.is_(None), Vacancy.deadline_at > now),
+        )
+        .order_by(Vacancy.id)
+        .limit(50)
+    )
     if vacancy_ids:
         query = query.where(Vacancy.id.in_(vacancy_ids))
     for vacancy in db.scalars(query):
@@ -535,9 +634,122 @@ def reconcile(
                 get_settings().congestion_price_max, job_congestion.price if job_congestion else 0
             ),
         )
+        vacancy_capacities[vacancy.id] = AttentionCapacity(
+            max(0, min(10, vacancy.cap) - active_count(db, vacancy_id=vacancy.id)),
+            max(0, 10 - receiving_count(db, "EMPLOYER", vacancy_id=vacancy.id)),
+        )
+        vacancy_capacity = vacancy_capacities[vacancy.id]
+        if not (vacancy_capacity.active_remaining or vacancy_capacity.waiting_remaining):
+            continue
+        # Apply public structured gates before the bounded pool. Otherwise old
+        # incompatible, already introduced or blocked profiles can monopolize it
+        # indefinitely. Private compensation and evidence remain service checks.
+        from app.db.pact_models import ExclusiveReservation
+
+        active_candidate = (
+            select(func.count())
+            .select_from(DecisionCard)
+            .where(
+                DecisionCard.candidate_id == Candidate.id,
+                DecisionCard.side == "CANDIDATE",
+                DecisionCard.status == "ACTIVE",
+            )
+            .correlate(Candidate)
+            .scalar_subquery()
+        )
+        waiting_candidate = (
+            select(func.count())
+            .select_from(WaitingItem)
+            .join(PairCycle, PairCycle.id == WaitingItem.pair_cycle_id)
+            .where(
+                PairCycle.candidate_id == Candidate.id,
+                WaitingItem.side == "CANDIDATE",
+                WaitingItem.state == "WAITING",
+            )
+            .correlate(Candidate)
+            .scalar_subquery()
+        )
+        pending_candidate = (
+            select(func.count())
+            .select_from(DecisionCard)
+            .join(PairCycle, PairCycle.id == DecisionCard.pair_cycle_id)
+            .where(
+                PairCycle.candidate_id == Candidate.id,
+                PairCycle.closed_at.is_(None),
+                PairCycle.first_mover == "EMPLOYER",
+                DecisionCard.side == "EMPLOYER",
+                DecisionCard.status == "ACTIVE",
+            )
+            .correlate(Candidate)
+            .scalar_subquery()
+        )
+        prefilters = [
+            Candidate.state == "ACTIVE",
+            Candidate.terms_accepted.is_(True),
+            Candidate.privacy_accepted.is_(True),
+            Candidate.confirmed_at.is_not(None),
+            Candidate.user_id != vacancy.owner_user_id,
+            Candidate.currency == vacancy.currency,
+            Candidate.compensation_period == vacancy.compensation_period,
+            cast(Candidate.role_families, JSONB).contains([vacancy.role_family]),
+            cast(Candidate.work_modes, JSONB).contains([vacancy.work_mode]),
+            cast(Candidate.employment_types, JSONB).contains([vacancy.employment_type]),
+            or_(Candidate.available_until.is_(None), Candidate.available_until > now),
+            select(User.id).where(User.id == Candidate.user_id, User.status == "ACTIVE").exists(),
+            ~select(CandidateBlock.id)
+            .where(CandidateBlock.candidate_id == Candidate.id, CandidateBlock.org_id == vacancy.org_id)
+            .exists(),
+            ~select(PairCycle.id)
+            .where(
+                PairCycle.candidate_id == Candidate.id,
+                PairCycle.vacancy_id == vacancy.id,
+                or_(PairCycle.closed_at.is_(None), PairCycle.closed_at > now - timedelta(days=30)),
+            )
+            .exists(),
+            ~select(OrgMember.id)
+            .where(
+                OrgMember.user_id == Candidate.user_id,
+                OrgMember.org_id == vacancy.org_id,
+                OrgMember.status == "ACTIVE",
+                or_(OrgMember.expires_at.is_(None), OrgMember.expires_at > now),
+            )
+            .exists(),
+            ~select(ExclusiveReservation.id)
+            .where(
+                ExclusiveReservation.candidate_id == Candidate.id,
+                ExclusiveReservation.vacancy_id != vacancy.id,
+                ExclusiveReservation.status == "ACTIVE",
+                ExclusiveReservation.expires_at > now,
+            )
+            .exists(),
+            or_(
+                and_(
+                    literal(vacancy_capacity.waiting_remaining > 0),
+                    active_candidate < func.least(10, Candidate.cap),
+                ),
+                and_(
+                    literal(vacancy_capacity.active_remaining > 0), waiting_candidate + pending_candidate < 10
+                ),
+            ),
+        ]
+        if vacancy.start_until:
+            prefilters.append(
+                or_(Candidate.available_from.is_(None), Candidate.available_from <= vacancy.start_until)
+            )
+        if vacancy.start_from:
+            prefilters.append(
+                or_(Candidate.available_until.is_(None), Candidate.available_until >= vacancy.start_from)
+            )
+        if vacancy.work_mode != "REMOTE":
+            prefilters.append(
+                or_(
+                    cast(Candidate.locations, JSONB) == [],
+                    cast(Candidate.locations, JSONB).contains([vacancy.location_region]),
+                )
+            )
         candidates = db.scalars(
             select(Candidate)
-            .where(Candidate.state == "ACTIVE")
+            .where(*prefilters)
             .order_by(Candidate.created_at, Candidate.id)
             .limit(pool_limit)
         )
@@ -568,17 +780,18 @@ def reconcile(
                     )
                 )
             )
-            features = ReciprocalFeatures(
-                candidate_id=candidate.id,
-                vacancy_id=vacancy.id,
-                candidate_version=candidate.version,
-                vacancy_version=vacancy.version,
-                as_of=utcnow().isoformat(),
-                employer_skills=skill_coverage(skills, preferred),
-                candidate_role=float(vacancy.role_family in candidate.role_families),
-                candidate_work_mode=float(vacancy.work_mode in candidate.work_modes),
-                candidate_employment_type=float(vacancy.employment_type in candidate.employment_types),
-                eligible=True,  # feasible() above; issuance rechecks under locks.
+            organization = db.get(Organization, vacancy.org_id)
+            features = compatibility_features(
+                candidate,
+                vacancy,
+                skills,
+                preferred,
+                utcnow(),
+                text_learning_enabled=bool(
+                    candidate.matching_learning_opt_in
+                    and organization is not None
+                    and organization.matching_learning_opt_in
+                ),
             )
             candidate_congestion = db.scalar(
                 select(CongestionPrice).where(
@@ -594,9 +807,42 @@ def reconcile(
                     candidate_congestion.price if candidate_congestion else 0,
                 ),
             )
-            trace = score_reciprocal(features, pair_prices)
+            trace = apply_learned_score(
+                score_reciprocal(features, pair_prices), features, learned_model, learning_reason
+            )
             if trace["net_surplus"] <= 0:
                 continue
+            # Preserve the native structured inputs before any optional learned
+            # scorer or compatibility transformation is applied in the future.
+            trace["learning_snapshot"] = {
+                "employer_skills": features.employer_skills,
+                "candidate_role": features.candidate_role,
+                "candidate_work_mode": features.candidate_work_mode,
+                "candidate_employment_type": features.candidate_employment_type,
+                "skill_precision": features.skill_precision,
+                "skill_jaccard": features.skill_jaccard,
+                "text_relevance": features.text_relevance,
+            }
+            trace["learning_feature_version"] = "reciprocal-structured-v2"
+            trace["learning_feature_provenance"] = {
+                "text_relevance_model_id": features.text_relevance_model_id,
+            }
+            if features.text_relevance is not None:
+                assert organization is not None
+                trace["learning_planned_consent"] = {
+                    "candidate_consent_version": candidate.matching_learning_consent_version,
+                    "organization_consent_version": organization.matching_learning_consent_version,
+                }
+            if candidate.id not in candidate_capacities:
+                candidate_capacities[candidate.id] = AttentionCapacity(
+                    max(0, min(10, candidate.cap) - active_count(db, candidate_id=candidate.id)),
+                    max(0, 10 - receiving_count(db, "CANDIDATE", candidate_id=candidate.id)),
+                )
+            if vacancy.id not in vacancy_capacities:
+                vacancy_capacities[vacancy.id] = AttentionCapacity(
+                    max(0, min(10, vacancy.cap) - active_count(db, vacancy_id=vacancy.id)),
+                    max(0, 10 - receiving_count(db, "EMPLOYER", vacancy_id=vacancy.id)),
+                )
             proposals.append(
                 (
                     trace["net_surplus"],
@@ -607,10 +853,45 @@ def reconcile(
                     trace,
                 )
             )
+    allocation = allocate_live(
+        tuple(
+            LiveProposal(candidate, vacancy, Side(side), weight)
+            for weight, candidate, vacancy, _, side, _ in proposals
+        ),
+        candidate_capacities,
+        vacancy_capacities,
+    )
+    by_pair = {
+        (candidate, vacancy): (version, side, trace)
+        for _, candidate, vacancy, version, side, trace in proposals
+    }
     issued = []
-    for _, candidate_id, vacancy_id, version, side, trace in sorted(
-        proposals, key=lambda p: (-p[0], p[1], p[2])
-    ):
+    if allocation.proposals:
+        # Acquire every participant before the registry lock. Later introductions
+        # reuse these locks, so consent revocation cannot create a lock inversion.
+        lock_scopes(
+            db,
+            *(f"candidate:{item.candidate_id}" for item in allocation.proposals),
+            *(f"vacancy:{item.vacancy_id}" for item in allocation.proposals),
+        )
+        lock_scopes(db, matching_learning.COORDINATION_SCOPE)
+        current_model, _ = matching_learning.current_scoring_model(db)
+        if (current_model.model_id if current_model else None) != planned_model_id:
+            raise AppError(409, "MODEL_VERSION_CONFLICT", "Scoring model changed; retry allocation")
+    for proposal in allocation.proposals:
+        candidate_id, vacancy_id = proposal.pair
+        version, side, trace = by_pair[proposal.pair]
+        trace["allocation"] = {
+            "allocator_version": allocation.allocator_version,
+            "solver": allocation.solver,
+            "objective": allocation.objective,
+            "baseline_objective": allocation.baseline_objective,
+            "search_complete": allocation.search_complete,
+            "fallback_reason": allocation.fallback_reason,
+            "objective_kind": "SUPPLIED_CONDITIONAL_UTILITY"
+            if planned_model_id
+            else "SUPPLIED_COMPATIBILITY_UTILITY",
+        }
         try:
             # Conflicts roll back only this proposed introduction, not prior valid work.
             with db.begin_nested():

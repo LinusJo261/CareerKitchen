@@ -30,9 +30,14 @@ def authorize_replay(db, actor: Actor, path: str, body) -> None:
     data = body if isinstance(body, dict) else {}
     root = parts[0]
     if root == "internal":
-        require_platform(
-            actor, *({"RESEARCH_ADMIN"} if parts[1] == "shadow" else {"OPERATIONS", "SYSTEM_WORKER"})
+        roles = (
+            {"RESEARCH_ADMIN"}
+            if parts[1] == "shadow"
+            else {"RESEARCH_ADMIN", "SYSTEM_WORKER"}
+            if parts[1] == "matching"
+            else {"OPERATIONS", "SYSTEM_WORKER"}
         )
+        require_platform(actor, *roles)
     elif root == "admin":
         require_platform(actor, "OPERATIONS" if parts[1] == "users" else "SUPPORT")
     elif root == "organizations":

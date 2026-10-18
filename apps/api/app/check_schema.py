@@ -3,7 +3,7 @@
 from sqlalchemy import Engine, text
 from sqlalchemy.exc import SQLAlchemyError
 
-EXPECTED_REVISION = "0005_congestion_prices"
+EXPECTED_REVISION = "0006_matching_learning"
 
 
 def check_schema(engine: Engine) -> None:

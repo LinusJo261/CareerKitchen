@@ -40,7 +40,7 @@ from app.db.pact_models import (
     TermConsent,
 )
 from app.integrations.storage import delete_private
-from app.services import clearing
+from app.services import clearing, matching_learning
 from app.services.common import Actor, emit, lock_scopes, utcnow
 from app.services.pact import invalidate_readiness
 
@@ -88,6 +88,8 @@ def owner_export(db: Session, user: User) -> dict[str, Any]:
                 "terms_accepted",
                 "privacy_accepted",
                 "confirmed_at",
+                "matching_learning_opt_in",
+                "matching_learning_consent_version",
                 "version",
             ),
         )
@@ -238,6 +240,7 @@ def erase_local_owner_data(db: Session, actor: Actor, user: User) -> None:
     candidate = db.scalar(select(Candidate).where(Candidate.user_id == user.id))
     if candidate:
         lock_scopes(db, f"candidate:{candidate.id}", f"user:{user.id}")
+        matching_learning.set_learning_consent(db, actor, candidate, False, candidate.version)
         if candidate.resume_object_ref:
             _delete_owned_blob(candidate.resume_object_ref, user.id)
         for claim in db.scalars(select(EvidenceClaim).where(EvidenceClaim.candidate_id == candidate.id)):

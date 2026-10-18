@@ -1,0 +1,3021 @@
+{
+  "experiments": {
+    "bge-fixed-v1": {
+      "elapsed_seconds": 510.93250589998206,
+      "human": {
+        "geometry": {
+          "documents_per_query": 5,
+          "query_count": 30,
+          "query_rater_observations": 58,
+          "raters": 2,
+          "unlabelled_queries_excluded": 0
+        },
+        "limitations": [
+          "These are ordinal relevance judgments, not observed mutual interest, hiring outcomes or calibrated match probabilities.",
+          "Exploratory intervals assume query clusters are representative independent resampling units and condition on the fixed jobs, raters and methods.",
+          "Rater/query rows and document-pair comparisons within a query are dependent; their count is not the independent sample size.",
+          "The percentile bootstrap does not include job or rater sampling uncertainty, annotation bias, model selection or text-adapter uncertainty.",
+          "Methods and paired differences use the same resampled query clusters, preserving incomplete rater coverage and the pooled-rating denominator.",
+          "Intervals are unadjusted for multiple comparisons and cannot establish superiority on an adaptively reused benchmark.",
+          "A single labelled query produces a degenerate resampling interval, not evidence of zero population uncertainty.",
+          "Predicted ties average uniformly over tied positions; score-pair tie rate describes resolution and is not an accuracy target."
+        ],
+        "methods": {
+          "bge": {
+            "bootstrap_cv_cluster_95": {
+              "mrr_human_first_choice": {
+                "lower": 0.39396360153256704,
+                "upper": 0.5135057471264367
+              },
+              "pairwise_agreement": {
+                "lower": 0.46379310344827585,
+                "upper": 0.5535714285714286
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 0.0
+              },
+              "top1_agreement": {
+                "lower": 0.1206896551724138,
+                "upper": 0.2982456140350877
+              }
+            },
+            "per_rater": {
+              "ANNOTATOR_1_RANKINGS": {
+                "mrr_human_first_choice": 0.3404761904761905,
+                "pairwise_agreement": 0.4321428571428571,
+                "queries": 28,
+                "score_pair_tie_rate": 0.0,
+                "top1_agreement": 0.03571428571428571
+              },
+              "ANNOTATOR_2_RANKINGS": {
+                "mrr_human_first_choice": 0.5583333333333333,
+                "pairwise_agreement": 0.58,
+                "queries": 30,
+                "score_pair_tie_rate": 0.0,
+                "top1_agreement": 0.36666666666666664
+              }
+            },
+            "pooled_query_rater": {
+              "mrr_human_first_choice": 0.45316091954022986,
+              "pairwise_agreement": 0.5086206896551724,
+              "score_pair_tie_rate": 0.0,
+              "top1_agreement": 0.20689655172413793
+            },
+            "pooled_query_rater_count": 58,
+            "query_clusters": 30
+          },
+          "bge_bm25_rrf": {
+            "bootstrap_cv_cluster_95": {
+              "mrr_human_first_choice": {
+                "lower": 0.44517452485380116,
+                "upper": 0.5971275913382593
+              },
+              "pairwise_agreement": {
+                "lower": 0.5263044464609801,
+                "upper": 0.6125056818181817
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.013333333333333334,
+                "upper": 0.05964912280701755
+              },
+              "top1_agreement": {
+                "lower": 0.16101694915254236,
+                "upper": 0.3813559322033898
+              }
+            },
+            "per_rater": {
+              "ANNOTATOR_1_RANKINGS": {
+                "mrr_human_first_choice": 0.4770833333333333,
+                "pairwise_agreement": 0.5285714285714286,
+                "queries": 28,
+                "score_pair_tie_rate": 0.03571428571428571,
+                "top1_agreement": 0.23214285714285715
+              },
+              "ANNOTATOR_2_RANKINGS": {
+                "mrr_human_first_choice": 0.5608333333333333,
+                "pairwise_agreement": 0.6066666666666667,
+                "queries": 30,
+                "score_pair_tie_rate": 0.03333333333333333,
+                "top1_agreement": 0.3
+              }
+            },
+            "pooled_query_rater": {
+              "mrr_human_first_choice": 0.5204022988505748,
+              "pairwise_agreement": 0.5689655172413793,
+              "score_pair_tie_rate": 0.034482758620689655,
+              "top1_agreement": 0.2672413793103448
+            },
+            "pooled_query_rater_count": 58,
+            "query_clusters": 30
+          },
+          "bge_bm25_tfidf_rrf": {
+            "bootstrap_cv_cluster_95": {
+              "mrr_human_first_choice": {
+                "lower": 0.44137607758620684,
+                "upper": 0.6045221070419693
+              },
+              "pairwise_agreement": {
+                "lower": 0.5428450363196126,
+                "upper": 0.6275909961685823
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 0.017241379310344827
+              },
+              "top1_agreement": {
+                "lower": 0.15,
+                "upper": 0.3793103448275862
+              }
+            },
+            "per_rater": {
+              "ANNOTATOR_1_RANKINGS": {
+                "mrr_human_first_choice": 0.518452380952381,
+                "pairwise_agreement": 0.6,
+                "queries": 28,
+                "score_pair_tie_rate": 0.0071428571428571435,
+                "top1_agreement": 0.2857142857142857
+              },
+              "ANNOTATOR_2_RANKINGS": {
+                "mrr_human_first_choice": 0.5219444444444444,
+                "pairwise_agreement": 0.5733333333333334,
+                "queries": 30,
+                "score_pair_tie_rate": 0.006666666666666667,
+                "top1_agreement": 0.23333333333333334
+              }
+            },
+            "pooled_query_rater": {
+              "mrr_human_first_choice": 0.5202586206896552,
+              "pairwise_agreement": 0.5862068965517241,
+              "score_pair_tie_rate": 0.006896551724137932,
+              "top1_agreement": 0.25862068965517243
+            },
+            "pooled_query_rater_count": 58,
+            "query_clusters": 30
+          },
+          "bge_tfidf_rrf": {
+            "bootstrap_cv_cluster_95": {
+              "mrr_human_first_choice": {
+                "lower": 0.4344632768361582,
+                "upper": 0.567090578121956
+              },
+              "pairwise_agreement": {
+                "lower": 0.5216666666666667,
+                "upper": 0.5983749999999993
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.025,
+                "upper": 0.07457627118644068
+              },
+              "top1_agreement": {
+                "lower": 0.13157894736842105,
+                "upper": 0.32456140350877194
+              }
+            },
+            "per_rater": {
+              "ANNOTATOR_1_RANKINGS": {
+                "mrr_human_first_choice": 0.45982142857142855,
+                "pairwise_agreement": 0.5285714285714286,
+                "queries": 28,
+                "score_pair_tie_rate": 0.05,
+                "top1_agreement": 0.19642857142857142
+              },
+              "ANNOTATOR_2_RANKINGS": {
+                "mrr_human_first_choice": 0.5355555555555556,
+                "pairwise_agreement": 0.59,
+                "queries": 30,
+                "score_pair_tie_rate": 0.04666666666666667,
+                "top1_agreement": 0.25
+              }
+            },
+            "pooled_query_rater": {
+              "mrr_human_first_choice": 0.4989942528735632,
+              "pairwise_agreement": 0.5603448275862069,
+              "score_pair_tie_rate": 0.048275862068965524,
+              "top1_agreement": 0.22413793103448276
+            },
+            "pooled_query_rater_count": 58,
+            "query_clusters": 30
+          },
+          "bm25": {
+            "bootstrap_cv_cluster_95": {
+              "mrr_human_first_choice": {
+                "lower": 0.49604519774011296,
+                "upper": 0.6612092100136372
+              },
+              "pairwise_agreement": {
+                "lower": 0.575925925925926,
+                "upper": 0.6553715193704598
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 0.0
+              },
+              "top1_agreement": {
+                "lower": 0.26666666666666666,
+                "upper": 0.5
+              }
+            },
+            "per_rater": {
+              "ANNOTATOR_1_RANKINGS": {
+                "mrr_human_first_choice": 0.6166666666666666,
+                "pairwise_agreement": 0.6642857142857144,
+                "queries": 28,
+                "score_pair_tie_rate": 0.0,
+                "top1_agreement": 0.4642857142857143
+              },
+              "ANNOTATOR_2_RANKINGS": {
+                "mrr_human_first_choice": 0.5416666666666666,
+                "pairwise_agreement": 0.57,
+                "queries": 30,
+                "score_pair_tie_rate": 0.0,
+                "top1_agreement": 0.3
+              }
+            },
+            "pooled_query_rater": {
+              "mrr_human_first_choice": 0.5778735632183908,
+              "pairwise_agreement": 0.6155172413793104,
+              "score_pair_tie_rate": 0.0,
+              "top1_agreement": 0.3793103448275862
+            },
+            "pooled_query_rater_count": 58,
+            "query_clusters": 30
+          },
+          "lexical_jaccard": {
+            "bootstrap_cv_cluster_95": {
+              "mrr_human_first_choice": {
+                "lower": 0.4008474576271186,
+                "upper": 0.5701149425287355
+              },
+              "pairwise_agreement": {
+                "lower": 0.44107142857142856,
+                "upper": 0.5559322033898305
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 0.0
+              },
+              "top1_agreement": {
+                "lower": 0.1694915254237288,
+                "upper": 0.3898305084745763
+              }
+            },
+            "per_rater": {
+              "ANNOTATOR_1_RANKINGS": {
+                "mrr_human_first_choice": 0.4869047619047619,
+                "pairwise_agreement": 0.5071428571428571,
+                "queries": 28,
+                "score_pair_tie_rate": 0.0,
+                "top1_agreement": 0.2857142857142857
+              },
+              "ANNOTATOR_2_RANKINGS": {
+                "mrr_human_first_choice": 0.4811111111111111,
+                "pairwise_agreement": 0.49,
+                "queries": 30,
+                "score_pair_tie_rate": 0.0,
+                "top1_agreement": 0.26666666666666666
+              }
+            },
+            "pooled_query_rater": {
+              "mrr_human_first_choice": 0.4839080459770115,
+              "pairwise_agreement": 0.4982758620689655,
+              "score_pair_tie_rate": 0.0,
+              "top1_agreement": 0.27586206896551724
+            },
+            "pooled_query_rater_count": 58,
+            "query_clusters": 30
+          },
+          "tfidf_cosine": {
+            "bootstrap_cv_cluster_95": {
+              "mrr_human_first_choice": {
+                "lower": 0.5028723456068575,
+                "upper": 0.6716988151392633
+              },
+              "pairwise_agreement": {
+                "lower": 0.5655172413793103,
+                "upper": 0.6561403508771929
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 0.0
+              },
+              "top1_agreement": {
+                "lower": 0.26666666666666666,
+                "upper": 0.5
+              }
+            },
+            "per_rater": {
+              "ANNOTATOR_1_RANKINGS": {
+                "mrr_human_first_choice": 0.6124999999999999,
+                "pairwise_agreement": 0.6714285714285715,
+                "queries": 28,
+                "score_pair_tie_rate": 0.0,
+                "top1_agreement": 0.42857142857142855
+              },
+              "ANNOTATOR_2_RANKINGS": {
+                "mrr_human_first_choice": 0.5611111111111111,
+                "pairwise_agreement": 0.5566666666666666,
+                "queries": 30,
+                "score_pair_tie_rate": 0.0,
+                "top1_agreement": 0.3333333333333333
+              }
+            },
+            "pooled_query_rater": {
+              "mrr_human_first_choice": 0.5859195402298851,
+              "pairwise_agreement": 0.6120689655172413,
+              "score_pair_tie_rate": 0.0,
+              "top1_agreement": 0.3793103448275862
+            },
+            "pooled_query_rater_count": 58,
+            "query_clusters": 30
+          }
+        },
+        "paired_comparisons": {
+          "bge": {
+            "bootstrap_cv_cluster_95": {
+              "mrr_human_first_choice": {
+                "lower": -0.25119047619047613,
+                "upper": -0.018102250957854484
+              },
+              "pairwise_agreement": {
+                "lower": -0.1655172413793104,
+                "upper": -0.04406779661016946
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 0.0
+              },
+              "top1_agreement": {
+                "lower": -0.3448275862068966,
+                "upper": 0.0
+              }
+            },
+            "delta_method_minus_reference": {
+              "mrr_human_first_choice": -0.13275862068965527,
+              "pairwise_agreement": -0.10344827586206895,
+              "score_pair_tie_rate": 0.0,
+              "top1_agreement": -0.17241379310344826
+            },
+            "reference_method": "tfidf_cosine"
+          },
+          "bge_bm25_rrf": {
+            "bootstrap_cv_cluster_95": {
+              "mrr_human_first_choice": {
+                "lower": -0.17287973484848482,
+                "upper": 0.03686541565778847
+              },
+              "pairwise_agreement": {
+                "lower": -0.09830508474576272,
+                "upper": 0.01090909090909098
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.013333333333333334,
+                "upper": 0.05964912280701755
+              },
+              "top1_agreement": {
+                "lower": -0.27586206896551724,
+                "upper": 0.051724137931034475
+              }
+            },
+            "delta_method_minus_reference": {
+              "mrr_human_first_choice": -0.06551724137931036,
+              "pairwise_agreement": -0.04310344827586199,
+              "score_pair_tie_rate": 0.034482758620689655,
+              "top1_agreement": -0.11206896551724138
+            },
+            "reference_method": "tfidf_cosine"
+          },
+          "bge_bm25_tfidf_rrf": {
+            "bootstrap_cv_cluster_95": {
+              "mrr_human_first_choice": {
+                "lower": -0.15086523475550348,
+                "upper": 0.011842662801070556
+              },
+              "pairwise_agreement": {
+                "lower": -0.07368421052631591,
+                "upper": 0.01754385964912286
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 0.017241379310344827
+              },
+              "top1_agreement": {
+                "lower": -0.25464733542319745,
+                "upper": 0.01694915254237289
+              }
+            },
+            "delta_method_minus_reference": {
+              "mrr_human_first_choice": -0.0656609195402299,
+              "pairwise_agreement": -0.025862068965517238,
+              "score_pair_tie_rate": 0.006896551724137932,
+              "top1_agreement": -0.12068965517241376
+            },
+            "reference_method": "tfidf_cosine"
+          },
+          "bge_tfidf_rrf": {
+            "bootstrap_cv_cluster_95": {
+              "mrr_human_first_choice": {
+                "lower": -0.16539802012092383,
+                "upper": -0.010873210111046193
+              },
+              "pairwise_agreement": {
+                "lower": -0.10166666666666657,
+                "upper": -0.0052631578947367474
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.025,
+                "upper": 0.07457627118644068
+              },
+              "top1_agreement": {
+                "lower": -0.288135593220339,
+                "upper": -0.033333333333333354
+              }
+            },
+            "delta_method_minus_reference": {
+              "mrr_human_first_choice": -0.08692528735632193,
+              "pairwise_agreement": -0.051724137931034475,
+              "score_pair_tie_rate": 0.048275862068965524,
+              "top1_agreement": -0.15517241379310343
+            },
+            "reference_method": "tfidf_cosine"
+          },
+          "bm25": {
+            "bootstrap_cv_cluster_95": {
+              "mrr_human_first_choice": {
+                "lower": -0.08592067453115548,
+                "upper": 0.05706614877589454
+              },
+              "pairwise_agreement": {
+                "lower": -0.038596491228070184,
+                "upper": 0.04482758620689653
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 0.0
+              },
+              "top1_agreement": {
+                "lower": -0.10526315789473684,
+                "upper": 0.10526315789473684
+              }
+            },
+            "delta_method_minus_reference": {
+              "mrr_human_first_choice": -0.008045977011494343,
+              "pairwise_agreement": 0.0034482758620690834,
+              "score_pair_tie_rate": 0.0,
+              "top1_agreement": 0.0
+            },
+            "reference_method": "tfidf_cosine"
+          },
+          "lexical_jaccard": {
+            "bootstrap_cv_cluster_95": {
+              "mrr_human_first_choice": {
+                "lower": -0.21299435028248587,
+                "upper": 0.002259887005649719
+              },
+              "pairwise_agreement": {
+                "lower": -0.17543859649122806,
+                "upper": -0.0535714285714286
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 0.0
+              },
+              "top1_agreement": {
+                "lower": -0.2631578947368421,
+                "upper": 0.050847457627118675
+              }
+            },
+            "delta_method_minus_reference": {
+              "mrr_human_first_choice": -0.10201149425287365,
+              "pairwise_agreement": -0.11379310344827581,
+              "score_pair_tie_rate": 0.0,
+              "top1_agreement": -0.10344827586206895
+            },
+            "reference_method": "tfidf_cosine"
+          }
+        },
+        "protocol_version": "ordinal-relevance-paired-query-cluster-v1",
+        "query_clusters": 30,
+        "reference_method": "tfidf_cosine",
+        "uncertainty": {
+          "bootstrap_replicates": 10000,
+          "confidence_level": 0.95,
+          "document_pairs_resampled_independently": false,
+          "estimand": "mean_over_available_query_rater_judgments",
+          "method": "paired_percentile_bootstrap_linear_interpolation",
+          "multiple_comparison_adjustment": "none",
+          "rater_rows_resampled_independently": false,
+          "raters_and_missingness_preserved_within_sampled_query": true,
+          "seed": 20261018,
+          "unit": "labelled_query_cluster"
+        },
+        "uniform_random_expected": {
+          "mrr_human_first_choice": 0.45666666666666667,
+          "pairwise_agreement": 0.5,
+          "score_pair_tie_rate": 0.0,
+          "top1_agreement": 0.2
+        }
+      },
+      "protocol": {
+        "all_documents_covered": true,
+        "backend": "onnxruntime CPU float32",
+        "batch_size": 16,
+        "chunk_pooling": "CLS token L2 normalized",
+        "chunk_tokens": 448,
+        "document_pooling": "equal chunk mean then L2 normalize",
+        "experiment": "exploratory_frozen_bge_v1",
+        "independent_holdout": false,
+        "instruction": "none, long document symmetric similarity",
+        "inter_op_threads": 1,
+        "intra_op_threads": 1,
+        "license": "MIT",
+        "model": "BAAI/bge-small-en-v1.5",
+        "no_label_fitting": true,
+        "onnxruntime": "1.31.0",
+        "overlap": 64,
+        "previous_public_scores_seen": true,
+        "rank_fusion": "reciprocal rank with tie midranks, k=60, equal weights; compare BGE+BM25, BGE+TFIDF, BGE+BM25+TFIDF",
+        "revision": "5c38ec7c405ec4b44b94cc5a9bb96e735b38267a",
+        "script_sha256": "252659a5a7575adf2fc879b9500957bce5cc3283eb166e47112f4f59fd062793",
+        "weights_sha256": "828e1496d7fabb79cfa4dcd84fa38625c0d3d21da474a00f08db0f559940cf35"
+      },
+      "protocol_sha256": "9566516229a918c359eb4a7b3d42601ff223c5700d4e943307f6b5b0df42378d",
+      "talentclef_development": {
+        "classification_accuracy_measured": false,
+        "cutoff": 10,
+        "definitions": {
+          "coverage": "expected fraction of full-pool top-k positions having any published suitability judgment; remaining positions have unknown suitability",
+          "map": "macro mean full-pool AP for retrieval of published relevant candidates; unlisted candidates earn no relevance credit",
+          "ndcg_at_k": "expected published-relevance binary DCG at k divided by ideal published-relevance DCG at k",
+          "precision_at_k": "expected published-relevant candidates in the first k full-pool positions divided by requested k; not verified suitability precision",
+          "recall_at_k": "expected published-relevant candidates in the first k positions divided by all published positives for that job",
+          "score_pair_tie_rate": "fraction of full-pool candidate pairs with exactly equal model scores; not an accuracy target"
+        },
+        "geometry": {
+          "evaluable_positive_queries": 10,
+          "published_relevant_pairs": 472,
+          "queries": 10,
+          "queries_with_fewer_than_cutoff_candidates": 0,
+          "scored_query_document_pairs": 4720,
+          "uncredited_pairs": 4248,
+          "zero_published_positive_queries_excluded": 0
+        },
+        "limitations": [
+          "This measures retrieval of published relevant candidates, not binary suitability classification or hiring accuracy.",
+          "Unlisted candidates earn zero relevance credit under an explicit information-retrieval convention; their suitability remains unknown, not confirmed negative.",
+          "P@k is published-relevance credit at k, not an estimate of the fraction of genuinely suitable candidates in the top k.",
+          "Sparse qrels can omit genuinely suitable candidates; selected or incomplete relevance judgments limit inference about the entire corpus.",
+          "All methods rank the identical full candidate pool for each job; every method and random baseline uses the same job resamples.",
+          "Jobs with no published positives are excluded from macro relevance metrics and counted explicitly.",
+          "Ties use exact uniform-permutation expectations, preventing source IDs or row order from generating artificial gains.",
+          "MAP follows a full-ranking published-relevance IR convention, but exact tie expectations and this subset protocol need not match an official leaderboard implementation.",
+          "Intervals resample jobs and condition on the fixed corpus, qrels and methods; they omit annotation, adapter, candidate-pool and model-selection uncertainty.",
+          "Few jobs and synthetic profiles limit generalization; exploratory intervals are unadjusted for multiple comparisons and benchmark reuse.",
+          "No observed mutual-interest, application, offer, employment-start, calibrated probability or live product outcome is measured."
+        ],
+        "measurement_target": "retrieval_of_published_relevant_candidates",
+        "methods": {
+          "bge": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": 0.7064563043614069,
+                "upper": 0.8973272107522057
+              },
+              "ndcg_at_k": {
+                "lower": 0.8331063704143091,
+                "upper": 0.9867491553091222
+              },
+              "precision_at_k": {
+                "lower": 0.8099999999999999,
+                "upper": 0.9800000000000001
+              },
+              "recall_at_k": {
+                "lower": 0.17353354978354976,
+                "upper": 0.42094155844155845
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 0.0
+              }
+            },
+            "evaluable_queries": 10,
+            "judgment_coverage": {
+              "judged_documents_across_queries": 472,
+              "mean_top_k_judgment_coverage": 0.9,
+              "queries_with_fewer_than_cutoff_scored_documents": 0,
+              "scored_documents_across_queries": 4720,
+              "unjudged_scored_documents_across_queries": 4248
+            },
+            "mean": {
+              "map": 0.8071708319088506,
+              "ndcg_at_k": 0.9200020706482668,
+              "precision_at_k": 0.9,
+              "recall_at_k": 0.27318272005772004,
+              "score_pair_tie_rate": 0.0
+            }
+          },
+          "bge_bm25_rrf": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": 0.7433468693788888,
+                "upper": 0.928986808946147
+              },
+              "ndcg_at_k": {
+                "lower": 0.8369288042139497,
+                "upper": 0.9989046406464807
+              },
+              "precision_at_k": {
+                "lower": 0.78,
+                "upper": 0.9800000000000001
+              },
+              "recall_at_k": {
+                "lower": 0.16787495490620494,
+                "upper": 0.4508207070707071
+              },
+              "score_pair_tie_rate": {
+                "lower": 3.5985461873403144e-06,
+                "upper": 1.1695275108856022e-05
+              }
+            },
+            "evaluable_queries": 10,
+            "judgment_coverage": {
+              "judged_documents_across_queries": 472,
+              "mean_top_k_judgment_coverage": 0.89,
+              "queries_with_fewer_than_cutoff_scored_documents": 0,
+              "scored_documents_across_queries": 4720,
+              "unjudged_scored_documents_across_queries": 4248
+            },
+            "mean": {
+              "map": 0.8408392258289336,
+              "ndcg_at_k": 0.9280741829796405,
+              "precision_at_k": 0.89,
+              "recall_at_k": 0.27809343434343436,
+              "score_pair_tie_rate": 7.197092374680629e-06
+            }
+          },
+          "bge_bm25_tfidf_rrf": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": 0.7455679163111116,
+                "upper": 0.9365778984931191
+              },
+              "ndcg_at_k": {
+                "lower": 0.8176025382732316,
+                "upper": 1.0
+              },
+              "precision_at_k": {
+                "lower": 0.79,
+                "upper": 0.97
+              },
+              "recall_at_k": {
+                "lower": 0.16920544733044734,
+                "upper": 0.45263821248196245
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 0.0
+              }
+            },
+            "evaluable_queries": 10,
+            "judgment_coverage": {
+              "judged_documents_across_queries": 472,
+              "mean_top_k_judgment_coverage": 0.89,
+              "queries_with_fewer_than_cutoff_scored_documents": 0,
+              "scored_documents_across_queries": 4720,
+              "unjudged_scored_documents_across_queries": 4248
+            },
+            "mean": {
+              "map": 0.8460166981268319,
+              "ndcg_at_k": 0.917283014359535,
+              "precision_at_k": 0.89,
+              "recall_at_k": 0.2794327200577201,
+              "score_pair_tie_rate": 0.0
+            }
+          },
+          "bge_tfidf_rrf": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": 0.7443402475241108,
+                "upper": 0.9359247292724344
+              },
+              "ndcg_at_k": {
+                "lower": 0.8209397113387041,
+                "upper": 1.0
+              },
+              "precision_at_k": {
+                "lower": 0.78,
+                "upper": 0.97
+              },
+              "recall_at_k": {
+                "lower": 0.1663980203823954,
+                "upper": 0.45135732323232325
+              },
+              "score_pair_tie_rate": {
+                "lower": 8.996365468350786e-06,
+                "upper": 2.1591277124041888e-05
+              }
+            },
+            "evaluable_queries": 10,
+            "judgment_coverage": {
+              "judged_documents_across_queries": 472,
+              "mean_top_k_judgment_coverage": 0.8800000000000001,
+              "queries_with_fewer_than_cutoff_scored_documents": 0,
+              "scored_documents_across_queries": 4720,
+              "unjudged_scored_documents_across_queries": 4248
+            },
+            "mean": {
+              "map": 0.8447509802508589,
+              "ndcg_at_k": 0.9151951341529145,
+              "precision_at_k": 0.8800000000000001,
+              "recall_at_k": 0.2776470057720058,
+              "score_pair_tie_rate": 1.5293821296196336e-05
+            }
+          },
+          "bm25": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": 0.6886327964881501,
+                "upper": 0.9048282900049384
+              },
+              "ndcg_at_k": {
+                "lower": 0.7910017612832275,
+                "upper": 1.0
+              },
+              "precision_at_k": {
+                "lower": 0.79,
+                "upper": 0.97
+              },
+              "recall_at_k": {
+                "lower": 0.16920544733044734,
+                "upper": 0.45263821248196245
+              },
+              "score_pair_tie_rate": {
+                "lower": 3.868437151390838e-05,
+                "upper": 5.397819281010472e-05
+              }
+            },
+            "evaluable_queries": 10,
+            "judgment_coverage": {
+              "judged_documents_across_queries": 472,
+              "mean_top_k_judgment_coverage": 0.89,
+              "queries_with_fewer_than_cutoff_scored_documents": 0,
+              "scored_documents_across_queries": 4720,
+              "unjudged_scored_documents_across_queries": 4248
+            },
+            "mean": {
+              "map": 0.8021535773919501,
+              "ndcg_at_k": 0.9104913649097247,
+              "precision_at_k": 0.89,
+              "recall_at_k": 0.2794327200577201,
+              "score_pair_tie_rate": 4.678110043542409e-05
+            }
+          },
+          "lexical_jaccard": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": 0.6790646982417653,
+                "upper": 0.8920989870062644
+              },
+              "ndcg_at_k": {
+                "lower": 0.839747421269337,
+                "upper": 0.9845425660421603
+              },
+              "precision_at_k": {
+                "lower": 0.78,
+                "upper": 0.96
+              },
+              "recall_at_k": {
+                "lower": 0.16551226551226553,
+                "upper": 0.4557720057720058
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0005982583036453273,
+                "upper": 0.0007520961531541257
+              }
+            },
+            "evaluable_queries": 10,
+            "judgment_coverage": {
+              "judged_documents_across_queries": 472,
+              "mean_top_k_judgment_coverage": 0.8800000000000001,
+              "queries_with_fewer_than_cutoff_scored_documents": 0,
+              "scored_documents_across_queries": 4720,
+              "unjudged_scored_documents_across_queries": 4248
+            },
+            "mean": {
+              "map": 0.7888899840854775,
+              "ndcg_at_k": 0.9204379870593236,
+              "precision_at_k": 0.8800000000000001,
+              "recall_at_k": 0.28117784992784994,
+              "score_pair_tie_rate": 0.0006774263197668142
+            }
+          },
+          "tfidf_cosine": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": 0.7161085091181121,
+                "upper": 0.9374149315243706
+              },
+              "ndcg_at_k": {
+                "lower": 0.7424806834357396,
+                "upper": 1.0
+              },
+              "precision_at_k": {
+                "lower": 0.74,
+                "upper": 1.0
+              },
+              "recall_at_k": {
+                "lower": 0.1629236562049062,
+                "upper": 0.4580359397546898
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 0.0
+              }
+            },
+            "evaluable_queries": 10,
+            "judgment_coverage": {
+              "judged_documents_across_queries": 472,
+              "mean_top_k_judgment_coverage": 0.8800000000000001,
+              "queries_with_fewer_than_cutoff_scored_documents": 0,
+              "scored_documents_across_queries": 4720,
+              "unjudged_scored_documents_across_queries": 4248
+            },
+            "mean": {
+              "map": 0.837335752157202,
+              "ndcg_at_k": 0.895367279222239,
+              "precision_at_k": 0.8800000000000001,
+              "recall_at_k": 0.2816648629148629,
+              "score_pair_tie_rate": 0.0
+            }
+          }
+        },
+        "official_full_corpus_leaderboard_score": false,
+        "paired_comparisons": {
+          "bge": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": -0.09426059986585784,
+                "upper": 0.03267582479940816
+              },
+              "ndcg_at_k": {
+                "lower": -0.10194390170955325,
+                "upper": 0.16616190437411638
+              },
+              "precision_at_k": {
+                "lower": -0.09999999999999998,
+                "upper": 0.1499999999999999
+              },
+              "recall_at_k": {
+                "lower": -0.050000000000000044,
+                "upper": 0.030803571428571458
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 0.0
+              }
+            },
+            "delta_method_minus_reference": {
+              "map": -0.03016492024835138,
+              "ndcg_at_k": 0.024634791426027758,
+              "precision_at_k": 0.019999999999999907,
+              "recall_at_k": -0.008482142857142883,
+              "score_pair_tie_rate": 0.0
+            },
+            "reference_method": "tfidf_cosine"
+          },
+          "bge_bm25_rrf": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": -0.04709654582789498,
+                "upper": 0.06116894494078478
+              },
+              "ndcg_at_k": {
+                "lower": -0.075180581107539,
+                "upper": 0.148799335304716
+              },
+              "precision_at_k": {
+                "lower": -0.11999999999999988,
+                "upper": 0.15000000000000002
+              },
+              "recall_at_k": {
+                "lower": -0.037500000000000006,
+                "upper": 0.026785714285714274
+              },
+              "score_pair_tie_rate": {
+                "lower": 3.5985461873403144e-06,
+                "upper": 1.1695275108856022e-05
+              }
+            },
+            "delta_method_minus_reference": {
+              "map": 0.0035034736717315385,
+              "ndcg_at_k": 0.032706903757401484,
+              "precision_at_k": 0.009999999999999898,
+              "recall_at_k": -0.0035714285714285587,
+              "score_pair_tie_rate": 7.197092374680629e-06
+            },
+            "reference_method": "tfidf_cosine"
+          },
+          "bge_bm25_tfidf_rrf": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": -0.025301245852134703,
+                "upper": 0.04946732201948557
+              },
+              "ndcg_at_k": {
+                "lower": -0.0670416458496168,
+                "upper": 0.11929398639585886
+              },
+              "precision_at_k": {
+                "lower": -0.08999999999999997,
+                "upper": 0.12
+              },
+              "recall_at_k": {
+                "lower": -0.02812500000000001,
+                "upper": 0.021428571428571408
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 0.0
+              }
+            },
+            "delta_method_minus_reference": {
+              "map": 0.008680945969629872,
+              "ndcg_at_k": 0.021915735137295944,
+              "precision_at_k": 0.009999999999999898,
+              "recall_at_k": -0.002232142857142849,
+              "score_pair_tie_rate": 0.0
+            },
+            "reference_method": "tfidf_cosine"
+          },
+          "bge_tfidf_rrf": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": -0.019738154511305273,
+                "upper": 0.03814585003364936
+              },
+              "ndcg_at_k": {
+                "lower": -0.04990243882949075,
+                "upper": 0.08939665988388612
+              },
+              "precision_at_k": {
+                "lower": -0.09000000000000008,
+                "upper": 0.08999999999999997
+              },
+              "recall_at_k": {
+                "lower": -0.02812500000000001,
+                "upper": 0.01607142857142857
+              },
+              "score_pair_tie_rate": {
+                "lower": 8.996365468350786e-06,
+                "upper": 2.1591277124041888e-05
+              }
+            },
+            "delta_method_minus_reference": {
+              "map": 0.0074152280936569115,
+              "ndcg_at_k": 0.019827854930675515,
+              "precision_at_k": 0.0,
+              "recall_at_k": -0.004017857142857129,
+              "score_pair_tie_rate": 1.5293821296196336e-05
+            },
+            "reference_method": "tfidf_cosine"
+          },
+          "bm25": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": -0.08417582741595389,
+                "upper": 0.016522420037381167
+              },
+              "ndcg_at_k": {
+                "lower": -0.060680110842746715,
+                "upper": 0.10605236790520356
+              },
+              "precision_at_k": {
+                "lower": -0.08999999999999997,
+                "upper": 0.12
+              },
+              "recall_at_k": {
+                "lower": -0.02812500000000001,
+                "upper": 0.021428571428571408
+              },
+              "score_pair_tie_rate": {
+                "lower": 3.868437151390838e-05,
+                "upper": 5.397819281010472e-05
+              }
+            },
+            "delta_method_minus_reference": {
+              "map": -0.03518217476525187,
+              "ndcg_at_k": 0.015124085687485689,
+              "precision_at_k": 0.009999999999999898,
+              "recall_at_k": -0.002232142857142849,
+              "score_pair_tie_rate": 4.678110043542409e-05
+            },
+            "reference_method": "tfidf_cosine"
+          },
+          "lexical_jaccard": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": -0.09047949871973293,
+                "upper": -0.008421576021858238
+              },
+              "ndcg_at_k": {
+                "lower": -0.04558765233555173,
+                "upper": 0.11616705506904446
+              },
+              "precision_at_k": {
+                "lower": -0.05999999999999994,
+                "upper": 0.06000000000000005
+              },
+              "recall_at_k": {
+                "lower": -0.01874999999999999,
+                "upper": 0.018262987012987036
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0005982583036453273,
+                "upper": 0.0007520961531541257
+              }
+            },
+            "delta_method_minus_reference": {
+              "map": -0.048445768071724515,
+              "ndcg_at_k": 0.025070707837084538,
+              "precision_at_k": 0.0,
+              "recall_at_k": -0.00048701298701298024,
+              "score_pair_tie_rate": 0.0006774263197668142
+            },
+            "reference_method": "tfidf_cosine"
+          }
+        },
+        "paired_comparisons_vs_uniform_random": {
+          "bge": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": 0.596934294983691,
+                "upper": 0.7882845454080879
+              },
+              "ndcg_at_k": {
+                "lower": 0.7361656000447978,
+                "upper": 0.888996356272286
+              },
+              "precision_at_k": {
+                "lower": 0.716271186440678,
+                "upper": 0.873220338983051
+              },
+              "recall_at_k": {
+                "lower": 0.15234710910558366,
+                "upper": 0.39975511776359235
+              },
+              "score_pair_tie_rate": {
+                "lower": -1.0,
+                "upper": -1.0
+              }
+            },
+            "delta_method_minus_reference": {
+              "map": 0.6962117485996785,
+              "ndcg_at_k": 0.8197490872937561,
+              "precision_at_k": 0.8,
+              "recall_at_k": 0.25199627937975394,
+              "score_pair_tie_rate": -1.0
+            },
+            "reference_method": "uniform_random_expected"
+          },
+          "bge_bm25_rrf": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": 0.6318739089441407,
+                "upper": 0.8234778670131702
+              },
+              "ndcg_at_k": {
+                "lower": 0.7442899234777848,
+                "upper": 0.8992843289956274
+              },
+              "precision_at_k": {
+                "lower": 0.6945720338983051,
+                "upper": 0.870677966101695
+              },
+              "recall_at_k": {
+                "lower": 0.14668851422823884,
+                "upper": 0.429634266392741
+              },
+              "score_pair_tie_rate": {
+                "lower": -0.9999964014538126,
+                "upper": -0.9999883047248912
+              }
+            },
+            "delta_method_minus_reference": {
+              "map": 0.7298801425197614,
+              "ndcg_at_k": 0.8278211996251298,
+              "precision_at_k": 0.79,
+              "recall_at_k": 0.25690699366546826,
+              "score_pair_tie_rate": -0.9999928029076253
+            },
+            "reference_method": "uniform_random_expected"
+          },
+          "bge_bm25_tfidf_rrf": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": 0.6336593704732786,
+                "upper": 0.8306437110245543
+              },
+              "ndcg_at_k": {
+                "lower": 0.72009286776974,
+                "upper": 0.8963779193688957
+              },
+              "precision_at_k": {
+                "lower": 0.7013559322033899,
+                "upper": 0.8666144067796608
+              },
+              "recall_at_k": {
+                "lower": 0.14801900665248124,
+                "upper": 0.43145177180399635
+              },
+              "score_pair_tie_rate": {
+                "lower": -1.0,
+                "upper": -1.0
+              }
+            },
+            "delta_method_minus_reference": {
+              "map": 0.7350576148176597,
+              "ndcg_at_k": 0.8170300310050242,
+              "precision_at_k": 0.79,
+              "recall_at_k": 0.258246279379754,
+              "score_pair_tie_rate": -1.0
+            },
+            "reference_method": "uniform_random_expected"
+          },
+          "bge_tfidf_rrf": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": 0.6297846192810805,
+                "upper": 0.830068961078441
+              },
+              "ndcg_at_k": {
+                "lower": 0.7251370390115752,
+                "upper": 0.8927701629443423
+              },
+              "precision_at_k": {
+                "lower": 0.6861016949152542,
+                "upper": 0.8640677966101694
+              },
+              "recall_at_k": {
+                "lower": 0.1452115797044293,
+                "upper": 0.43017088255435715
+              },
+              "score_pair_tie_rate": {
+                "lower": -0.9999910036345316,
+                "upper": -0.9999784087228759
+              }
+            },
+            "delta_method_minus_reference": {
+              "map": 0.7337918969416868,
+              "ndcg_at_k": 0.8149421507984038,
+              "precision_at_k": 0.7800000000000001,
+              "recall_at_k": 0.2564605650940397,
+              "score_pair_tie_rate": -0.9999847061787038
+            },
+            "reference_method": "uniform_random_expected"
+          },
+          "bm25": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": 0.5751317562241831,
+                "upper": 0.8005549318840942
+              },
+              "ndcg_at_k": {
+                "lower": 0.6973875303119588,
+                "upper": 0.8962314680399073
+              },
+              "precision_at_k": {
+                "lower": 0.7013559322033899,
+                "upper": 0.8666144067796608
+              },
+              "recall_at_k": {
+                "lower": 0.14801900665248124,
+                "upper": 0.43145177180399635
+              },
+              "score_pair_tie_rate": {
+                "lower": -0.9999613156284861,
+                "upper": -0.9999460218071899
+              }
+            },
+            "delta_method_minus_reference": {
+              "map": 0.691194494082778,
+              "ndcg_at_k": 0.810238381555214,
+              "precision_at_k": 0.79,
+              "recall_at_k": 0.258246279379754,
+              "score_pair_tie_rate": -0.9999532188995646
+            },
+            "reference_method": "uniform_random_expected"
+          },
+          "lexical_jaccard": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": 0.560700940183055,
+                "upper": 0.7894194799080605
+              },
+              "ndcg_at_k": {
+                "lower": 0.7347937298885301,
+                "upper": 0.8907707599558277
+              },
+              "precision_at_k": {
+                "lower": 0.6754194915254237,
+                "upper": 0.8589872881355931
+              },
+              "recall_at_k": {
+                "lower": 0.14432582483429943,
+                "upper": 0.43458556509403967
+              },
+              "score_pair_tie_rate": {
+                "lower": -0.9994017416963547,
+                "upper": -0.9992479038468459
+              }
+            },
+            "delta_method_minus_reference": {
+              "map": 0.6779309007763054,
+              "ndcg_at_k": 0.8201850037048128,
+              "precision_at_k": 0.7800000000000001,
+              "recall_at_k": 0.25999140924988384,
+              "score_pair_tie_rate": -0.9993225736802331
+            },
+            "reference_method": "uniform_random_expected"
+          },
+          "tfidf_cosine": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": 0.6017554186455087,
+                "upper": 0.8317892722927364
+              },
+              "ndcg_at_k": {
+                "lower": 0.6475615201684986,
+                "upper": 0.912458881052269
+              },
+              "precision_at_k": {
+                "lower": 0.6391525423728813,
+                "upper": 0.888135593220339
+              },
+              "recall_at_k": {
+                "lower": 0.1417372155269401,
+                "upper": 0.4368494990767237
+              },
+              "score_pair_tie_rate": {
+                "lower": -1.0,
+                "upper": -1.0
+              }
+            },
+            "delta_method_minus_reference": {
+              "map": 0.7263766688480299,
+              "ndcg_at_k": 0.7951142958677283,
+              "precision_at_k": 0.7800000000000001,
+              "recall_at_k": 0.2604784222368968,
+              "score_pair_tie_rate": -1.0
+            },
+            "reference_method": "uniform_random_expected"
+          }
+        },
+        "primary_metric": "map",
+        "protocol_version": "published-relevant-retrieval-paired-job-cluster-v1",
+        "reference_method": "tfidf_cosine",
+        "source_judgments": {
+          "explicit_unsuitable_pairs": 0,
+          "published_relevant_pairs": 472,
+          "scored_query_document_pairs": 4720,
+          "unjudged_scored_pairs": 4248
+        },
+        "status": "PUBLISHED_QRELS_RETRIEVAL_MEASURED",
+        "uncertainty": {
+          "all_methods_use_identical_query_resamples": true,
+          "bootstrap_replicates": 10000,
+          "candidates_resampled_independently": false,
+          "confidence_level": 0.95,
+          "method": "paired_percentile_bootstrap_linear_interpolation",
+          "multiple_comparison_adjustment": "none",
+          "seed": 20261018,
+          "unit": "job_query_cluster"
+        },
+        "uniform_random_expected": {
+          "bootstrap_job_cluster_95": {
+            "map": {
+              "lower": 0.07914782640309734,
+              "upper": 0.14863030859268184
+            },
+            "ndcg_at_k": {
+              "lower": 0.06855556023302353,
+              "upper": 0.13838857657484965
+            },
+            "precision_at_k": {
+              "lower": 0.06779661016949154,
+              "upper": 0.13813559322033897
+            },
+            "recall_at_k": {
+              "lower": 0.0211864406779661,
+              "upper": 0.021186440677966104
+            },
+            "score_pair_tie_rate": {
+              "lower": 1.0,
+              "upper": 1.0
+            }
+          },
+          "evaluable_queries": 10,
+          "expectation": "uniform_permutation_of_the_same_full_candidate_pool_per_query",
+          "mean": {
+            "map": 0.11095908330917217,
+            "ndcg_at_k": 0.10025298335451067,
+            "precision_at_k": 0.1,
+            "recall_at_k": 0.0211864406779661,
+            "score_pair_tie_rate": 1.0
+          },
+          "tie_rate_semantics": "one_all_tied_score_group_is_used_to_compute_exact_uniform_permutation_expectations"
+        },
+        "universe_scope": "common_full_scored_candidate_pool",
+        "unlisted_candidate_policy": "uncredited_not_confirmed_negative"
+      }
+    },
+    "cross-fixed-v1": {
+      "elapsed_seconds": 46.15828169998713,
+      "human": {
+        "geometry": {
+          "documents_per_query": 5,
+          "query_count": 30,
+          "query_rater_observations": 58,
+          "raters": 2,
+          "unlabelled_queries_excluded": 0
+        },
+        "limitations": [
+          "These are ordinal relevance judgments, not observed mutual interest, hiring outcomes or calibrated match probabilities.",
+          "Exploratory intervals assume query clusters are representative independent resampling units and condition on the fixed jobs, raters and methods.",
+          "Rater/query rows and document-pair comparisons within a query are dependent; their count is not the independent sample size.",
+          "The percentile bootstrap does not include job or rater sampling uncertainty, annotation bias, model selection or text-adapter uncertainty.",
+          "Methods and paired differences use the same resampled query clusters, preserving incomplete rater coverage and the pooled-rating denominator.",
+          "Intervals are unadjusted for multiple comparisons and cannot establish superiority on an adaptively reused benchmark.",
+          "A single labelled query produces a degenerate resampling interval, not evidence of zero population uncertainty.",
+          "Predicted ties average uniformly over tied positions; score-pair tie rate describes resolution and is not an accuracy target."
+        ],
+        "methods": {
+          "bm25": {
+            "bootstrap_cv_cluster_95": {
+              "mrr_human_first_choice": {
+                "lower": 0.49604519774011296,
+                "upper": 0.6612092100136372
+              },
+              "pairwise_agreement": {
+                "lower": 0.575925925925926,
+                "upper": 0.6553715193704598
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 0.0
+              },
+              "top1_agreement": {
+                "lower": 0.26666666666666666,
+                "upper": 0.5
+              }
+            },
+            "per_rater": {
+              "ANNOTATOR_1_RANKINGS": {
+                "mrr_human_first_choice": 0.6166666666666666,
+                "pairwise_agreement": 0.6642857142857144,
+                "queries": 28,
+                "score_pair_tie_rate": 0.0,
+                "top1_agreement": 0.4642857142857143
+              },
+              "ANNOTATOR_2_RANKINGS": {
+                "mrr_human_first_choice": 0.5416666666666666,
+                "pairwise_agreement": 0.57,
+                "queries": 30,
+                "score_pair_tie_rate": 0.0,
+                "top1_agreement": 0.3
+              }
+            },
+            "pooled_query_rater": {
+              "mrr_human_first_choice": 0.5778735632183908,
+              "pairwise_agreement": 0.6155172413793104,
+              "score_pair_tie_rate": 0.0,
+              "top1_agreement": 0.3793103448275862
+            },
+            "pooled_query_rater_count": 58,
+            "query_clusters": 30
+          },
+          "cross_encoder": {
+            "bootstrap_cv_cluster_95": {
+              "mrr_human_first_choice": {
+                "lower": 0.3608161027568922,
+                "upper": 0.48474637151763095
+              },
+              "pairwise_agreement": {
+                "lower": 0.3368421052631579,
+                "upper": 0.4338990617433414
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 0.0
+              },
+              "top1_agreement": {
+                "lower": 0.07272727272727272,
+                "upper": 0.2413793103448276
+              }
+            },
+            "per_rater": {
+              "ANNOTATOR_1_RANKINGS": {
+                "mrr_human_first_choice": 0.42976190476190473,
+                "pairwise_agreement": 0.39999999999999997,
+                "queries": 28,
+                "score_pair_tie_rate": 0.0,
+                "top1_agreement": 0.14285714285714285
+              },
+              "ANNOTATOR_2_RANKINGS": {
+                "mrr_human_first_choice": 0.41333333333333333,
+                "pairwise_agreement": 0.37,
+                "queries": 30,
+                "score_pair_tie_rate": 0.0,
+                "top1_agreement": 0.16666666666666666
+              }
+            },
+            "pooled_query_rater": {
+              "mrr_human_first_choice": 0.42126436781609194,
+              "pairwise_agreement": 0.38448275862068965,
+              "score_pair_tie_rate": 0.0,
+              "top1_agreement": 0.15517241379310345
+            },
+            "pooled_query_rater_count": 58,
+            "query_clusters": 30
+          },
+          "lexical_jaccard": {
+            "bootstrap_cv_cluster_95": {
+              "mrr_human_first_choice": {
+                "lower": 0.4008474576271186,
+                "upper": 0.5701149425287355
+              },
+              "pairwise_agreement": {
+                "lower": 0.44107142857142856,
+                "upper": 0.5559322033898305
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 0.0
+              },
+              "top1_agreement": {
+                "lower": 0.1694915254237288,
+                "upper": 0.3898305084745763
+              }
+            },
+            "per_rater": {
+              "ANNOTATOR_1_RANKINGS": {
+                "mrr_human_first_choice": 0.4869047619047619,
+                "pairwise_agreement": 0.5071428571428571,
+                "queries": 28,
+                "score_pair_tie_rate": 0.0,
+                "top1_agreement": 0.2857142857142857
+              },
+              "ANNOTATOR_2_RANKINGS": {
+                "mrr_human_first_choice": 0.4811111111111111,
+                "pairwise_agreement": 0.49,
+                "queries": 30,
+                "score_pair_tie_rate": 0.0,
+                "top1_agreement": 0.26666666666666666
+              }
+            },
+            "pooled_query_rater": {
+              "mrr_human_first_choice": 0.4839080459770115,
+              "pairwise_agreement": 0.4982758620689655,
+              "score_pair_tie_rate": 0.0,
+              "top1_agreement": 0.27586206896551724
+            },
+            "pooled_query_rater_count": 58,
+            "query_clusters": 30
+          },
+          "tfidf_cosine": {
+            "bootstrap_cv_cluster_95": {
+              "mrr_human_first_choice": {
+                "lower": 0.5028723456068575,
+                "upper": 0.6716988151392633
+              },
+              "pairwise_agreement": {
+                "lower": 0.5655172413793103,
+                "upper": 0.6561403508771929
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 0.0
+              },
+              "top1_agreement": {
+                "lower": 0.26666666666666666,
+                "upper": 0.5
+              }
+            },
+            "per_rater": {
+              "ANNOTATOR_1_RANKINGS": {
+                "mrr_human_first_choice": 0.6124999999999999,
+                "pairwise_agreement": 0.6714285714285715,
+                "queries": 28,
+                "score_pair_tie_rate": 0.0,
+                "top1_agreement": 0.42857142857142855
+              },
+              "ANNOTATOR_2_RANKINGS": {
+                "mrr_human_first_choice": 0.5611111111111111,
+                "pairwise_agreement": 0.5566666666666666,
+                "queries": 30,
+                "score_pair_tie_rate": 0.0,
+                "top1_agreement": 0.3333333333333333
+              }
+            },
+            "pooled_query_rater": {
+              "mrr_human_first_choice": 0.5859195402298851,
+              "pairwise_agreement": 0.6120689655172413,
+              "score_pair_tie_rate": 0.0,
+              "top1_agreement": 0.3793103448275862
+            },
+            "pooled_query_rater_count": 58,
+            "query_clusters": 30
+          }
+        },
+        "paired_comparisons": {
+          "bm25": {
+            "bootstrap_cv_cluster_95": {
+              "mrr_human_first_choice": {
+                "lower": -0.08592067453115548,
+                "upper": 0.05706614877589454
+              },
+              "pairwise_agreement": {
+                "lower": -0.038596491228070184,
+                "upper": 0.04482758620689653
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 0.0
+              },
+              "top1_agreement": {
+                "lower": -0.10526315789473684,
+                "upper": 0.10526315789473684
+              }
+            },
+            "delta_method_minus_reference": {
+              "mrr_human_first_choice": -0.008045977011494343,
+              "pairwise_agreement": 0.0034482758620690834,
+              "score_pair_tie_rate": 0.0,
+              "top1_agreement": 0.0
+            },
+            "reference_method": "tfidf_cosine"
+          },
+          "cross_encoder": {
+            "bootstrap_cv_cluster_95": {
+              "mrr_human_first_choice": {
+                "lower": -0.2675359195402299,
+                "upper": -0.06724113578803816
+              },
+              "pairwise_agreement": {
+                "lower": -0.2894736842105263,
+                "upper": -0.16896551724137931
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 0.0
+              },
+              "top1_agreement": {
+                "lower": -0.3620689655172414,
+                "upper": -0.10169491525423727
+              }
+            },
+            "delta_method_minus_reference": {
+              "mrr_human_first_choice": -0.16465517241379318,
+              "pairwise_agreement": -0.22758620689655168,
+              "score_pair_tie_rate": 0.0,
+              "top1_agreement": -0.22413793103448273
+            },
+            "reference_method": "tfidf_cosine"
+          },
+          "lexical_jaccard": {
+            "bootstrap_cv_cluster_95": {
+              "mrr_human_first_choice": {
+                "lower": -0.21299435028248587,
+                "upper": 0.002259887005649719
+              },
+              "pairwise_agreement": {
+                "lower": -0.17543859649122806,
+                "upper": -0.0535714285714286
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 0.0
+              },
+              "top1_agreement": {
+                "lower": -0.2631578947368421,
+                "upper": 0.050847457627118675
+              }
+            },
+            "delta_method_minus_reference": {
+              "mrr_human_first_choice": -0.10201149425287365,
+              "pairwise_agreement": -0.11379310344827581,
+              "score_pair_tie_rate": 0.0,
+              "top1_agreement": -0.10344827586206895
+            },
+            "reference_method": "tfidf_cosine"
+          }
+        },
+        "protocol_version": "ordinal-relevance-paired-query-cluster-v1",
+        "query_clusters": 30,
+        "reference_method": "tfidf_cosine",
+        "uncertainty": {
+          "bootstrap_replicates": 10000,
+          "confidence_level": 0.95,
+          "document_pairs_resampled_independently": false,
+          "estimand": "mean_over_available_query_rater_judgments",
+          "method": "paired_percentile_bootstrap_linear_interpolation",
+          "multiple_comparison_adjustment": "none",
+          "rater_rows_resampled_independently": false,
+          "raters_and_missingness_preserved_within_sampled_query": true,
+          "seed": 20261018,
+          "unit": "labelled_query_cluster"
+        },
+        "uniform_random_expected": {
+          "mrr_human_first_choice": 0.45666666666666667,
+          "pairwise_agreement": 0.5,
+          "score_pair_tie_rate": 0.0,
+          "top1_agreement": 0.2
+        }
+      },
+      "protocol": {
+        "batch_size": 8,
+        "experiment": "exploratory_frozen_cross_v1",
+        "independent_holdout": false,
+        "inter_op_threads": 1,
+        "intra_op_threads": 1,
+        "license": "Apache-2.0",
+        "max_tokens": 512,
+        "model": "cross-encoder/ms-marco-MiniLM-L6-v2",
+        "no_label_training_or_tuning": true,
+        "revision": "233902d25c440f23af6f7d6e94d2946bac0bee0a",
+        "scoring": "raw sequence-classification relevance logit, no probability claim",
+        "script_sha256": "22b2f7143db852e8883f30d87fda957b36ce1c2ebb8efa84c34f24b2dfcc3627",
+        "text_order": "candidate query then vacancy document",
+        "truncation": "longest_first",
+        "weights_sha256": "5d3e70fd0c9ff14b9b5169a51e957b7a9c74897afd0a35ce4bd318150c1d4d4a"
+      },
+      "protocol_sha256": "175ec508820a56d6f90dcbc1087091c978b3e6ceb32c44407c58c84f5183e6e2"
+    },
+    "e5-fixed-v1": {
+      "elapsed_seconds": 513.6233640999999,
+      "human": {
+        "geometry": {
+          "documents_per_query": 5,
+          "query_count": 30,
+          "query_rater_observations": 58,
+          "raters": 2,
+          "unlabelled_queries_excluded": 0
+        },
+        "limitations": [
+          "These are ordinal relevance judgments, not observed mutual interest, hiring outcomes or calibrated match probabilities.",
+          "Exploratory intervals assume query clusters are representative independent resampling units and condition on the fixed jobs, raters and methods.",
+          "Rater/query rows and document-pair comparisons within a query are dependent; their count is not the independent sample size.",
+          "The percentile bootstrap does not include job or rater sampling uncertainty, annotation bias, model selection or text-adapter uncertainty.",
+          "Methods and paired differences use the same resampled query clusters, preserving incomplete rater coverage and the pooled-rating denominator.",
+          "Intervals are unadjusted for multiple comparisons and cannot establish superiority on an adaptively reused benchmark.",
+          "A single labelled query produces a degenerate resampling interval, not evidence of zero population uncertainty.",
+          "Predicted ties average uniformly over tied positions; score-pair tie rate describes resolution and is not an accuracy target."
+        ],
+        "methods": {
+          "bm25": {
+            "bootstrap_cv_cluster_95": {
+              "mrr_human_first_choice": {
+                "lower": 0.49604519774011296,
+                "upper": 0.6612092100136372
+              },
+              "pairwise_agreement": {
+                "lower": 0.575925925925926,
+                "upper": 0.6553715193704598
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 0.0
+              },
+              "top1_agreement": {
+                "lower": 0.26666666666666666,
+                "upper": 0.5
+              }
+            },
+            "per_rater": {
+              "ANNOTATOR_1_RANKINGS": {
+                "mrr_human_first_choice": 0.6166666666666666,
+                "pairwise_agreement": 0.6642857142857144,
+                "queries": 28,
+                "score_pair_tie_rate": 0.0,
+                "top1_agreement": 0.4642857142857143
+              },
+              "ANNOTATOR_2_RANKINGS": {
+                "mrr_human_first_choice": 0.5416666666666666,
+                "pairwise_agreement": 0.57,
+                "queries": 30,
+                "score_pair_tie_rate": 0.0,
+                "top1_agreement": 0.3
+              }
+            },
+            "pooled_query_rater": {
+              "mrr_human_first_choice": 0.5778735632183908,
+              "pairwise_agreement": 0.6155172413793104,
+              "score_pair_tie_rate": 0.0,
+              "top1_agreement": 0.3793103448275862
+            },
+            "pooled_query_rater_count": 58,
+            "query_clusters": 30
+          },
+          "e5": {
+            "bootstrap_cv_cluster_95": {
+              "mrr_human_first_choice": {
+                "lower": 0.47598553477498534,
+                "upper": 0.6248574561403508
+              },
+              "pairwise_agreement": {
+                "lower": 0.5543822479928636,
+                "upper": 0.6267940375302662
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 0.0
+              },
+              "top1_agreement": {
+                "lower": 0.1864406779661017,
+                "upper": 0.4067796610169492
+              }
+            },
+            "per_rater": {
+              "ANNOTATOR_1_RANKINGS": {
+                "mrr_human_first_choice": 0.5375,
+                "pairwise_agreement": 0.5714285714285714,
+                "queries": 28,
+                "score_pair_tie_rate": 0.0,
+                "top1_agreement": 0.2857142857142857
+              },
+              "ANNOTATOR_2_RANKINGS": {
+                "mrr_human_first_choice": 0.5572222222222222,
+                "pairwise_agreement": 0.6066666666666667,
+                "queries": 30,
+                "score_pair_tie_rate": 0.0,
+                "top1_agreement": 0.3
+              }
+            },
+            "pooled_query_rater": {
+              "mrr_human_first_choice": 0.5477011494252874,
+              "pairwise_agreement": 0.5896551724137932,
+              "score_pair_tie_rate": 0.0,
+              "top1_agreement": 0.29310344827586204
+            },
+            "pooled_query_rater_count": 58,
+            "query_clusters": 30
+          },
+          "e5_bm25_rrf": {
+            "bootstrap_cv_cluster_95": {
+              "mrr_human_first_choice": {
+                "lower": 0.5062118517958031,
+                "upper": 0.6617852011494252
+              },
+              "pairwise_agreement": {
+                "lower": 0.5703389830508474,
+                "upper": 0.6413793103448276
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.055172413793103454,
+                "upper": 0.10677966101694916
+              },
+              "top1_agreement": {
+                "lower": 0.2627118644067797,
+                "upper": 0.4830508474576271
+              }
+            },
+            "per_rater": {
+              "ANNOTATOR_1_RANKINGS": {
+                "mrr_human_first_choice": 0.6202380952380953,
+                "pairwise_agreement": 0.6196428571428572,
+                "queries": 28,
+                "score_pair_tie_rate": 0.08214285714285716,
+                "top1_agreement": 0.4642857142857143
+              },
+              "ANNOTATOR_2_RANKINGS": {
+                "mrr_human_first_choice": 0.5480555555555555,
+                "pairwise_agreement": 0.59,
+                "queries": 30,
+                "score_pair_tie_rate": 0.08000000000000002,
+                "top1_agreement": 0.2833333333333333
+              }
+            },
+            "pooled_query_rater": {
+              "mrr_human_first_choice": 0.5829022988505747,
+              "pairwise_agreement": 0.6043103448275863,
+              "score_pair_tie_rate": 0.0810344827586207,
+              "top1_agreement": 0.3706896551724138
+            },
+            "pooled_query_rater_count": 58,
+            "query_clusters": 30
+          },
+          "e5_bm25_tfidf_rrf": {
+            "bootstrap_cv_cluster_95": {
+              "mrr_human_first_choice": {
+                "lower": 0.4819202951490356,
+                "upper": 0.6541666666666667
+              },
+              "pairwise_agreement": {
+                "lower": 0.5614035087719298,
+                "upper": 0.6350877192982456
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 0.010714285714285716
+              },
+              "top1_agreement": {
+                "lower": 0.22413793103448276,
+                "upper": 0.4666666666666667
+              }
+            },
+            "per_rater": {
+              "ANNOTATOR_1_RANKINGS": {
+                "mrr_human_first_choice": 0.6226190476190476,
+                "pairwise_agreement": 0.6267857142857143,
+                "queries": 28,
+                "score_pair_tie_rate": 0.0035714285714285718,
+                "top1_agreement": 0.4642857142857143
+              },
+              "ANNOTATOR_2_RANKINGS": {
+                "mrr_human_first_choice": 0.5144444444444445,
+                "pairwise_agreement": 0.5683333333333334,
+                "queries": 30,
+                "score_pair_tie_rate": 0.0033333333333333335,
+                "top1_agreement": 0.23333333333333334
+              }
+            },
+            "pooled_query_rater": {
+              "mrr_human_first_choice": 0.5666666666666667,
+              "pairwise_agreement": 0.596551724137931,
+              "score_pair_tie_rate": 0.003448275862068966,
+              "top1_agreement": 0.3448275862068966
+            },
+            "pooled_query_rater_count": 58,
+            "query_clusters": 30
+          },
+          "e5_tfidf_rrf": {
+            "bootstrap_cv_cluster_95": {
+              "mrr_human_first_choice": {
+                "lower": 0.49912280701754386,
+                "upper": 0.6638466399048467
+              },
+              "pairwise_agreement": {
+                "lower": 0.5683333333333334,
+                "upper": 0.6425925925925926
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.048195369249394694,
+                "upper": 0.1
+              },
+              "top1_agreement": {
+                "lower": 0.2413793103448276,
+                "upper": 0.47413793103448276
+              }
+            },
+            "per_rater": {
+              "ANNOTATOR_1_RANKINGS": {
+                "mrr_human_first_choice": 0.5860119047619048,
+                "pairwise_agreement": 0.6089285714285715,
+                "queries": 28,
+                "score_pair_tie_rate": 0.075,
+                "top1_agreement": 0.4107142857142857
+              },
+              "ANNOTATOR_2_RANKINGS": {
+                "mrr_human_first_choice": 0.5741666666666667,
+                "pairwise_agreement": 0.6,
+                "queries": 30,
+                "score_pair_tie_rate": 0.07333333333333333,
+                "top1_agreement": 0.3
+              }
+            },
+            "pooled_query_rater": {
+              "mrr_human_first_choice": 0.5798850574712644,
+              "pairwise_agreement": 0.6043103448275862,
+              "score_pair_tie_rate": 0.07413793103448275,
+              "top1_agreement": 0.35344827586206895
+            },
+            "pooled_query_rater_count": 58,
+            "query_clusters": 30
+          },
+          "lexical_jaccard": {
+            "bootstrap_cv_cluster_95": {
+              "mrr_human_first_choice": {
+                "lower": 0.4008474576271186,
+                "upper": 0.5701149425287355
+              },
+              "pairwise_agreement": {
+                "lower": 0.44107142857142856,
+                "upper": 0.5559322033898305
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 0.0
+              },
+              "top1_agreement": {
+                "lower": 0.1694915254237288,
+                "upper": 0.3898305084745763
+              }
+            },
+            "per_rater": {
+              "ANNOTATOR_1_RANKINGS": {
+                "mrr_human_first_choice": 0.4869047619047619,
+                "pairwise_agreement": 0.5071428571428571,
+                "queries": 28,
+                "score_pair_tie_rate": 0.0,
+                "top1_agreement": 0.2857142857142857
+              },
+              "ANNOTATOR_2_RANKINGS": {
+                "mrr_human_first_choice": 0.4811111111111111,
+                "pairwise_agreement": 0.49,
+                "queries": 30,
+                "score_pair_tie_rate": 0.0,
+                "top1_agreement": 0.26666666666666666
+              }
+            },
+            "pooled_query_rater": {
+              "mrr_human_first_choice": 0.4839080459770115,
+              "pairwise_agreement": 0.4982758620689655,
+              "score_pair_tie_rate": 0.0,
+              "top1_agreement": 0.27586206896551724
+            },
+            "pooled_query_rater_count": 58,
+            "query_clusters": 30
+          },
+          "tfidf_cosine": {
+            "bootstrap_cv_cluster_95": {
+              "mrr_human_first_choice": {
+                "lower": 0.5028723456068575,
+                "upper": 0.6716988151392633
+              },
+              "pairwise_agreement": {
+                "lower": 0.5655172413793103,
+                "upper": 0.6561403508771929
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 0.0
+              },
+              "top1_agreement": {
+                "lower": 0.26666666666666666,
+                "upper": 0.5
+              }
+            },
+            "per_rater": {
+              "ANNOTATOR_1_RANKINGS": {
+                "mrr_human_first_choice": 0.6124999999999999,
+                "pairwise_agreement": 0.6714285714285715,
+                "queries": 28,
+                "score_pair_tie_rate": 0.0,
+                "top1_agreement": 0.42857142857142855
+              },
+              "ANNOTATOR_2_RANKINGS": {
+                "mrr_human_first_choice": 0.5611111111111111,
+                "pairwise_agreement": 0.5566666666666666,
+                "queries": 30,
+                "score_pair_tie_rate": 0.0,
+                "top1_agreement": 0.3333333333333333
+              }
+            },
+            "pooled_query_rater": {
+              "mrr_human_first_choice": 0.5859195402298851,
+              "pairwise_agreement": 0.6120689655172413,
+              "score_pair_tie_rate": 0.0,
+              "top1_agreement": 0.3793103448275862
+            },
+            "pooled_query_rater_count": 58,
+            "query_clusters": 30
+          }
+        },
+        "paired_comparisons": {
+          "bm25": {
+            "bootstrap_cv_cluster_95": {
+              "mrr_human_first_choice": {
+                "lower": -0.08592067453115548,
+                "upper": 0.05706614877589454
+              },
+              "pairwise_agreement": {
+                "lower": -0.038596491228070184,
+                "upper": 0.04482758620689653
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 0.0
+              },
+              "top1_agreement": {
+                "lower": -0.10526315789473684,
+                "upper": 0.10526315789473684
+              }
+            },
+            "delta_method_minus_reference": {
+              "mrr_human_first_choice": -0.008045977011494343,
+              "pairwise_agreement": 0.0034482758620690834,
+              "score_pair_tie_rate": 0.0,
+              "top1_agreement": 0.0
+            },
+            "reference_method": "tfidf_cosine"
+          },
+          "e5": {
+            "bootstrap_cv_cluster_95": {
+              "mrr_human_first_choice": {
+                "lower": -0.14022988505747125,
+                "upper": 0.060169491525423724
+              },
+              "pairwise_agreement": {
+                "lower": -0.07333333333333336,
+                "upper": 0.028070175438596467
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 0.0
+              },
+              "top1_agreement": {
+                "lower": -0.25,
+                "upper": 0.07017543859649122
+              }
+            },
+            "delta_method_minus_reference": {
+              "mrr_human_first_choice": -0.03821839080459777,
+              "pairwise_agreement": -0.022413793103448154,
+              "score_pair_tie_rate": 0.0,
+              "top1_agreement": -0.08620689655172414
+            },
+            "reference_method": "tfidf_cosine"
+          },
+          "e5_bm25_rrf": {
+            "bootstrap_cv_cluster_95": {
+              "mrr_human_first_choice": {
+                "lower": -0.08405203922161728,
+                "upper": 0.06793840103253462
+              },
+              "pairwise_agreement": {
+                "lower": -0.05086206896551726,
+                "upper": 0.03482142857142845
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.055172413793103454,
+                "upper": 0.10677966101694916
+              },
+              "top1_agreement": {
+                "lower": -0.125,
+                "upper": 0.10526315789473684
+              }
+            },
+            "delta_method_minus_reference": {
+              "mrr_human_first_choice": -0.0030172413793104758,
+              "pairwise_agreement": -0.007758620689655049,
+              "score_pair_tie_rate": 0.0810344827586207,
+              "top1_agreement": -0.008620689655172376
+            },
+            "reference_method": "tfidf_cosine"
+          },
+          "e5_bm25_tfidf_rrf": {
+            "bootstrap_cv_cluster_95": {
+              "mrr_human_first_choice": {
+                "lower": -0.09138270637408559,
+                "upper": 0.04473911070780399
+              },
+              "pairwise_agreement": {
+                "lower": -0.050877192982456076,
+                "upper": 0.018965517241379296
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 0.010714285714285716
+              },
+              "top1_agreement": {
+                "lower": -0.13793103448275867,
+                "upper": 0.0714285714285714
+              }
+            },
+            "delta_method_minus_reference": {
+              "mrr_human_first_choice": -0.019252873563218476,
+              "pairwise_agreement": -0.01551724137931032,
+              "score_pair_tie_rate": 0.003448275862068966,
+              "top1_agreement": -0.03448275862068961
+            },
+            "reference_method": "tfidf_cosine"
+          },
+          "e5_tfidf_rrf": {
+            "bootstrap_cv_cluster_95": {
+              "mrr_human_first_choice": {
+                "lower": -0.050000000000000044,
+                "upper": 0.03601694915254239
+              },
+              "pairwise_agreement": {
+                "lower": -0.04067796610169494,
+                "upper": 0.02637121212121212
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.048195369249394694,
+                "upper": 0.1
+              },
+              "top1_agreement": {
+                "lower": -0.09322033898305082,
+                "upper": 0.0357142857142857
+              }
+            },
+            "delta_method_minus_reference": {
+              "mrr_human_first_choice": -0.0060344827586207295,
+              "pairwise_agreement": -0.00775862068965516,
+              "score_pair_tie_rate": 0.07413793103448275,
+              "top1_agreement": -0.025862068965517238
+            },
+            "reference_method": "tfidf_cosine"
+          },
+          "lexical_jaccard": {
+            "bootstrap_cv_cluster_95": {
+              "mrr_human_first_choice": {
+                "lower": -0.21299435028248587,
+                "upper": 0.002259887005649719
+              },
+              "pairwise_agreement": {
+                "lower": -0.17543859649122806,
+                "upper": -0.0535714285714286
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 0.0
+              },
+              "top1_agreement": {
+                "lower": -0.2631578947368421,
+                "upper": 0.050847457627118675
+              }
+            },
+            "delta_method_minus_reference": {
+              "mrr_human_first_choice": -0.10201149425287365,
+              "pairwise_agreement": -0.11379310344827581,
+              "score_pair_tie_rate": 0.0,
+              "top1_agreement": -0.10344827586206895
+            },
+            "reference_method": "tfidf_cosine"
+          }
+        },
+        "protocol_version": "ordinal-relevance-paired-query-cluster-v1",
+        "query_clusters": 30,
+        "reference_method": "tfidf_cosine",
+        "uncertainty": {
+          "bootstrap_replicates": 10000,
+          "confidence_level": 0.95,
+          "document_pairs_resampled_independently": false,
+          "estimand": "mean_over_available_query_rater_judgments",
+          "method": "paired_percentile_bootstrap_linear_interpolation",
+          "multiple_comparison_adjustment": "none",
+          "rater_rows_resampled_independently": false,
+          "raters_and_missingness_preserved_within_sampled_query": true,
+          "seed": 20261018,
+          "unit": "labelled_query_cluster"
+        },
+        "uniform_random_expected": {
+          "mrr_human_first_choice": 0.45666666666666667,
+          "pairwise_agreement": 0.5,
+          "score_pair_tie_rate": 0.0,
+          "top1_agreement": 0.2
+        }
+      },
+      "protocol": {
+        "all_documents_covered": true,
+        "backend": "onnxruntime CPU float32",
+        "batch_size": 16,
+        "chunk_pooling": "attention-masked token mean then L2 normalized",
+        "chunk_tokens": 448,
+        "document_pooling": "equal chunk mean then L2 normalize",
+        "experiment": "exploratory_frozen_e5_v1",
+        "independent_holdout": false,
+        "instruction": "query: for each query chunk, passage: for each corpus document chunk",
+        "inter_op_threads": 1,
+        "intra_op_threads": 1,
+        "license": "MIT",
+        "model": "intfloat/e5-small-v2",
+        "no_label_fitting": true,
+        "onnxruntime": "1.31.0",
+        "overlap": 64,
+        "previous_public_scores_seen": true,
+        "rank_fusion": "reciprocal rank with tie midranks, k=60, equal weights; compare BGE+BM25, BGE+TFIDF, BGE+BM25+TFIDF",
+        "revision": "ffb93f3bd4047442299a41ebb6fa998a38507c52",
+        "script_sha256": "41a7ab5a1bd07bee844f07c2d2240cc27f305232184088ddc77aa6ee28fcbb03",
+        "weights_sha256": "4b8205be2a3c5fc53c6534d76a2012064f7309c162b806f2889c6ec8ec4fdcba"
+      },
+      "protocol_sha256": "d4f0e46abafb8791cd7ca68d8e792f7490394470ce3874f42b6db80ab07a4583",
+      "talentclef_development": {
+        "classification_accuracy_measured": false,
+        "cutoff": 10,
+        "definitions": {
+          "coverage": "expected fraction of full-pool top-k positions having any published suitability judgment; remaining positions have unknown suitability",
+          "map": "macro mean full-pool AP for retrieval of published relevant candidates; unlisted candidates earn no relevance credit",
+          "ndcg_at_k": "expected published-relevance binary DCG at k divided by ideal published-relevance DCG at k",
+          "precision_at_k": "expected published-relevant candidates in the first k full-pool positions divided by requested k; not verified suitability precision",
+          "recall_at_k": "expected published-relevant candidates in the first k positions divided by all published positives for that job",
+          "score_pair_tie_rate": "fraction of full-pool candidate pairs with exactly equal model scores; not an accuracy target"
+        },
+        "geometry": {
+          "evaluable_positive_queries": 10,
+          "published_relevant_pairs": 472,
+          "queries": 10,
+          "queries_with_fewer_than_cutoff_candidates": 0,
+          "scored_query_document_pairs": 4720,
+          "uncredited_pairs": 4248,
+          "zero_published_positive_queries_excluded": 0
+        },
+        "limitations": [
+          "This measures retrieval of published relevant candidates, not binary suitability classification or hiring accuracy.",
+          "Unlisted candidates earn zero relevance credit under an explicit information-retrieval convention; their suitability remains unknown, not confirmed negative.",
+          "P@k is published-relevance credit at k, not an estimate of the fraction of genuinely suitable candidates in the top k.",
+          "Sparse qrels can omit genuinely suitable candidates; selected or incomplete relevance judgments limit inference about the entire corpus.",
+          "All methods rank the identical full candidate pool for each job; every method and random baseline uses the same job resamples.",
+          "Jobs with no published positives are excluded from macro relevance metrics and counted explicitly.",
+          "Ties use exact uniform-permutation expectations, preventing source IDs or row order from generating artificial gains.",
+          "MAP follows a full-ranking published-relevance IR convention, but exact tie expectations and this subset protocol need not match an official leaderboard implementation.",
+          "Intervals resample jobs and condition on the fixed corpus, qrels and methods; they omit annotation, adapter, candidate-pool and model-selection uncertainty.",
+          "Few jobs and synthetic profiles limit generalization; exploratory intervals are unadjusted for multiple comparisons and benchmark reuse.",
+          "No observed mutual-interest, application, offer, employment-start, calibrated probability or live product outcome is measured."
+        ],
+        "measurement_target": "retrieval_of_published_relevant_candidates",
+        "methods": {
+          "bm25": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": 0.6886327964881501,
+                "upper": 0.9048282900049384
+              },
+              "ndcg_at_k": {
+                "lower": 0.7910017612832275,
+                "upper": 1.0
+              },
+              "precision_at_k": {
+                "lower": 0.79,
+                "upper": 0.97
+              },
+              "recall_at_k": {
+                "lower": 0.16920544733044734,
+                "upper": 0.45263821248196245
+              },
+              "score_pair_tie_rate": {
+                "lower": 3.868437151390838e-05,
+                "upper": 5.397819281010472e-05
+              }
+            },
+            "evaluable_queries": 10,
+            "judgment_coverage": {
+              "judged_documents_across_queries": 472,
+              "mean_top_k_judgment_coverage": 0.89,
+              "queries_with_fewer_than_cutoff_scored_documents": 0,
+              "scored_documents_across_queries": 4720,
+              "unjudged_scored_documents_across_queries": 4248
+            },
+            "mean": {
+              "map": 0.8021535773919501,
+              "ndcg_at_k": 0.9104913649097247,
+              "precision_at_k": 0.89,
+              "recall_at_k": 0.2794327200577201,
+              "score_pair_tie_rate": 4.678110043542409e-05
+            }
+          },
+          "e5": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": 0.6447186687234302,
+                "upper": 0.801088654925364
+              },
+              "ndcg_at_k": {
+                "lower": 0.8152489433646017,
+                "upper": 0.9714251383861114
+              },
+              "precision_at_k": {
+                "lower": 0.72,
+                "upper": 0.96
+              },
+              "recall_at_k": {
+                "lower": 0.1699709145021645,
+                "upper": 0.3017541486291486
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 0.0
+              }
+            },
+            "evaluable_queries": 10,
+            "judgment_coverage": {
+              "judged_documents_across_queries": 472,
+              "mean_top_k_judgment_coverage": 0.85,
+              "queries_with_fewer_than_cutoff_scored_documents": 0,
+              "scored_documents_across_queries": 4720,
+              "unjudged_scored_documents_across_queries": 4248
+            },
+            "mean": {
+              "map": 0.7201388635001871,
+              "ndcg_at_k": 0.8985667553481849,
+              "precision_at_k": 0.85,
+              "recall_at_k": 0.22943272005772006,
+              "score_pair_tie_rate": 0.0
+            }
+          },
+          "e5_bm25_rrf": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": 0.7471130568218299,
+                "upper": 0.9176217193467868
+              },
+              "ndcg_at_k": {
+                "lower": 0.8532918008631813,
+                "upper": 1.0
+              },
+              "precision_at_k": {
+                "lower": 0.78,
+                "upper": 0.96
+              },
+              "recall_at_k": {
+                "lower": 0.16551204004329004,
+                "upper": 0.4495319264069263
+              },
+              "score_pair_tie_rate": {
+                "lower": 2.698909640505236e-06,
+                "upper": 8.096728921515707e-06
+              }
+            },
+            "evaluable_queries": 10,
+            "judgment_coverage": {
+              "judged_documents_across_queries": 472,
+              "mean_top_k_judgment_coverage": 0.8800000000000001,
+              "queries_with_fewer_than_cutoff_scored_documents": 0,
+              "scored_documents_across_queries": 4720,
+              "unjudged_scored_documents_across_queries": 4248
+            },
+            "mean": {
+              "map": 0.8352356455077745,
+              "ndcg_at_k": 0.929582708902184,
+              "precision_at_k": 0.8800000000000001,
+              "recall_at_k": 0.2763077200577201,
+              "score_pair_tie_rate": 5.397819281010472e-06
+            }
+          },
+          "e5_bm25_tfidf_rrf": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": 0.7429884366052102,
+                "upper": 0.9307777324654198
+              },
+              "ndcg_at_k": {
+                "lower": 0.8072400637899377,
+                "upper": 1.0
+              },
+              "precision_at_k": {
+                "lower": 0.8,
+                "upper": 0.9800000000000001
+              },
+              "recall_at_k": {
+                "lower": 0.1726409181096681,
+                "upper": 0.45519480519480515
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 2.698909640505236e-06
+              }
+            },
+            "evaluable_queries": 10,
+            "judgment_coverage": {
+              "judged_documents_across_queries": 472,
+              "mean_top_k_judgment_coverage": 0.9,
+              "queries_with_fewer_than_cutoff_scored_documents": 0,
+              "scored_documents_across_queries": 4720,
+              "unjudged_scored_documents_across_queries": 4248
+            },
+            "mean": {
+              "map": 0.8416842515409568,
+              "ndcg_at_k": 0.9200261033693554,
+              "precision_at_k": 0.9,
+              "recall_at_k": 0.28255772005772006,
+              "score_pair_tie_rate": 8.996365468350786e-07
+            }
+          },
+          "e5_tfidf_rrf": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": 0.7392429050192946,
+                "upper": 0.9212930317478016
+              },
+              "ndcg_at_k": {
+                "lower": 0.8403102485240588,
+                "upper": 0.9989046406464807
+              },
+              "precision_at_k": {
+                "lower": 0.78,
+                "upper": 0.97
+              },
+              "recall_at_k": {
+                "lower": 0.16595745400432899,
+                "upper": 0.4527360660173159
+              },
+              "score_pair_tie_rate": {
+                "lower": 1.7992730936701572e-06,
+                "upper": 1.0795638562020944e-05
+              }
+            },
+            "evaluable_queries": 10,
+            "judgment_coverage": {
+              "judged_documents_across_queries": 472,
+              "mean_top_k_judgment_coverage": 0.8800000000000001,
+              "queries_with_fewer_than_cutoff_scored_documents": 0,
+              "scored_documents_across_queries": 4720,
+              "unjudged_scored_documents_across_queries": 4248
+            },
+            "mean": {
+              "map": 0.8352154594178532,
+              "ndcg_at_k": 0.9227144321848808,
+              "precision_at_k": 0.8800000000000001,
+              "recall_at_k": 0.2789862914862915,
+              "score_pair_tie_rate": 6.297455827845551e-06
+            }
+          },
+          "lexical_jaccard": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": 0.6790646982417653,
+                "upper": 0.8920989870062644
+              },
+              "ndcg_at_k": {
+                "lower": 0.839747421269337,
+                "upper": 0.9845425660421603
+              },
+              "precision_at_k": {
+                "lower": 0.78,
+                "upper": 0.96
+              },
+              "recall_at_k": {
+                "lower": 0.16551226551226553,
+                "upper": 0.4557720057720058
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0005982583036453273,
+                "upper": 0.0007520961531541257
+              }
+            },
+            "evaluable_queries": 10,
+            "judgment_coverage": {
+              "judged_documents_across_queries": 472,
+              "mean_top_k_judgment_coverage": 0.8800000000000001,
+              "queries_with_fewer_than_cutoff_scored_documents": 0,
+              "scored_documents_across_queries": 4720,
+              "unjudged_scored_documents_across_queries": 4248
+            },
+            "mean": {
+              "map": 0.7888899840854775,
+              "ndcg_at_k": 0.9204379870593236,
+              "precision_at_k": 0.8800000000000001,
+              "recall_at_k": 0.28117784992784994,
+              "score_pair_tie_rate": 0.0006774263197668142
+            }
+          },
+          "tfidf_cosine": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": 0.7161085091181121,
+                "upper": 0.9374149315243706
+              },
+              "ndcg_at_k": {
+                "lower": 0.7424806834357396,
+                "upper": 1.0
+              },
+              "precision_at_k": {
+                "lower": 0.74,
+                "upper": 1.0
+              },
+              "recall_at_k": {
+                "lower": 0.1629236562049062,
+                "upper": 0.4580359397546898
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 0.0
+              }
+            },
+            "evaluable_queries": 10,
+            "judgment_coverage": {
+              "judged_documents_across_queries": 472,
+              "mean_top_k_judgment_coverage": 0.8800000000000001,
+              "queries_with_fewer_than_cutoff_scored_documents": 0,
+              "scored_documents_across_queries": 4720,
+              "unjudged_scored_documents_across_queries": 4248
+            },
+            "mean": {
+              "map": 0.837335752157202,
+              "ndcg_at_k": 0.895367279222239,
+              "precision_at_k": 0.8800000000000001,
+              "recall_at_k": 0.2816648629148629,
+              "score_pair_tie_rate": 0.0
+            }
+          }
+        },
+        "official_full_corpus_leaderboard_score": false,
+        "paired_comparisons": {
+          "bm25": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": -0.08417582741595389,
+                "upper": 0.016522420037381167
+              },
+              "ndcg_at_k": {
+                "lower": -0.060680110842746715,
+                "upper": 0.10605236790520356
+              },
+              "precision_at_k": {
+                "lower": -0.08999999999999997,
+                "upper": 0.12
+              },
+              "recall_at_k": {
+                "lower": -0.02812500000000001,
+                "upper": 0.021428571428571408
+              },
+              "score_pair_tie_rate": {
+                "lower": 3.868437151390838e-05,
+                "upper": 5.397819281010472e-05
+              }
+            },
+            "delta_method_minus_reference": {
+              "map": -0.03518217476525187,
+              "ndcg_at_k": 0.015124085687485689,
+              "precision_at_k": 0.009999999999999898,
+              "recall_at_k": -0.002232142857142849,
+              "score_pair_tie_rate": 4.678110043542409e-05
+            },
+            "reference_method": "tfidf_cosine"
+          },
+          "e5": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": -0.1992696958344306,
+                "upper": -0.029983158248880225
+              },
+              "ndcg_at_k": {
+                "lower": -0.14121457066026666,
+                "upper": 0.1684916573266475
+              },
+              "precision_at_k": {
+                "lower": -0.18000000000000005,
+                "upper": 0.1200000000000001
+              },
+              "recall_at_k": {
+                "lower": -0.16562499999999997,
+                "upper": 0.025892857142857134
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 0.0
+              }
+            },
+            "delta_method_minus_reference": {
+              "map": -0.11719688865701494,
+              "ndcg_at_k": 0.0031994761259458437,
+              "precision_at_k": -0.030000000000000138,
+              "recall_at_k": -0.052232142857142866,
+              "score_pair_tie_rate": 0.0
+            },
+            "reference_method": "tfidf_cosine"
+          },
+          "e5_bm25_rrf": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": -0.0506735922291399,
+                "upper": 0.05596507372635444
+              },
+              "ndcg_at_k": {
+                "lower": -0.05941652396994779,
+                "upper": 0.13345441749763964
+              },
+              "precision_at_k": {
+                "lower": -0.11999999999999988,
+                "upper": 0.12
+              },
+              "recall_at_k": {
+                "lower": -0.037500000000000006,
+                "upper": 0.021428571428571408
+              },
+              "score_pair_tie_rate": {
+                "lower": 2.698909640505236e-06,
+                "upper": 8.096728921515707e-06
+              }
+            },
+            "delta_method_minus_reference": {
+              "map": -0.0021001066494275022,
+              "ndcg_at_k": 0.03421542967994495,
+              "precision_at_k": 0.0,
+              "recall_at_k": -0.005357142857142838,
+              "score_pair_tie_rate": 5.397819281010472e-06
+            },
+            "reference_method": "tfidf_cosine"
+          },
+          "e5_bm25_tfidf_rrf": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": -0.025102678856699406,
+                "upper": 0.04187540260620106
+              },
+              "ndcg_at_k": {
+                "lower": -0.0355782665714538,
+                "upper": 0.10955473901280288
+              },
+              "precision_at_k": {
+                "lower": -0.05999999999999994,
+                "upper": 0.12
+              },
+              "recall_at_k": {
+                "lower": -0.01874999999999999,
+                "upper": 0.021428571428571422
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0,
+                "upper": 2.698909640505236e-06
+              }
+            },
+            "delta_method_minus_reference": {
+              "map": 0.004348499383754811,
+              "ndcg_at_k": 0.024658824147116398,
+              "precision_at_k": 0.019999999999999907,
+              "recall_at_k": 0.0008928571428571397,
+              "score_pair_tie_rate": 8.996365468350786e-07
+            },
+            "reference_method": "tfidf_cosine"
+          },
+          "e5_tfidf_rrf": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": -0.03674278940178429,
+                "upper": 0.037214840797887096
+              },
+              "ndcg_at_k": {
+                "lower": -0.05450933683810688,
+                "upper": 0.12071877951725529
+              },
+              "precision_at_k": {
+                "lower": -0.07999999999999985,
+                "upper": 0.06999999999999995
+              },
+              "recall_at_k": {
+                "lower": -0.024999999999999994,
+                "upper": 0.01383928571428572
+              },
+              "score_pair_tie_rate": {
+                "lower": 1.7992730936701572e-06,
+                "upper": 1.0795638562020944e-05
+              }
+            },
+            "delta_method_minus_reference": {
+              "map": -0.0021202927393487725,
+              "ndcg_at_k": 0.027347152962641785,
+              "precision_at_k": 0.0,
+              "recall_at_k": -0.002678571428571419,
+              "score_pair_tie_rate": 6.297455827845551e-06
+            },
+            "reference_method": "tfidf_cosine"
+          },
+          "lexical_jaccard": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": -0.09047949871973293,
+                "upper": -0.008421576021858238
+              },
+              "ndcg_at_k": {
+                "lower": -0.04558765233555173,
+                "upper": 0.11616705506904446
+              },
+              "precision_at_k": {
+                "lower": -0.05999999999999994,
+                "upper": 0.06000000000000005
+              },
+              "recall_at_k": {
+                "lower": -0.01874999999999999,
+                "upper": 0.018262987012987036
+              },
+              "score_pair_tie_rate": {
+                "lower": 0.0005982583036453273,
+                "upper": 0.0007520961531541257
+              }
+            },
+            "delta_method_minus_reference": {
+              "map": -0.048445768071724515,
+              "ndcg_at_k": 0.025070707837084538,
+              "precision_at_k": 0.0,
+              "recall_at_k": -0.00048701298701298024,
+              "score_pair_tie_rate": 0.0006774263197668142
+            },
+            "reference_method": "tfidf_cosine"
+          }
+        },
+        "paired_comparisons_vs_uniform_random": {
+          "bm25": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": 0.5751317562241831,
+                "upper": 0.8005549318840942
+              },
+              "ndcg_at_k": {
+                "lower": 0.6973875303119588,
+                "upper": 0.8962314680399073
+              },
+              "precision_at_k": {
+                "lower": 0.7013559322033899,
+                "upper": 0.8666144067796608
+              },
+              "recall_at_k": {
+                "lower": 0.14801900665248124,
+                "upper": 0.43145177180399635
+              },
+              "score_pair_tie_rate": {
+                "lower": -0.9999613156284861,
+                "upper": -0.9999460218071899
+              }
+            },
+            "delta_method_minus_reference": {
+              "map": 0.691194494082778,
+              "ndcg_at_k": 0.810238381555214,
+              "precision_at_k": 0.79,
+              "recall_at_k": 0.258246279379754,
+              "score_pair_tie_rate": -0.9999532188995646
+            },
+            "reference_method": "uniform_random_expected"
+          },
+          "e5": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": 0.5328451604874331,
+                "upper": 0.6906628034962653
+              },
+              "ndcg_at_k": {
+                "lower": 0.7327413532049454,
+                "upper": 0.8602002507018729
+              },
+              "precision_at_k": {
+                "lower": 0.6377966101694915,
+                "upper": 0.8452542372881356
+              },
+              "recall_at_k": {
+                "lower": 0.1487844738241984,
+                "upper": 0.2805677079511825
+              },
+              "score_pair_tie_rate": {
+                "lower": -1.0,
+                "upper": -1.0
+              }
+            },
+            "delta_method_minus_reference": {
+              "map": 0.6091797801910149,
+              "ndcg_at_k": 0.7983137719936741,
+              "precision_at_k": 0.75,
+              "recall_at_k": 0.20824627937975396,
+              "score_pair_tie_rate": -1.0
+            },
+            "reference_method": "uniform_random_expected"
+          },
+          "e5_bm25_rrf": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": 0.6286773342833741,
+                "upper": 0.8180028606242817
+              },
+              "ndcg_at_k": {
+                "lower": 0.7540806720416563,
+                "upper": 0.8968650699030285
+              },
+              "precision_at_k": {
+                "lower": 0.6820338983050848,
+                "upper": 0.8647457627118645
+              },
+              "recall_at_k": {
+                "lower": 0.14432559936532394,
+                "upper": 0.4283454857289602
+              },
+              "score_pair_tie_rate": {
+                "lower": -0.9999973010903594,
+                "upper": -0.9999919032710785
+              }
+            },
+            "delta_method_minus_reference": {
+              "map": 0.7242765621986024,
+              "ndcg_at_k": 0.8293297255476733,
+              "precision_at_k": 0.7800000000000001,
+              "recall_at_k": 0.255121279379754,
+              "score_pair_tie_rate": -0.999994602180719
+            },
+            "reference_method": "uniform_random_expected"
+          },
+          "e5_bm25_tfidf_rrf": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": 0.6281018002835939,
+                "upper": 0.8271842795567843
+              },
+              "ndcg_at_k": {
+                "lower": 0.7162694465980431,
+                "upper": 0.8985881060815706
+              },
+              "precision_at_k": {
+                "lower": 0.7169491525423729,
+                "upper": 0.8701694915254237
+              },
+              "recall_at_k": {
+                "lower": 0.151454477431702,
+                "upper": 0.43400836451683905
+              },
+              "score_pair_tie_rate": {
+                "lower": -1.0,
+                "upper": -0.9999973010903594
+              }
+            },
+            "delta_method_minus_reference": {
+              "map": 0.7307251682317847,
+              "ndcg_at_k": 0.8197731200148447,
+              "precision_at_k": 0.8,
+              "recall_at_k": 0.26137127937975396,
+              "score_pair_tie_rate": -0.9999991003634532
+            },
+            "reference_method": "uniform_random_expected"
+          },
+          "e5_tfidf_rrf": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": 0.6224201631928736,
+                "upper": 0.8186927623191309
+              },
+              "ndcg_at_k": {
+                "lower": 0.7381155436912007,
+                "upper": 0.8951455657925735
+              },
+              "precision_at_k": {
+                "lower": 0.6835508474576271,
+                "upper": 0.8644067796610169
+              },
+              "recall_at_k": {
+                "lower": 0.14477101332636289,
+                "upper": 0.4315496253393498
+              },
+              "score_pair_tie_rate": {
+                "lower": -0.9999982007269064,
+                "upper": -0.999989204361438
+              }
+            },
+            "delta_method_minus_reference": {
+              "map": 0.7242563761086811,
+              "ndcg_at_k": 0.8224614488303701,
+              "precision_at_k": 0.7800000000000001,
+              "recall_at_k": 0.2577998508083254,
+              "score_pair_tie_rate": -0.9999937025441722
+            },
+            "reference_method": "uniform_random_expected"
+          },
+          "lexical_jaccard": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": 0.560700940183055,
+                "upper": 0.7894194799080605
+              },
+              "ndcg_at_k": {
+                "lower": 0.7347937298885301,
+                "upper": 0.8907707599558277
+              },
+              "precision_at_k": {
+                "lower": 0.6754194915254237,
+                "upper": 0.8589872881355931
+              },
+              "recall_at_k": {
+                "lower": 0.14432582483429943,
+                "upper": 0.43458556509403967
+              },
+              "score_pair_tie_rate": {
+                "lower": -0.9994017416963547,
+                "upper": -0.9992479038468459
+              }
+            },
+            "delta_method_minus_reference": {
+              "map": 0.6779309007763054,
+              "ndcg_at_k": 0.8201850037048128,
+              "precision_at_k": 0.7800000000000001,
+              "recall_at_k": 0.25999140924988384,
+              "score_pair_tie_rate": -0.9993225736802331
+            },
+            "reference_method": "uniform_random_expected"
+          },
+          "tfidf_cosine": {
+            "bootstrap_job_cluster_95": {
+              "map": {
+                "lower": 0.6017554186455087,
+                "upper": 0.8317892722927364
+              },
+              "ndcg_at_k": {
+                "lower": 0.6475615201684986,
+                "upper": 0.912458881052269
+              },
+              "precision_at_k": {
+                "lower": 0.6391525423728813,
+                "upper": 0.888135593220339
+              },
+              "recall_at_k": {
+                "lower": 0.1417372155269401,
+                "upper": 0.4368494990767237
+              },
+              "score_pair_tie_rate": {
+                "lower": -1.0,
+                "upper": -1.0
+              }
+            },
+            "delta_method_minus_reference": {
+              "map": 0.7263766688480299,
+              "ndcg_at_k": 0.7951142958677283,
+              "precision_at_k": 0.7800000000000001,
+              "recall_at_k": 0.2604784222368968,
+              "score_pair_tie_rate": -1.0
+            },
+            "reference_method": "uniform_random_expected"
+          }
+        },
+        "primary_metric": "map",
+        "protocol_version": "published-relevant-retrieval-paired-job-cluster-v1",
+        "reference_method": "tfidf_cosine",
+        "source_judgments": {
+          "explicit_unsuitable_pairs": 0,
+          "published_relevant_pairs": 472,
+          "scored_query_document_pairs": 4720,
+          "unjudged_scored_pairs": 4248
+        },
+        "status": "PUBLISHED_QRELS_RETRIEVAL_MEASURED",
+        "uncertainty": {
+          "all_methods_use_identical_query_resamples": true,
+          "bootstrap_replicates": 10000,
+          "candidates_resampled_independently": false,
+          "confidence_level": 0.95,
+          "method": "paired_percentile_bootstrap_linear_interpolation",
+          "multiple_comparison_adjustment": "none",
+          "seed": 20261018,
+          "unit": "job_query_cluster"
+        },
+        "uniform_random_expected": {
+          "bootstrap_job_cluster_95": {
+            "map": {
+              "lower": 0.07914782640309734,
+              "upper": 0.14863030859268184
+            },
+            "ndcg_at_k": {
+              "lower": 0.06855556023302353,
+              "upper": 0.13838857657484965
+            },
+            "precision_at_k": {
+              "lower": 0.06779661016949154,
+              "upper": 0.13813559322033897
+            },
+            "recall_at_k": {
+              "lower": 0.0211864406779661,
+              "upper": 0.021186440677966104
+            },
+            "score_pair_tie_rate": {
+              "lower": 1.0,
+              "upper": 1.0
+            }
+          },
+          "evaluable_queries": 10,
+          "expectation": "uniform_permutation_of_the_same_full_candidate_pool_per_query",
+          "mean": {
+            "map": 0.11095908330917217,
+            "ndcg_at_k": 0.10025298335451067,
+            "precision_at_k": 0.1,
+            "recall_at_k": 0.0211864406779661,
+            "score_pair_tie_rate": 1.0
+          },
+          "tie_rate_semantics": "one_all_tied_score_group_is_used_to_compute_exact_uniform_permutation_expectations"
+        },
+        "universe_scope": "common_full_scored_candidate_pool",
+        "unlisted_candidate_policy": "uncredited_not_confirmed_negative"
+      }
+    }
+  },
+  "human_label_disagreement": {
+    "first_choice_agreement": 0.17857142857142858,
+    "first_choice_agreements": 5,
+    "maximum_possible_deterministic_pooled_first_choice_agreement": 0.603448275862069,
+    "overlapping_cv_queries": 28,
+    "pairwise_agreement": 0.5678571428571428,
+    "pooled_rater_query_judgments": 58
+  },
+  "limitations": [
+    "All model architectures and fixed preprocessing were chosen using primary model cards, not optimized on these labels; nevertheless this is an exploratory search across multiple models on already-seen public development datasets.",
+    "Models learned from generic third-party pretraining, not consented app outcomes. Original training overlap with public documents is unknown.",
+    "Full-text neural and lexical retrieval similarity does not measure candidate consent, eligibility, essential qualifications, reciprocal interest, or hiring success.",
+    "TalentCLEF profiles are synthetic with expert relevance labels; all public English development judgments are positives; unlisted pairs remain unjudged. MAP is published-positive retrieval quality, not percent accuracy.",
+    "Crossencoder is reported only on the human benchmark, uses official pair input with longest-first512-token truncation, and may omit document tails.",
+    "BGE and E5 retain all document tokens with fixed448-token overlapping windows and equal mean aggregation; this can dilute specific facts and overweight overlap.",
+    "Fixed equal reciprocal-rank fusion uses k60 and midranks for ties; all explored variants are reported, not only the winner.",
+    "No neural method is promoted based on these public experiments; production learned promotion requires consented outcomes, held-out validation, versioning, and deterministic fallback."
+  ],
+  "models_searched": 3,
+  "primary_model_sources": {
+    "bge": "https://huggingface.co/BAAI/bge-small-en-v1.5",
+    "cross_encoder": "https://huggingface.co/cross-encoder/ms-marco-MiniLM-L6-v2",
+    "e5": "https://huggingface.co/intfloat/e5-small-v2"
+  },
+  "prior_public_development_scores_seen": true,
+  "production_model_promotion": false,
+  "schema": 1,
+  "scope": "EXPLORATORY_FROZEN_PRETRAINED_ML_COMPARISONS",
+  "software": {
+    "numpy": "2.3.5",
+    "onnxruntime": "1.31.0",
+    "python": "3.12.14",
+    "tokenizers": "0.23.3"
+  },
+  "source_integrity": {
+    "human_archive_sha256": "a30003477335398662c853125df17eae5493f72229225ab8e4becc7dbf7b0bba",
+    "talent_archive_sha256": "3437ef0437b0f603a15c5e3f8e62e3450ba24cb2bbbdbc5ad328829bbce0e179"
+  },
+  "supervised_fitting_on_benchmark_labels": false
+}

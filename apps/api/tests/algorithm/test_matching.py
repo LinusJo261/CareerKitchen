@@ -11,7 +11,14 @@ from app.matching.action_policy import ActionChoice, ReleaseState, next_release,
 from app.matching.attention import DualPrice, MarketPrices, update_congestion, update_price
 from app.matching.baseline import HeuristicPairScorer, plan_baseline
 from app.matching.calibration import Observation, probability_metrics, temporal_split
-from app.matching.portfolio import Commitment, MarketSnapshot, ResearchEdge, VacancyResearch, allocate_global
+from app.matching.portfolio import (
+    Commitment,
+    MarketSnapshot,
+    ResearchEdge,
+    VacancyResearch,
+    allocate_global,
+    allocate_heuristic,
+)
 from app.matching.reliability import ClaimContext, can_issue_reliability_claim
 from app.matching.retrieval import EligibilitySnapshot, EligibilityState, hard_feasible, sparse_retrieve
 from app.matching.runtime import PlannerLimits, PlanningBudget
@@ -304,11 +311,12 @@ def competition_market():
 
 def test_competition_counterexample_repaired_by_augmenting_exchange():
     snapshot = competition_market()
-    initial = allocate_global(snapshot, PlannerLimits(exchange_steps=0), budget())
+    initial = allocate_heuristic(snapshot, PlannerLimits(exchange_steps=0), budget())
     assert initial.expected_fills == pytest.approx(0.9)
     improved = allocate_global(snapshot, budget=budget())
     assert improved.expected_fills == pytest.approx(1.69)
-    assert improved.exchange_count == 1
+    assert improved.solver == "JOINT_ASSIGNMENT_ENUMERATION"
+    assert improved.search_complete
     assert [(item.vacancy_id, item.candidates) for item in improved.vacancies] == [
         ("a", ("y",)),
         ("b", ("x",)),

@@ -24,6 +24,11 @@ FEATURE_NAMES = (
     "candidate_compensation_preference_alignment",
     "candidate_schedule_preference_alignment",
 )
+EXPANDED_FEATURE_NAMES = (*FEATURE_NAMES, "skill_precision", "skill_jaccard", "text_relevance")
+FEATURE_NAMES_BY_VERSION = {
+    "mutual-pair-features-v1": FEATURE_NAMES,
+    "mutual-pair-features-v2": EXPANDED_FEATURE_NAMES,
+}
 PREFERENCE_ALIGNMENT_NAMES = FEATURE_NAMES[4:]
 
 
@@ -41,18 +46,38 @@ def _number(value: object, name: str, *, bounded: bool) -> float | None:
     return result
 
 
-def validate_features(values: dict) -> dict[str, float | None]:
+def validate_features(
+    values: dict, feature_version: str = "mutual-pair-features-v1"
+) -> dict[str, float | None]:
     """Require every declared feature, using null for unknown/not applicable.
 
     Only experience years may exceed one. The strict allowlist keeps identity,
     outcome and free-text fields out of this experiment's predictive matrix.
     """
-    if not isinstance(values, dict) or set(values) != set(FEATURE_NAMES):
-        raise ValueError("Features must contain exactly the ten declared feature names")
-    return {
-        name: _number(values[name], name, bounded=name != "relevant_experience_years")
-        for name in FEATURE_NAMES
-    }
+    names = FEATURE_NAMES_BY_VERSION.get(feature_version)
+    if names is None:
+        raise ValueError("Unsupported feature version")
+    if not isinstance(values, dict) or set(values) != set(names):
+        if feature_version == "mutual-pair-features-v1":
+            raise ValueError("Features must contain exactly the ten declared feature names")
+        raise ValueError("Features must contain exactly the thirteen declared versioned feature names")
+    return {name: _number(values[name], name, bounded=name != "relevant_experience_years") for name in names}
+
+
+def validate_feature_provenance(value: object, features: dict) -> dict:
+    """Pin a text scalar to its immutable extractor without exporting prose."""
+    if not isinstance(value, dict) or set(value) != {"text_relevance_model_id"}:
+        raise ValueError("Expanded feature provenance requires the declared text extractor")
+    model_id = value["text_relevance_model_id"]
+    if model_id is not None and (
+        not isinstance(model_id, str)
+        or len(model_id) != 64
+        or any(c not in "0123456789abcdef" for c in model_id)
+    ):
+        raise ValueError("Text extractor must be an immutable model hash")
+    if (features.get("text_relevance") is None) != (model_id is None):
+        raise ValueError("Text relevance and its immutable extractor must be available together")
+    return {"text_relevance_model_id": model_id}
 
 
 def _skills(values: tuple[str, ...] | None, name: str) -> set[str] | None:

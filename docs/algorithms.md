@@ -1,9 +1,10 @@
 # Career Kitchen matching implementation
 
-## Live reciprocal compatibility baseline
+## Live reciprocal scoring and attention allocation
 
 The live `services.clearing.reconcile` path now uses
-`reciprocal.score_reciprocal`, version `reciprocal-compatibility-v1`. The older
+`reciprocal.score_reciprocal`, version `reciprocal-compatibility-v1`, when no qualified
+observed-outcome model is available. The older
 four-weight heuristic and supplied-probability formulas below remain available
 for research/replay; they are not this live path's scoring formula.
 
@@ -14,25 +15,60 @@ aliases. Employer fit averages role compatibility and optional skill coverage;
 when no preferences exist, skill coverage is not applicable and is excluded.
 Candidate fit averages stated acceptable role, employment type and work mode.
 Pair relevance is the geometric mean of the two fits. Directional attention and
-congestion costs remain separate, with no new probabilities or model training.
+congestion costs remain separate. These cold-start scores are nonprobabilistic.
 
 Current candidate fields express acceptable sets, not ranked preferences; eligible
 pairs therefore currently have candidate fit one. Experience and evidence lack
 structured optional scoring targets and are explicitly unknown, not assigned zero
 or inferred from prose. Essential evidence checks remain mandatory. This baseline
-does not yet implement richer ranked preferences, semantic skill inference,
-global allocation, or a trained predictor. Equal applicable weights are versioned
+does not implement richer ranked preferences or semantic skill inference.
+Equal applicable weights are versioned
 engineering choices, not empirical coefficients.
+
+`matching.live.allocate_live` replaces greedy issuance with sparse maximum-weight
+flow. Each pair retains the scorer's preferred first mover. Candidate-first
+introductions use candidate active slots and vacancy receiving slots;
+employer-first introductions use vacancy active slots and candidate receiving
+slots. These resource graphs are disjoint and can be optimized separately.
+Residual paths can rearrange earlier proposals to improve total supplied utility.
+Capacity can exceed one, while each pair can appear only once. A one-second/
+one-million-operation budget returns the complete feasible greedy fallback on
+exhaustion; incomplete improvements never escape. Numerical guards preserve the
+baseline objective. This optimizes the supplied bounded graph, not every person
+in the marketplace or an observed hiring outcome.
+
+Receiving space includes actual waiting items and unresolved first-side decisions
+that may enter the receiving queue. That reservation prevents separate matching
+runs from overpromising the same attention capacity. The executor locks selected
+participants, rechecks the model, eligibility, versions, cooldown and capacities,
+then issues audited cards transactionally. Concurrent changes can reduce actual
+issuance below the planned objective; the next durable reconciliation retries.
+
+The optional [outcome-learning pipeline](matching-learning.md) fits regularized
+logistic regression and optional calibration from explicitly consented frozen
+decisions. A qualified registry model supplies ranking utility for the declared
+historical explicit-resolution population. It cannot change eligibility or
+manufacture a human decision. Invalid, future or stale artifacts use deterministic
+scoring. No observed model is active in the evaluated empty local database.
+
+Role, preference, availability, participant-role conflict, block, prior-cycle,
+attention and explicit consent filters run in SQL before the live bounded
+candidate limit. Older unrelated or nonconsenting profiles therefore cannot
+consume the whole retrieval pool. Remaining feasibility checks still run before
+scoring and under issuance locks. This fixes retrieval scope; it does not change
+the compatibility weights or make the bounded pool an exhaustive market search.
 
 Each issued pair/exposure retains the sanitized scoring inputs, timestamp,
 candidate/vacancy versions, feature hash, weights version, both fits, both
 directional scores and price snapshot. No raw private compensation, resume or
 evidence contents enter this trace. Existing immutable exposure timestamps and
 decision cards/events retain issue, response, expiry and cancellation separately.
-Issuance is not proof of viewing; no view event is currently available. A future
-training exporter must exclude unresolved/expired/cancelled cards from explicit
-rejection labels, respect consent/retention, and account for exposure selection.
-No training exporter or dataset is created by this change.
+Issuance is not proof of viewing; no view event is currently available. The
+training exporter excludes unresolved/expired/cancelled cards from explicit
+rejection labels. Both candidate and organization must explicitly opt in before
+exposure and retain the same consent epoch through resolution and export.
+Immutable resolutions are captured in the answer transaction. Historical traces
+are never retroactively backfilled using edited profiles.
 
 Focused reciprocal tests can run without external services:
 `PYTHONPATH=apps/api python -m unittest discover -s apps/api/tests/algorithm -p test_reciprocal.py -v`.
@@ -63,7 +99,8 @@ The four interest predictions remain separate. The downstream target is offer
 acceptance, with legacy quality fixed to one. It is not a verified employment start.
 All probabilities are supplied by the caller, finite, bounded in `[0,1]`, versioned,
 and unavailable if their cutoff lies in the future. This package trains no model and
-contains no default response, acceptance, or employment probabilities.
+contains no default response, acceptance, or employment probabilities. The separate
+observed-outcome trainer does not fit these legacy downstream probabilities.
 
 `baseline.HeuristicPairScorer` provides the cold-start route when no forecast is
 supplied. Its trace is explicitly `NONPROBABILISTIC`. It combines four disclosed,
@@ -79,6 +116,8 @@ the better direction, and respects each selected active cap in `1..10`, current
 active usage, waiting limits, and existing pair cycles. Unknown capacity means no
 proposal. It defers when the chosen first mover has no slot. It never fills a quota
 or moves an active decision. Call it again after committed events to replenish.
+Within one proposed batch it also decrements the receiving side's remaining
+waiting allowance, so separate positive pairs cannot overpromise the same space.
 
 `attention.update_price` and `update_congestion` preserve the original adaptive
 dual update, with configurable clamps:
@@ -112,7 +151,7 @@ resolved decisions. The same `g/H/sqrt(H+1)` legacy update adjusts `lambda` or
 `kappa`, clamps at `CONGESTION_PRICE_MAX`, records exact counts and versions, and
 retains `gradient_h` across restarts. Oldest/uncontrolled scopes are visited first
 in bounded batches. Price updates never assume acceptance or verified employment.
-The live baseline and shadow snapshot consume these persisted prices.
+The live scorer and shadow snapshot consume these persisted prices.
 
 ## Eligibility and retrieval
 
@@ -168,16 +207,43 @@ release. There is no automatic requirement to recommend ten people.
 
 ## Global allocation, fixed commitments and exchanges
 
-`portfolio.allocate_global(MarketSnapshot(...))` greedily selects marginal aggregate
-fill gains less separately supplied attention and delay costs. In the absence of
-scenario models, it uses caller-supplied routing values and reports unknown fill.
-It then searches bounded moves, swaps, and a two-vacancy augmenting path with one
-refill. Finally it removes contingent candidates that are redundant to an achieved
-modeled threshold and orders remaining proposals by marginal modeled value.
+`portfolio.allocate_global(MarketSnapshot(...))` dispatches by the available
+objective. For routing-only markets, `assignment.maximum_weight_assignment` uses
+sparse residual shortest paths to maximize supplied routing value less attention
+and delay costs. It can reroute arbitrarily long chains of contingent assignments,
+including exchanges spanning more than two vacancies. Zero or negative net-value
+edges provide no filler. It preserves candidate capacity one and each vacancy's
+remaining shortlist space after fixed commitments.
 
-This is a sparse, budgeted heuristic. It does not claim global optimality or minimal
-cardinality for the whole market. Longer augmenting paths, large-scale min-cost
-flow and richer Pareto policies can later implement the same interface.
+For modeled markets with at most 20,000 possible joint assignments, the planner
+enumerates joint assignments within the same operation/time budget. This handles
+robust-model complementarity: two candidates may help together even when neither
+has positive worst-model value alone. Larger modeled markets retain bounded
+greedy/exchange search with additional complementary-pair proposals; they do not
+claim a global optimum. The old algorithm remains `allocate_heuristic` for a
+controlled comparison on identical frozen snapshots.
+The large-market bundle repair checks pairs among the first sixteen available
+unassigned candidate IDs per vacancy for at most five rounds (also bounded by
+the configured exchange-step limit). This deterministic neighborhood can miss
+better bundles outside it; `search_complete` remains false.
+
+Model support is established for the feasible optimization population before
+search. Incomplete probabilities keep that vacancy's objective routing-only and
+its fill risk unknown, rather than switching between fill and routing units as
+members change. Threshold-based release can remove contingent candidates once
+the stipulated target survives. Joint search compares the resulting released
+shortlists at every leaf, and bounded bundle repair compares the released bundle
+before accepting a gain. This avoids optimizing an allocation whose advantage
+disappears after release, or occupying a candidate in a zero-target vacancy before
+discarding that proposal. When release policy constrains the unrestricted utility
+optimum, the solver reports `_THRESHOLD_POLICY` and `search_complete=false`.
+No whole-market minimum-cardinality claim is made.
+
+Plans include planner version, solver, search-completion state, operation count
+and a floating-point numerical tolerance (`1e-12`). Completed optimization concerns
+only the supplied mathematical objective; it provides no real-world hiring or
+reliability certification. See the independent exhaustive-oracle comparison in
+[the allocator benchmark](matching-allocator-benchmark.md).
 
 Each newly planned candidate consumes at most one hypothetical market capacity.
 Plans are soft contingent proposals; this does not authorize actual exclusive
@@ -232,6 +298,8 @@ same baseline proposal tuple/hash. Experimental results remain internal research
 The wall-clock limit is cooperative between bounded operations, so it is not a
 hard process-level cancellation guarantee for arbitrarily large external model
 objects. Input schemas and deployment workers must also bound model sizes.
+The default bounds are one second, 1,000,000 cooperative operations and 20,000
+sparse edges; explicit tighter bounds still fail closed with the baseline intact.
 
 `reliability.can_issue_reliability_claim` always returns `CANNOT_CERTIFY` in this
 deployment. Self-asserted booleans, synthetic trials, model thresholds, and small

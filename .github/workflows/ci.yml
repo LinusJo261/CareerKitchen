@@ -5,6 +5,8 @@ permissions:
 jobs:
   research:
     runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: apps/api
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -14,6 +16,8 @@ jobs:
           cache-dependency-path: requirements-research.txt
       - run: pip install -r requirements-research.txt
       - run: python -m unittest discover -s tests/research -v
+      - run: python -m scripts.benchmark_matching_allocator --output .local/matching-allocation-benchmark/ci --threshold-cases 300 --check
+      - run: python -m scripts.benchmark_live_matching --output .local/live-matching-benchmark/ci --check
   frontend:
     runs-on: ubuntu-latest
     steps:

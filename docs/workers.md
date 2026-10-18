@@ -21,11 +21,17 @@ It cannot express human interest, approve a hiring policy, send a human message,
 or verify employment automatically.
 
 Reconciliation is triggered by materially relevant candidate/vacancy changes,
-answers/expiry, evidence/consent changes and price windows. The baseline executor
+answers/expiry, evidence/consent changes, model activation and price windows. The live executor
 retains its locks, feasibility checks, cooldowns, chosen lower caps and outbox
 audit. A generated `decision.issued` event creates a notification only and cannot
 recursively trigger more clearing. Pending decisions with stale role terms or
 missing essential eligibility close; human mutual commitments remain intact.
+Maintenance commits an audited `matching.allocation_requested` follow-up event.
+Its next transaction resolves the original authoritative event's scope and runs
+allocation without retaining maintenance's earlier participant locks. The source
+event's inbox receipt prevents duplicate follow-up creation. The allocation
+transaction locks all selected participants in a consistent order before the
+model registry; conflicts retain the durable retry/dead-letter behavior.
 An explicit `shortlist.replan_requested` is a separate research event: consumption
 commits first, then records read-only shadow diagnostics when SHADOW is enabled.
 It never calls live clearing, issues a card or creates a human notification.
@@ -47,7 +53,7 @@ authenticated services. The email adapter is not configured; records explicitly
 say `NOT_CONFIGURED` and never claim an email was sent. This build does not claim
 external calendar or email delivery.
 
-In `FEATURE_MODE=SHADOW`, the baseline transaction commits first. A separate
+In `FEATURE_MODE=SHADOW`, the live allocation transaction commits first. A separate
 authorized snapshot builder collects only sanctioned derived inputs and current
 price/role/profile versions, then closes its database session. The pure planner
 receives only frozen objects. A separate recorder writes `ShadowRun` diagnostics;
@@ -56,6 +62,19 @@ decisions. A crash between baseline commit and research recording can omit a
 shadow diagnostic; research results are not a correctness dependency or a public
 claim. The package ships without empirical scenario models or a public reliability
 validator, so all claims remain `CANNOT_CERTIFY`.
+
+The bounded shadow population applies role and consent filters before its
+100-candidate limit and includes at most 20 vacancies. It uses the live scorer's
+shared structured feature builder, confirmed taxonomy skills and curated aliases,
+not-applicable optional skills, and the same congestion clamps. One observation
+time applies across all scored pairs. Recent closed pairs respect the live
+30-day cooldown. Current attention usage and receiving waiting ceilings gate
+new edges. Open commitments on selected vacancies are never silently truncated;
+candidates committed outside that vacancy sample cannot supply new contingent
+edges inside it. Existing fixed human decisions remain even above a new limit.
+Recorded diagnostics identify the input scorer, planner version, solver,
+objective, bounded population and search-completion state. They describe an
+internal routing comparison, not calibrated outcome probabilities.
 
 The worker implements encrypted owner export and local erasure as described in
 [privacy.md](privacy.md). Supabase provider identity deletion and remote orphan
