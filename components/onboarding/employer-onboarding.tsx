@@ -18,10 +18,12 @@ import { Input } from "@/components/ui/input";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Progression } from "@/components/workspace/kit";
 import { sendWorkspaceCommand, useWorkspace } from "@/lib/workspace";
+import { onboardingLoadState } from "@/lib/onboarding-load";
 
 export function EmployerOnboarding() {
   const router = useRouter();
   const { data, error, isLoading, refresh } = useWorkspace();
+  const loadState = onboardingLoadState(!!data.session, error, "employer");
   const [step, setStep] = useState(0);
   const [legalName, setLegalName] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -46,7 +48,14 @@ export function EmployerOnboarding() {
     event.preventDefault();
     setAttempted(true);
     setSaveError("");
-    if (invalid || busy || error || !data.session) return;
+    if (
+      invalid ||
+      busy ||
+      loadState.kind === "sign-in" ||
+      loadState.kind === "forbidden" ||
+      !data.session
+    )
+      return;
     if (!step) {
       setStep(1);
       setAttempted(false);
@@ -81,21 +90,51 @@ export function EmployerOnboarding() {
       </header>
       <div className="page-width py-10 pb-24">
         <div className="mx-auto max-w-2xl">
+          {loadState.kind === "warning" && (
+            <Alert className="mb-7">
+              <AlertDescription
+                role="status"
+                className="flex flex-wrap items-center justify-between gap-3"
+              >
+                <span>
+                  {loadState.title} {loadState.message}
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => refresh().catch(() => undefined)}
+                >
+                  Try again
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
           {isLoading && !data.session ? (
             <p role="status" className="flex items-center gap-3">
               <LoaderCircle className="size-5 animate-spin" />
               Loading your account…
             </p>
-          ) : error || !data.session ? (
+          ) : !data.session ||
+            (loadState.kind !== "ready" && loadState.kind !== "warning") ? (
             <>
-              <h1 className="text-3xl">Sign in to set up your organization.</h1>
+              <h1 className="text-3xl">{loadState.title}</h1>
               <p role="alert" className="mt-4 text-muted-foreground">
-                {error?.message ||
-                  "Your account is needed to securely save this setup."}
+                {loadState.message}
               </p>
-              <Button className="mt-6" asChild>
-                <Link href="/sign-in?role=employer">Sign in</Link>
-              </Button>
+              {loadState.kind === "sign-in" ? (
+                <Button className="mt-6" asChild>
+                  <Link href="/sign-in?role=employer">Sign in</Link>
+                </Button>
+              ) : (
+                <Button
+                  className="mt-6"
+                  variant="outline"
+                  onClick={() => refresh().catch(() => undefined)}
+                >
+                  Try again
+                </Button>
+              )}
             </>
           ) : data.backend.organizations.length ? (
             <>

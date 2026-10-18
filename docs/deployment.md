@@ -2,8 +2,8 @@
 
 The backend uses FastAPI, PostgreSQL, Supabase Auth, private Supabase Storage, and a
 PostgreSQL transactional outbox. API and worker are separate persistent Railway
-services built from the same image. No production service has been provisioned by
-this repository, and no remote credentials have been supplied or tested.
+services built from the same image. Deployment resources and credentials are
+configured separately from this repository; secrets must remain outside Git.
 
 ## Local development
 
@@ -51,6 +51,15 @@ portable Windows server binds only `127.0.0.1:55432`; stop it with
    tables inaccessible to Supabase anonymous/authenticated API roles unless an
    explicit audited RLS policy is introduced. The API performs tenant checks.
 
+The current production website uses `https://www.careerkitchen.us`. Set that exact
+origin, without a trailing slash, as Vercel's Production `CAREER_KITCHEN_SITE_URL`
+and Supabase's Site URL; allow `https://www.careerkitchen.us/auth/callback` in
+Supabase. Redirect the apex and old Vercel website alias to `www` before sign-in
+starts. Redeploy Vercel after changing its environment. See
+[LinkedIn sign-in](linkedin-sign-in.md#canonical-production-origin) for cookie,
+callback, and preview behavior. The server-only `CAREER_KITCHEN_API_URL` continues
+to point directly to the Railway API origin.
+
 ## Database owner and runtime roles
 
 Run migrations in a separately credentialed release job using the table-owner
@@ -97,7 +106,8 @@ only test-created roles after verification.
 Set `ENVIRONMENT=production`, `AUTH_MODE=supabase`, `ALLOW_DEV_AUTH=false`,
 `STORAGE_BACKEND=supabase`, `FEATURE_MODE=SHADOW`, and all keys from
 `.env.example`. Start with SHADOW so advanced algorithms run read-only while the
-baseline remains the live executor and fallback. Set `CORS_ORIGINS` to exact HTTPS Vercel frontend origins and
+baseline remains the live executor and fallback. Set `CORS_ORIGINS` to exact HTTPS
+website origins, such as `https://www.careerkitchen.us`, and
 `TRUSTED_HOSTS` to API domain names **and `healthcheck.railway.app`**; Railway sends
 deployment probes with that Host value. Wildcards are rejected. Generate independent
 Fernet encryption, audit HMAC, and private readiness secrets. Keep encryption keys
@@ -169,5 +179,3 @@ their own live deployment restore drill.
 - [Storage uploads](https://supabase.com/docs/reference/python/storage-from-upload)
 - [Railway IaC reference](https://docs.railway.com/infrastructure-as-code/reference)
 - [Railway healthcheck host and monitoring behavior](https://docs.railway.com/deployments/healthchecks)
-
-

@@ -42,21 +42,51 @@ import {
   type OnboardingDraft,
 } from "@/lib/onboarding";
 import { onboardingSaveState, saveOnboarding } from "@/lib/onboarding-save";
+import { onboardingLoadState } from "@/lib/onboarding-load";
 
-function Frame({ children }: { children: ReactNode }) {
+function Frame({
+  children,
+  loadWarning,
+  onRetry,
+}: {
+  children: ReactNode;
+  loadWarning?: string;
+  onRetry?: () => void;
+}) {
   return (
     <main className="min-h-dvh">
       <header className="page-width flex min-h-20 items-center justify-between gap-4 py-4">
         <Brand />
         <Badge variant="outline">Your profile</Badge>
       </header>
-      <div className="page-width py-8 pb-24 md:py-12">{children}</div>
+      <div className="page-width py-8 pb-24 md:py-12">
+        {loadWarning && (
+          <Alert className="mx-auto mb-8 max-w-6xl">
+            <AlertDescription
+              role="status"
+              className="flex flex-wrap items-center justify-between gap-3"
+            >
+              <span>{loadWarning}</span>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={onRetry}
+              >
+                Try again
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+        {children}
+      </div>
     </main>
   );
 }
 
 export function CandidateOnboarding() {
   const { data, isLoading, error, refresh } = useWorkspace();
+  const loadState = onboardingLoadState(!!data.session, error, "candidate");
   if (isLoading && !data.session)
     return (
       <Frame>
@@ -69,30 +99,45 @@ export function CandidateOnboarding() {
         </div>
       </Frame>
     );
-  if (error || !data.session)
+  if (
+    !data.session ||
+    (loadState.kind !== "ready" && loadState.kind !== "warning")
+  )
     return (
       <Frame>
         <div className="mx-auto max-w-lg py-12">
-          <h1 className="text-3xl">Let’s reconnect your account.</h1>
+          <h1 className="text-3xl">{loadState.title}</h1>
           <p role="alert" className="mt-4 text-muted-foreground">
-            {error?.status === 401 || !data.session
-              ? "Sign in to securely save your profile."
-              : error?.message ||
-                "Unable to load your profile. Please try again."}
+            {loadState.message}
           </p>
           <div className="mt-6 flex gap-3">
-            <Button asChild>
-              <Link href="/sign-in?role=candidate">Sign in</Link>
-            </Button>
-            <Button variant="outline" onClick={() => refresh()}>
-              Try again
-            </Button>
+            {loadState.kind === "sign-in" ? (
+              <Button asChild>
+                <Link href="/sign-in?role=candidate">Sign in</Link>
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={() => refresh().catch(() => undefined)}
+              >
+                Try again
+              </Button>
+            )}
           </div>
         </div>
       </Frame>
     );
   return (
-    <CandidateWizard key={data.session.id} initial={data} refresh={refresh} />
+    <CandidateWizard
+      key={data.session.id}
+      initial={data}
+      refresh={refresh}
+      loadWarning={
+        loadState.kind === "warning"
+          ? `${loadState.title} ${loadState.message}`
+          : undefined
+      }
+    />
   );
 }
 
@@ -200,9 +245,11 @@ function Section({
 function CandidateWizard({
   initial,
   refresh,
+  loadWarning,
 }: {
   initial: WorkspaceState;
   refresh: () => Promise<unknown>;
+  loadWarning?: string;
 }) {
   const router = useRouter();
   const [draft, setDraft] = useState(() =>
@@ -420,7 +467,10 @@ function CandidateWizard({
     "Review the information you choose to save. You can return and edit it at any time.",
   ];
   return (
-    <Frame>
+    <Frame
+      loadWarning={loadWarning}
+      onRetry={() => refresh().catch(() => undefined)}
+    >
       <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-16">
         <aside className="lg:sticky lg:top-8 lg:self-start">
           <p className="eyebrow mb-3">Mise en place</p>

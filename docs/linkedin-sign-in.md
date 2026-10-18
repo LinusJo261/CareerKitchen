@@ -25,11 +25,26 @@ sign-in available.
 
 For the current deployment, the LinkedIn redirect is
 `https://dlglvzjmzdxikuolkmio.supabase.co/auth/v1/callback`; the Supabase application
-redirect is `https://careerkitchen.vercel.app/auth/callback`. These are two
+redirect is `https://www.careerkitchen.us/auth/callback`. These are two
 different steps in the redirect chain. Preview or local websites require their
 own explicit allowed application callback URLs.
 
 See [Supabase's LinkedIn setup guide](https://supabase.com/docs/guides/auth/social-login/auth-linkedin).
+
+## Canonical production origin
+
+Production uses `https://www.careerkitchen.us` as both the Supabase Site URL and
+Vercel's Production `CAREER_KITCHEN_SITE_URL`. Set that environment value without
+a trailing slash: the application compares it with the browser's exact Origin.
+Redeploy Production after an environment change. The apex `careerkitchen.us` and
+`careerkitchen.vercel.app` redirect to `www` before sign-in begins, preserving
+the requested path and query.
+
+Sessions and PKCE verifiers use host-only cookies. An existing Vercel-domain
+session does not transfer to `www`; sign in again there and restart any sign-in
+flow begun on the previous domain. Start and finish authentication on the same
+origin. Do not apply the production Site URL to preview environments; an
+authenticated preview needs its own origin and allowed callback URL.
 
 ## Session and onboarding behavior
 
