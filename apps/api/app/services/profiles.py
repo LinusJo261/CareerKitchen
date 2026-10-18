@@ -42,6 +42,8 @@ def candidate_out(candidate: Candidate) -> dict:
     fields = (
         "id",
         "version",
+        "display_name",
+        "professional_links",
         "headline",
         "summary",
         "region",
@@ -164,6 +166,12 @@ def save_candidate(db: Session, actor: Actor, data: CandidateInput) -> Candidate
         candidate = Candidate(user_id=actor.user_id)
         db.add(candidate)
     values = data.model_dump(exclude={"expected_version", "compensation_floor", "profile_confirmed"})
+    # Older profile editors do not know these optional onboarding fields.
+    for optional_field in ("display_name", "professional_links"):
+        if optional_field not in data.model_fields_set:
+            values.pop(optional_field, None)
+    if "professional_links" in values:
+        values["professional_links"] = data.professional_links.model_dump(exclude_none=True)
     for key, value in values.items():
         setattr(candidate, key, value)
     candidate.compensation_floor_cipher = (

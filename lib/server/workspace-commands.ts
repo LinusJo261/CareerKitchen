@@ -51,6 +51,8 @@ const vacancyFields = [
   'start_until',
 ]
 const candidateFields = [
+  'display_name',
+  'professional_links',
   'headline',
   'summary',
   'region',

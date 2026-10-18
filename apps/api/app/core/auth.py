@@ -3,6 +3,8 @@
 No header-selected remote key URLs and no HS256 production fallback are accepted.
 """
 
+import logging
+import math
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from functools import lru_cache
@@ -16,6 +18,45 @@ from jwt.exceptions import PyJWKClientError, PyJWTError
 
 from app.core.errors import AppError
 from app.core.settings import Settings, get_settings
+
+logger = logging.getLogger("career_kitchen.auth")
+
+
+def _invalid_token(reason: str, message: str = "The session is not valid") -> AppError:
+    # Fixed reason codes only: never log tokens, claim values, keys or provider bodies.
+    logger.warning("access_token_rejected reason=%s", reason)
+    return AppError(401, "INVALID_TOKEN", message)
+
+
+def _authentication_time(claims: dict[str, Any]) -> datetime:
+    # Supabase access tokens use optional AMR entries rather than requiring OIDC's
+    # auth_time. Missing/null AMR must not invalidate an otherwise verified session.
+    # Unknown authentication time stays at the epoch, requiring fresh sign-in for
+    # operations that demand recent authentication; issuance/refresh is not sign-in.
+    amr = claims.get("amr")
+    if amr is None:
+        amr = []
+    if not isinstance(amr, list):
+        raise _invalid_token("malformed_amr")
+    amr_times = [
+        entry["timestamp"]
+        for entry in amr
+        if isinstance(entry, dict)
+        and isinstance(entry.get("timestamp"), (int, float))
+        and not isinstance(entry["timestamp"], bool)
+        and math.isfinite(entry["timestamp"])
+    ]
+    timestamp = claims.get("auth_time")
+    if timestamp is None:
+        timestamp = min(amr_times) if amr_times else 0
+    if (
+        not isinstance(timestamp, (int, float))
+        or isinstance(timestamp, bool)
+        or not math.isfinite(timestamp)
+        or timestamp < 0
+    ):
+        raise _invalid_token("malformed_authentication_time")
+    return datetime.fromtimestamp(timestamp, UTC)
 
 
 @dataclass(frozen=True)
@@ -53,14 +94,14 @@ def _supabase_user(token: str, settings: Settings, subject: UUID) -> dict[str, A
                 headers={"Authorization": f"Bearer {token}", "apikey": publishable_key},
             )
         if response.status_code in {401, 403}:
-            raise AppError(401, "INVALID_TOKEN", "The session is not valid")
+            raise _invalid_token(f"provider_rejected_{response.status_code}")
         if response.status_code != 200:
             raise AppError(503, "AUTH_UNAVAILABLE", "Authentication provider is temporarily unavailable")
         user = response.json()
         if not isinstance(user, dict) or not isinstance(user.get("id"), str):
             raise ValueError("Malformed authentication provider identity")
         if UUID(user["id"]) != subject:
-            raise AppError(401, "INVALID_TOKEN", "The session is not valid")
+            raise _invalid_token("provider_subject_mismatch")
         return user
     except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc:
         raise AppError(503, "AUTH_UNAVAILABLE", "Authentication provider is temporarily unavailable") from exc
@@ -75,17 +116,17 @@ def verify_access_token(token: str, settings: Settings | None = None) -> Verifie
     try:
         header = jwt.get_unverified_header(token)
         if any(name in header for name in ("jku", "x5u", "jwk")):
-            raise AppError(401, "INVALID_TOKEN", "The session is not valid")
+            raise _invalid_token("remote_key_header")
         algorithm = header.get("alg")
         if settings.auth_mode == "local":
             # Settings rejects this mode unless development/test and explicitly enabled.
             if algorithm != "HS256":
-                raise AppError(401, "INVALID_TOKEN", "The session is not valid")
+                raise _invalid_token("unsupported_local_algorithm")
             key: Any = settings.dev_jwt_secret.get_secret_value()
             allowed_algorithms = ["HS256"]
         else:
             if algorithm not in {"ES256", "RS256"} or not isinstance(header.get("kid"), str):
-                raise AppError(401, "INVALID_TOKEN", "The session is not valid")
+                raise _invalid_token("unsupported_provider_algorithm_or_key_id")
             key = _jwk_client(settings.jwks_url).get_signing_key_from_jwt(token).key
             allowed_algorithms = ["ES256", "RS256"]
         claims = jwt.decode(
@@ -99,20 +140,14 @@ def verify_access_token(token: str, settings: Settings | None = None) -> Verifie
         )
         subject = UUID(claims["sub"])
         if not isinstance(claims["session_id"], str):
-            raise AppError(401, "INVALID_TOKEN", "The session is not valid")
+            raise _invalid_token("malformed_session_id")
         session_id = UUID(claims["session_id"])
         issued_at = datetime.fromtimestamp(claims["iat"], UTC)
         if claims["exp"] - claims["iat"] > settings.jwt_max_lifetime_seconds:
-            raise AppError(401, "INVALID_TOKEN", "The token lifetime is not permitted")
-        amr_times = [
-            entry["timestamp"]
-            for entry in claims.get("amr", [])
-            if isinstance(entry, dict) and isinstance(entry.get("timestamp"), (int, float))
-        ]
-        auth_timestamp = claims.get("auth_time", min(amr_times) if amr_times else 0)
-        auth_time = datetime.fromtimestamp(auth_timestamp, UTC)
+            raise _invalid_token("excessive_lifetime", "The token lifetime is not permitted")
+        auth_time = _authentication_time(claims)
         if auth_time > issued_at + timedelta(seconds=settings.jwt_clock_skew_seconds):
-            raise AppError(401, "INVALID_TOKEN", "The session is not valid")
+            raise _invalid_token("future_authentication_time")
         if settings.auth_mode == "supabase":
             user = _supabase_user(token, settings, subject)
             # Confirmation is a provider-owned field, never user_metadata.email_verified.
@@ -126,9 +161,10 @@ def verify_access_token(token: str, settings: Settings | None = None) -> Verifie
         return VerifiedIdentity(subject, settings.jwt_issuer, session_id, email, email_verified, auth_time)
     except PyJWKClientError as exc:
         # Unknown key, malformed provider response, and network failure all fail closed.
-        raise AppError(401, "INVALID_TOKEN", "The session could not be verified") from exc
+        raise _invalid_token("signing_key_unavailable", "The session could not be verified") from exc
     except (PyJWTError, ValueError, TypeError, KeyError, OverflowError, OSError) as exc:
-        raise AppError(401, "INVALID_TOKEN", "The session is not valid") from exc
+        logger.warning("access_token_validation_failed exception_type=%s", type(exc).__name__)
+        raise _invalid_token("invalid_claims_or_signature") from exc
 
 
 def mint_dev_token(

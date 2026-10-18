@@ -70,6 +70,8 @@ def owner_export(db: Session, user: User) -> dict[str, Any]:
             candidate,
             (
                 "id",
+                "display_name",
+                "professional_links",
                 "headline",
                 "summary",
                 "region",
@@ -271,6 +273,7 @@ def erase_local_owner_data(db: Session, actor: Actor, user: User) -> None:
             clearing.close_cycle(db, actor, cycle, "CLOSED_WITHDRAWN")
         invalidate_readiness(db, candidate_id=candidate.id, reason="ACCOUNT_DELETED")
         candidate.headline, candidate.summary, candidate.region = "Deleted account", "", ""
+        candidate.display_name, candidate.professional_links = "", {}
         candidate.experiences, candidate.education = [], []
         candidate.role_families, candidate.employment_types, candidate.work_modes, candidate.locations = (
             [],

@@ -27,6 +27,12 @@ REVOKE ALL ON SCHEMA public FROM career_kitchen_backend;
 GRANT USAGE ON SCHEMA public TO career_kitchen_backend;
 REVOKE ALL ON TABLE public.alembic_version FROM PUBLIC;
 GRANT SELECT ON TABLE public.alembic_version TO career_kitchen_backend;
+-- Hosted Supabase projects can enable RLS on migration metadata as well.
+-- The release gate needs its version row, with no permission to alter it.
+ALTER TABLE public.alembic_version ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS career_kitchen_backend_read ON public.alembic_version;
+CREATE POLICY career_kitchen_backend_read ON public.alembic_version
+    FOR SELECT TO career_kitchen_backend USING (true);
 
 DO $policies$
 DECLARE

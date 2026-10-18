@@ -54,6 +54,30 @@ export async function supabaseServer() {
   })
 }
 
+function sessionFailure(
+  error: { status?: number } | null,
+  message: string,
+): GatewayError {
+  if (error && ![400, 401, 403].includes(error.status || 0))
+    return new GatewayError(
+      503,
+      'AUTH_UNAVAILABLE',
+      'Sign-in is temporarily unavailable. Please try again shortly.',
+    )
+  return new GatewayError(401, 'UNAUTHORIZED', message)
+}
+
+function accessTokenAlgorithm(token: string): string | undefined {
+  try {
+    const header = JSON.parse(
+      Buffer.from(token.split('.')[0], 'base64url').toString('utf8'),
+    )
+    return typeof header?.alg === 'string' ? header.alg : undefined
+  } catch {
+    return undefined
+  }
+}
+
 export async function accessToken(request: Request) {
   const mode = authMode(requestHostname(request))
   if (mode === 'local') {
@@ -71,9 +95,8 @@ export async function accessToken(request: Request) {
   const supabase = await supabaseServer()
   const verified = await supabase.auth.getUser()
   if (verified.error || !verified.data.user)
-    throw new GatewayError(
-      401,
-      'UNAUTHORIZED',
+    throw sessionFailure(
+      verified.error,
       'Your session expired. Please sign in again.',
     )
   const {
@@ -81,7 +104,38 @@ export async function accessToken(request: Request) {
     error,
   } = await supabase.auth.getSession()
   if (error || !session)
-    throw new GatewayError(401, 'UNAUTHORIZED', 'Sign in to your workspace.')
+    throw sessionFailure(error, 'Sign in to your workspace.')
+  if (accessTokenAlgorithm(session.access_token) === 'HS256') {
+    // Supabase still accepts unexpired legacy tokens after an asymmetric key
+    // rotation. Request one freshly signed token rather than weakening the API's
+    // ES256/RS256 policy. This header only triggers refresh; it grants no access.
+    const refreshed = await supabase.auth.refreshSession()
+    if (refreshed.error || !refreshed.data.session)
+      throw sessionFailure(
+        refreshed.error,
+        'Your session expired. Please sign in again.',
+      )
+    const token = refreshed.data.session.access_token
+    const checked = await supabase.auth.getUser(token)
+    if (checked.error || !checked.data.user)
+      throw sessionFailure(
+        checked.error,
+        'Your session expired. Please sign in again.',
+      )
+    if (checked.data.user.id !== verified.data.user.id)
+      throw new GatewayError(
+        401,
+        'UNAUTHORIZED',
+        'Your session changed. Please sign in again.',
+      )
+    if (!['ES256', 'RS256'].includes(accessTokenAlgorithm(token) || ''))
+      throw new GatewayError(
+        503,
+        'AUTH_SIGNING_NOT_READY',
+        'Sign-in is being updated. Please try again shortly.',
+      )
+    return token
+  }
   return session.access_token
 }
 

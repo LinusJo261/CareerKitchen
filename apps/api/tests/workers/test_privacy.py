@@ -44,6 +44,11 @@ def seed_private_records(m):
         user = db.get(User, m.candidate_user_id)
         user.issuer, user.subject = get_settings().jwt_issuer, user.id
         candidate = db.get(Candidate, m.candidate_id)
+        candidate.display_name = "Owner private display name"
+        candidate.professional_links = {
+            "linkedin": "https://www.linkedin.com/in/fictional-private-owner",
+            "portfolio": "https://fictional-private-owner.example.invalid/portfolio",
+        }
         candidate.summary = "Owner private summary"
         candidate.experiences = [{"title": "Owner private work history"}]
         candidate.education = [{"institution": "Owner private education"}]
@@ -146,6 +151,11 @@ def test_export_is_encrypted_owner_scoped_and_contains_no_counterpart_content(wo
         assert request.status == "COMPLETE"
         assert "Owner private summary" not in request.result_cipher
         result = json.loads(decrypt(request.result_cipher))
+        assert result["candidate"]["display_name"] == "Owner private display name"
+        assert result["candidate"]["professional_links"] == {
+            "linkedin": "https://www.linkedin.com/in/fictional-private-owner",
+            "portfolio": "https://fictional-private-owner.example.invalid/portfolio",
+        }
         assert result["candidate"]["private_compensation_floor"] == "75000"
         assert result["candidate"]["experiences"][0]["title"] == "Owner private work history"
         assert len(result["skills"]) == len(result["evidence_claims"]) == len(result["evidence_grants"]) == 1
@@ -177,6 +187,7 @@ def test_erasure_scrubs_owner_data_revokes_scopes_preserves_counterpart_and_bloc
         assert request.status == "NEEDS_PROVIDER_REVIEW"
         candidate = db.get(Candidate, m.candidate_id)
         assert candidate.headline == "Deleted account" and candidate.summary == ""
+        assert candidate.display_name == "" and candidate.professional_links == {}
         assert candidate.experiences == candidate.education == []
         assert candidate.compensation_floor_cipher is candidate.resume_object_ref is None
         assert db.scalar(select(func.count()).select_from(CandidateSkill)) == 0

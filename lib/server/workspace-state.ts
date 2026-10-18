@@ -261,7 +261,7 @@ export async function workspaceState(
       id: candidate.id,
       version: candidate.version,
       state: candidate.state,
-      name: state.session.email,
+      name: candidate.display_name || state.session.email,
       title: candidate.headline,
       summary: candidate.summary,
       location: candidate.region,

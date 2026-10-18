@@ -135,19 +135,29 @@ export function Shell({
     return (
       <main className="mx-auto flex min-h-screen max-w-xl flex-col items-start justify-center gap-5 p-6">
         <Brand />
-        <h1 className="text-2xl">Your workspace is unavailable</h1>
+        <h1 className="text-2xl">
+          {error?.status === 401 || !error
+            ? 'Sign in to your workspace'
+            : error.status === 403
+              ? 'Workspace access needs attention'
+              : 'Your workspace is temporarily unavailable'}
+        </h1>
         <p className="text-sm text-muted-foreground" role="alert">
-          {error instanceof Error
-            ? error.message
-            : 'Sign in to load your account and saved workspace.'}
+          {error?.status === 401
+            ? 'Your session needs to be refreshed. Sign in again to continue.'
+            : error instanceof Error
+              ? error.message
+              : 'Sign in to load your account and saved workspace.'}
         </p>
         <div className="flex gap-3">
           <Button asChild>
             <Link href={`/sign-in?role=${role}`}>Sign in</Link>
           </Button>
-          <Button variant="outline" onClick={() => refresh()}>
-            Try again
-          </Button>
+          {error?.status !== 401 && (
+            <Button variant="outline" onClick={() => refresh()}>
+              Try again
+            </Button>
+          )}
         </div>
       </main>
     )

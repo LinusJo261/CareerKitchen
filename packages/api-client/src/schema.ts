@@ -1844,6 +1844,11 @@ export interface components {
             compensation_period: "ANNUAL" | "MONTHLY" | "HOURLY";
             /** Currency */
             currency: string;
+            /**
+             * Display Name
+             * @default
+             */
+            display_name: string;
             /** Education */
             education?: components["schemas"]["EducationInput"][];
             /** Employment Types */
@@ -1861,6 +1866,7 @@ export interface components {
              * @constant
              */
             privacy_accepted: true;
+            professional_links?: components["schemas"]["ProfessionalLinks"];
             /**
              * Profile Confirmed
              * @constant
@@ -1909,6 +1915,11 @@ export interface components {
             confirmed_at: string | null;
             /** Currency */
             currency: string;
+            /**
+             * Display Name
+             * @default
+             */
+            display_name: string;
             /** Education */
             education: components["schemas"]["EducationInput"][];
             /** Employment Types */
@@ -1926,6 +1937,7 @@ export interface components {
             locations: string[];
             /** Privacy Accepted */
             privacy_accepted: boolean;
+            professional_links?: components["schemas"]["ProfessionalLinks"];
             /** Region */
             region: string;
             /** Role Families */
@@ -3357,6 +3369,13 @@ export interface components {
             locations: string[];
             /** Work Modes */
             work_modes: ("REMOTE" | "HYBRID" | "ONSITE")[];
+        };
+        /** ProfessionalLinks */
+        ProfessionalLinks: {
+            /** Linkedin */
+            linkedin?: string | null;
+            /** Portfolio */
+            portfolio?: string | null;
         };
         /** ReadinessOut */
         ReadinessOut: {
