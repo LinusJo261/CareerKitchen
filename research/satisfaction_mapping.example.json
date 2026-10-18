@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "source": {
+    "kind": "survey_export",
+    "dataset": "NLSY97",
+    "release": "REPLACE_WITH_ACTUAL_EXPORTED_RELEASE_AND_ROUNDS",
+    "codebook_url": "https://www.nlsinfo.org/sites/default/files/attachments/121129/nlsy97r12emp.html"
+  },
+  "columns": {
+    "person_id": "person_id",
+    "employer_id": "employer_id",
+    "job_started_at": "job_started_at",
+    "feature_as_of": "feature_as_of",
+    "rating_reference_at": "rating_reference_at",
+    "rating_observed_at": "rating_observed_at",
+    "satisfaction": "satisfaction"
+  },
+  "label_order_worst_to_best": [
+    "dislike_very_much",
+    "dislike_somewhat",
+    "okay",
+    "like_fairly_well",
+    "like_very_much"
+  ],
+  "label_codes": {
+    "1": "like_very_much",
+    "2": "like_fairly_well",
+    "3": "okay",
+    "4": "dislike_somewhat",
+    "5": "dislike_very_much"
+  },
+  "missing_codes": ["", "-1", "-2", "-3", "-4", "-5"],
+  "features": {
+    "numeric": {
+      "prior_experience_years": "prior_experience_years",
+      "offered_hours_per_week": "offered_hours_per_week"
+    },
+    "categorical": {
+      "employment_type": "employment_type"
+    }
+  },
+  "feature_timing": {
+    "prior_experience_years": "prehire_or_job_start",
+    "offered_hours_per_week": "prehire_or_job_start",
+    "employment_type": "prehire_or_job_start"
+  },
+  "followup_months": {"min": 3, "max": 24}
+}

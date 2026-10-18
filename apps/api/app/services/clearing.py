@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import secrets
-from dataclasses import asdict
 from datetime import timedelta
 from decimal import Decimal
 from hmac import compare_digest
@@ -33,8 +32,7 @@ from app.db.models import (
     WaitingItem,
 )
 from app.matching.attention import MarketPrices
-from app.matching.baseline import HeuristicPairScorer
-from app.matching.types import SanitizedPairFeatures
+from app.matching.reciprocal import ReciprocalFeatures, score_reciprocal, skill_coverage
 from app.services.common import (
     Actor,
     digest,
@@ -73,6 +71,8 @@ def feasible(db: Session, candidate: Candidate, vacancy: Vacancy) -> tuple[bool,
         )
     ):
         reasons.append("EXCLUSIVELY_RESERVED_ELSEWHERE")
+    if not candidate.terms_accepted or not candidate.privacy_accepted or not candidate.confirmed_at:
+        reasons.append("CANDIDATE_CONSENT_REQUIRED")
     if candidate.state != "ACTIVE" or vacancy.state != "ACTIVE":
         reasons.append("INACTIVE")
     if (
@@ -195,7 +195,14 @@ def _issue(
             score_trace=cycle.score_trace,
         )
     )
-    emit(db, actor, "decision.issued", card, org_id=vacancy.org_id)
+    emit(
+        db,
+        actor,
+        "decision.issued",
+        card,
+        org_id=vacancy.org_id,
+        payload={"pair_cycle_id": cycle.id, "exposure_side": side, "model_version": cycle.model_version},
+    )
     return card
 
 
@@ -212,6 +219,9 @@ def issue_first(
     candidate = load(db, Candidate, candidate_id)
     vacancy = load(db, Vacancy, vacancy_id)
     require_version(vacancy, role_version)
+    snapshot = (score_trace or {}).get("features", {})
+    if snapshot and snapshot.get("candidate_version") != candidate.version:
+        raise AppError(412, "VERSION_CONFLICT", "Candidate changed; recompute compatibility")
     valid, reasons = feasible(db, candidate, vacancy)
     if not valid:
         raise AppError(409, "PAIR_INELIGIBLE", "Pair is not currently eligible: " + ",".join(reasons))
@@ -543,28 +553,32 @@ def reconcile(
             )
             if existing:
                 continue
-            skills = set(
-                db.scalars(
-                    select(Skill.name)
+            skills = tuple(
+                (skill.name, tuple(skill.aliases))
+                for skill in db.scalars(
+                    select(Skill)
                     .join(CandidateSkill, CandidateSkill.skill_id == Skill.id)
-                    .where(CandidateSkill.candidate_id == candidate.id)
+                    .where(CandidateSkill.candidate_id == candidate.id, CandidateSkill.confirmed.is_(True))
                 )
             )
-            preferred = set(
+            preferred = tuple(
                 db.scalars(
                     select(Requirement.key).where(
                         Requirement.vacancy_id == vacancy.id, Requirement.kind == "PREFERENCE"
                     )
                 )
             )
-            features = SanitizedPairFeatures(
-                candidate.id,
-                vacancy.id,
-                vacancy.role_family,
-                "structured-v1",
-                utcnow(),
-                skill_alignment=len(skills.intersection(preferred)) / len(preferred) if preferred else 0,
-                work_mode_alignment=1,
+            features = ReciprocalFeatures(
+                candidate_id=candidate.id,
+                vacancy_id=vacancy.id,
+                candidate_version=candidate.version,
+                vacancy_version=vacancy.version,
+                as_of=utcnow().isoformat(),
+                employer_skills=skill_coverage(skills, preferred),
+                candidate_role=float(vacancy.role_family in candidate.role_families),
+                candidate_work_mode=float(vacancy.work_mode in candidate.work_modes),
+                candidate_employment_type=float(vacancy.employment_type in candidate.employment_types),
+                eligible=True,  # feasible() above; issuance rechecks under locks.
             )
             candidate_congestion = db.scalar(
                 select(CongestionPrice).where(
@@ -580,25 +594,16 @@ def reconcile(
                     candidate_congestion.price if candidate_congestion else 0,
                 ),
             )
-            score = HeuristicPairScorer().score(features, pair_prices)
-            if score.best.net_surplus <= 0:
+            trace = score_reciprocal(features, pair_prices)
+            if trace["net_surplus"] <= 0:
                 continue
-            trace = {
-                "model_version": score.model_version,
-                "estimate_kind": "NONPROBABILISTIC",
-                "feature_hash": features.digest,
-                "reason_codes": list(score.factors),
-                "candidate_first": asdict(score.candidate_first),
-                "employer_first": asdict(score.employer_first),
-                "prices": asdict(pair_prices),
-            }
             proposals.append(
                 (
-                    score.best.net_surplus,
+                    trace["net_surplus"],
                     candidate.id,
                     vacancy.id,
                     vacancy.version,
-                    score.best.side.value,
+                    trace["first_mover"],
                     trace,
                 )
             )

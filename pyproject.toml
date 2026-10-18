@@ -51,3 +51,9 @@ files = ["apps/api/app"]
 check_untyped_defs = true
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = ["numpy", "numpy.*"]
+# New NumPy stubs use Python 3.12 syntax; keep checking our Python 3.11 code.
+follow_imports = "skip"
+follow_imports_for_stubs = true
+
