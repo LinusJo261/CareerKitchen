@@ -298,6 +298,12 @@
             "title": "Currency",
             "type": "string"
           },
+          "display_name": {
+            "default": "",
+            "maxLength": 120,
+            "title": "Display Name",
+            "type": "string"
+          },
           "education": {
             "items": {
               "$ref": "#/components/schemas/EducationInput"
@@ -353,6 +359,9 @@
             "const": true,
             "title": "Privacy Accepted",
             "type": "boolean"
+          },
+          "professional_links": {
+            "$ref": "#/components/schemas/ProfessionalLinks"
           },
           "profile_confirmed": {
             "const": true,
@@ -495,6 +504,11 @@
             "title": "Currency",
             "type": "string"
           },
+          "display_name": {
+            "default": "",
+            "title": "Display Name",
+            "type": "string"
+          },
           "education": {
             "items": {
               "$ref": "#/components/schemas/EducationInput"
@@ -535,6 +549,9 @@
           "privacy_accepted": {
             "title": "Privacy Accepted",
             "type": "boolean"
+          },
+          "professional_links": {
+            "$ref": "#/components/schemas/ProfessionalLinks"
           },
           "region": {
             "title": "Region",
@@ -4560,6 +4577,37 @@
           "locations"
         ],
         "title": "PreferencesInput",
+        "type": "object"
+      },
+      "ProfessionalLinks": {
+        "additionalProperties": false,
+        "properties": {
+          "linkedin": {
+            "anyOf": [
+              {
+                "maxLength": 2048,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linkedin"
+          },
+          "portfolio": {
+            "anyOf": [
+              {
+                "maxLength": 2048,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Portfolio"
+          }
+        },
+        "title": "ProfessionalLinks",
         "type": "object"
       },
       "ReadinessOut": {

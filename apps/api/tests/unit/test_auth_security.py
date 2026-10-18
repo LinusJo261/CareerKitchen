@@ -11,7 +11,7 @@ from app.core.errors import AppError
 from app.core.settings import Settings
 from app.integrations import storage
 from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from pydantic import ValidationError
 
 
@@ -166,6 +166,72 @@ def test_supabase_asymmetric_verification_and_provider_email(monkeypatch):
         auth.verify_access_token(
             jwt.encode(claims, "attacker-secret-that-is-long-enough-32", algorithm="HS256"), settings
         )
+
+
+@pytest.mark.parametrize("amr", [None, []])
+def test_supabase_es256_session_accepts_optional_amr_without_inventing_recent_auth(monkeypatch, amr):
+    settings = Settings(
+        _env_file=None,
+        auth_mode="supabase",
+        supabase_url="https://project.supabase.co",
+        supabase_publishable_key="test-publishable",
+    )
+    private_key = ec.generate_private_key(ec.SECP256R1())
+    claims = token_claims(settings) | {"amr": amr, "auth_time": None}
+    client = SimpleNamespace(
+        get_signing_key_from_jwt=lambda raw: SimpleNamespace(key=private_key.public_key())
+    )
+    monkeypatch.setattr(auth, "_jwk_client", lambda url: client)
+    monkeypatch.setattr(
+        auth,
+        "_supabase_user",
+        lambda raw, cfg, sub: {
+            "id": str(sub),
+            "email": "confirmed@example.invalid",
+            "email_confirmed_at": "2026-01-01T00:00:00Z",
+        },
+    )
+    token = jwt.encode(claims, private_key, algorithm="ES256", headers={"kid": "ec-test-key"})
+    identity = auth.verify_access_token(token, settings)
+    assert str(identity.subject) == claims["sub"]
+    assert identity.auth_time == datetime.fromtimestamp(0, UTC)
+
+
+def test_supabase_amr_uses_sign_in_time_instead_of_token_refresh_time():
+    claims = {
+        "iat": 1800000000,
+        "amr": [
+            {"method": "password", "timestamp": 1799990000},
+            {"method": "totp", "timestamp": 1799995000},
+        ],
+    }
+    assert auth._authentication_time(claims) == datetime.fromtimestamp(1799990000, UTC)
+    assert auth._authentication_time({}) == datetime.fromtimestamp(0, UTC)
+    assert auth._authentication_time({"auth_time": None, "amr": claims["amr"]}) == datetime.fromtimestamp(
+        1799990000, UTC
+    )
+
+
+@pytest.mark.parametrize("timestamp", [True, "1800000000", {}, [], -1, float("inf"), float("nan")])
+def test_malformed_authentication_time_rejected(timestamp):
+    settings = local_settings()
+    claims = token_claims(settings) | {"auth_time": timestamp}
+    with pytest.raises(AppError) as failure:
+        auth.verify_access_token(sign_local(claims, settings), settings)
+    assert failure.value.code == "INVALID_TOKEN"
+
+
+def test_session_rejection_logs_only_safe_reason_codes(caplog):
+    settings = local_settings()
+    private_marker = "private-claim-value-must-never-be-logged"
+    claims = token_claims(settings) | {"sub": private_marker}
+    token = sign_local(claims, settings)
+    with pytest.raises(AppError):
+        auth.verify_access_token(token, settings)
+    assert "reason=invalid_claims_or_signature" in caplog.text
+    assert private_marker not in caplog.text
+    assert token not in caplog.text
+    assert settings.dev_jwt_secret.get_secret_value() not in caplog.text
 
 
 def test_provider_error_fails_closed(monkeypatch):

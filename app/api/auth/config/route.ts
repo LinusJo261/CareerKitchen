@@ -1,23 +1,27 @@
 import { authMode, sampleDemoAvailable } from '@/lib/server/session'
 import { requestHostname } from '@/lib/server/http-utils'
+import { linkedInAvailability } from "@/lib/server/auth-navigation";
 export async function GET(request: Request) {
-  const mode = authMode(requestHostname(request))
+  const mode = authMode(requestHostname(request));
   return Response.json(
     {
       mode,
       sampleDemo: sampleDemoAvailable(request),
-      ...(mode === 'local'
+      ...(mode === "supabase"
+        ? { linkedin: await linkedInAvailability() }
+        : {}),
+      ...(mode === "local"
         ? {
             accounts: [
-              'employer',
+              "employer",
               ...Array.from(
                 { length: 30 },
-                (_, i) => `candidate-${String(i + 1).padStart(2, '0')}`,
+                (_, i) => `candidate-${String(i + 1).padStart(2, "0")}`,
               ),
             ],
           }
         : {}),
     },
-    { headers: { 'Cache-Control': 'no-store' } },
-  )
+    { headers: { "Cache-Control": "no-store" } },
+  );
 }

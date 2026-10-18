@@ -26,19 +26,24 @@ export class Backend {
             process.env.NODE_ENV !== 'production',
           )
     const method = options.method || 'GET'
+    const multipart = options.body instanceof FormData
     let response: Response
     try {
       response = await fetch(base + path, {
         method,
         headers: {
           Authorization: `Bearer ${this.token}`,
-          ...(options.body !== undefined
+          ...(options.body !== undefined && !multipart
             ? { 'Content-Type': 'application/json' }
             : {}),
           ...(options.key ? { 'Idempotency-Key': options.key } : {}),
         },
         ...(options.body !== undefined
-          ? { body: JSON.stringify(options.body) }
+          ? {
+              body: multipart
+                ? (options.body as FormData)
+                : JSON.stringify(options.body),
+            }
           : {}),
         cache: 'no-store',
         redirect: 'error',

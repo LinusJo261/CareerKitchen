@@ -69,6 +69,17 @@ jobs:
       - run: alembic upgrade head
       - run: alembic downgrade base
       - run: alembic upgrade head
+      - name: Create isolated synthetic sample database for integration tests
+        run: |
+          python - <<'PY'
+          from sqlalchemy import create_engine, text
+          from sqlalchemy.engine import make_url
+          from app.core.settings import get_settings
+          engine = create_engine(make_url(get_settings().database_url).set(database="postgres"), isolation_level="AUTOCOMMIT")
+          with engine.connect() as connection:
+              connection.execute(text("CREATE DATABASE career_kitchen_samples"))
+          engine.dispose()
+          PY
       - run: pytest --cov=apps/api/app --cov-report=term-missing
       - run: python scripts/export_openapi.py --check
       - uses: actions/setup-node@v4

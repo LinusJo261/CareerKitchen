@@ -12,9 +12,10 @@ import argparse
 import hashlib
 import json
 import re
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 from urllib.parse import urljoin, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -25,9 +26,24 @@ SOURCE_URL = f"https://huggingface.co/datasets/{DATASET}"
 BASE_URL = f"{SOURCE_URL}/resolve/{REVISION}/"
 SCHEMA_VERSION = 1
 COUNTS = {"resumes": 10_000, "jobs": 2_500}
+
+
 # Independently downloaded and SHA256-checked on 2026-10-18. A revision update
 # requires reviewing the license, schema, and these exact byte-level pins.
-SOURCE_FILES = {
+class SourceFile(TypedDict):
+    source_path: str
+    bytes: int
+    sha256: str
+
+
+class TableFile(TypedDict):
+    file: str
+    count: int
+    bytes: int
+    sha256: str
+
+
+SOURCE_FILES: dict[str, SourceFile] = {
     "README.md": {
         "source_path": "README.md",
         "bytes": 13_204,
@@ -44,7 +60,7 @@ SOURCE_FILES = {
         "sha256": "c13d7c7e0ab510e81117974027de1364f973a27b3cacc8fabfbd8851c352c871",
     },
 }
-TABLE_FILES = {
+TABLE_FILES: dict[str, TableFile] = {
     "resumes": {
         "file": "resumes.jsonl",
         "count": 10_000,
@@ -171,7 +187,7 @@ def _read_bounded(path: Path, maximum: int) -> bytes:
     return raw
 
 
-def _verified_file(raw: bytes, metadata: dict[str, Any]) -> None:
+def _verified_file(raw: bytes, metadata: Mapping[str, Any]) -> None:
     if len(raw) != metadata["bytes"] or sha256(raw) != metadata["sha256"]:
         raise ValueError("Pinned synthetic source failed byte length or SHA256 validation")
 
@@ -314,8 +330,8 @@ def load_source(path: Path = DEFAULT_SOURCE) -> tuple[dict[str, list[dict[str, A
         or manifest["tables"] != TABLE_FILES
     ):
         raise ValueError("Invalid pinned synthetic dataset manifest")
-    for filename, metadata in SOURCE_FILES.items():
-        _verified_file(_read_bounded(directory / filename, metadata["bytes"]), metadata)
+    for filename, source_metadata in SOURCE_FILES.items():
+        _verified_file(_read_bounded(directory / filename, source_metadata["bytes"]), source_metadata)
     tables = {}
     for name, count in COUNTS.items():
         metadata = manifest["tables"][name]

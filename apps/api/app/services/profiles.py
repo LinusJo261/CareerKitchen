@@ -42,6 +42,8 @@ def candidate_out(candidate: Candidate) -> dict:
     fields = (
         "id",
         "version",
+        "display_name",
+        "professional_links",
         "headline",
         "summary",
         "region",
@@ -164,6 +166,12 @@ def save_candidate(db: Session, actor: Actor, data: CandidateInput) -> Candidate
         candidate = Candidate(user_id=actor.user_id)
         db.add(candidate)
     values = data.model_dump(exclude={"expected_version", "compensation_floor", "profile_confirmed"})
+    # Older profile editors do not know these optional onboarding fields.
+    for optional_field in ("display_name", "professional_links"):
+        if optional_field not in data.model_fields_set:
+            values.pop(optional_field, None)
+    if "professional_links" in values:
+        values["professional_links"] = data.professional_links.model_dump(exclude_none=True)
     for key, value in values.items():
         setattr(candidate, key, value)
     candidate.compensation_floor_cipher = (
@@ -372,7 +380,9 @@ def create_vacancy(db: Session, actor: Actor, data: VacancyInput) -> Vacancy:
         )
     )
     if duplicate:
-        raise AppError(409, "DUPLICATE_VACANCY", "Review the existing vacancy before creating a duplicate")
+        raise AppError(
+            409, "DUPLICATE_VACANCY", "Review the existing job opening before creating a duplicate"
+        )
     vacancy = Vacancy(
         **values, org_id=org_id, owner_user_id=actor.user_id, openings_remaining=data.openings_total
     )
@@ -420,7 +430,7 @@ def set_vacancy_state(db: Session, actor: Actor, vacancy_id: str, expected: int,
     vacancy = load(db, Vacancy, vacancy.id)
     require_version(vacancy, expected)
     if vacancy.state in {"CLOSED", "FILLED"}:
-        raise AppError(409, "VACANCY_TERMINAL", "Closed vacancies cannot be reopened")
+        raise AppError(409, "VACANCY_TERMINAL", "Closed job openings cannot be reopened")
     if state == "ACTIVE":
         org = load(db, Organization, vacancy.org_id)
         if org.verification_state != "VERIFIED" or vacancy.openings_remaining < 1:
@@ -428,14 +438,14 @@ def set_vacancy_state(db: Session, actor: Actor, vacancy_id: str, expected: int,
                 409, "ACTIVATION_BLOCKED", "Verified employer and an available opening are required"
             )
         if vacancy.deadline_at and vacancy.deadline_at <= utcnow():
-            raise AppError(409, "ROLE_EXPIRED", "Vacancy deadline has passed")
+            raise AppError(409, "ROLE_EXPIRED", "Job opening deadline has passed")
         count = db.scalar(
             select(func.count())
             .select_from(Vacancy)
             .where(Vacancy.org_id == org.id, Vacancy.state == "ACTIVE", Vacancy.id != vacancy.id)
         )
         if (count or 0) >= org.active_role_capacity:
-            raise AppError(409, "ROLE_CAPACITY_FULL", "Organization active vacancy capacity is full")
+            raise AppError(409, "ROLE_CAPACITY_FULL", "Organization active job opening capacity is full")
         if any(
             r.reviewed_by is None
             for r in db.scalars(select(Requirement).where(Requirement.vacancy_id == vacancy.id))
@@ -469,7 +479,7 @@ def set_requirement(
     requirement = load(db, Requirement, requirement_id) if requirement_id else None
     require_version(requirement or vacancy, data.expected_version)
     if requirement and requirement.vacancy_id != vacancy.id:
-        raise AppError(403, "FORBIDDEN", "Requirement is outside this vacancy")
+        raise AppError(403, "FORBIDDEN", "Requirement is outside this job opening")
     if (
         requirement
         and requirement.kind == "ESSENTIAL"

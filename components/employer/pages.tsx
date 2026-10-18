@@ -212,7 +212,7 @@ export function VacanciesPage() {
     <>
       <PageHeader
         eyebrow={data.organization.name}
-        title="Vacancies"
+        title="Job openings"
         description="Publish clear role terms, compensation and requirements. Changes use the version you reviewed."
         actions={<VacancyDialog />}
       />
@@ -223,7 +223,7 @@ export function VacanciesPage() {
         value={filter}
         onValueChange={(v) => v && setFilter(v)}
         className="mb-5"
-        aria-label="Filter vacancies"
+        aria-label="Filter job openings"
       >
         {["All", "ACTIVE", "DRAFT", "PAUSED", "CLOSED", "FILLED"].map((f) => (
           <ToggleGroupItem key={f} value={f}>
@@ -234,8 +234,8 @@ export function VacanciesPage() {
       {!list.length ? (
         <EmptyNote
           icon={BriefcaseBusiness}
-          title="No vacancies here"
-          description="Create a draft vacancy after your organization membership has been approved."
+          title="No job openings here"
+          description="Create a draft job opening after your organization membership has been approved."
         />
       ) : (
         <ul className="grid gap-4 lg:grid-cols-2">
@@ -279,21 +279,21 @@ export function VacanciesPage() {
                   {v.state === "ACTIVE" ? (
                     <ActionDialog
                       trigger="Pause"
-                      title="Pause vacancy?"
+                      title="Pause job opening?"
                       description="Pending introductions will be cancelled until you publish again."
-                      submitLabel="Pause vacancy"
+                      submitLabel="Pause job opening"
                       onSubmit={() =>
                         execute(
                           "vacancy.pause",
                           { id: v.id, expected_version: v.version },
-                          "Vacancy paused.",
+                          "Job opening paused.",
                         )
                       }
                     />
                   ) : (
                     <ActionDialog
                       trigger="Publish"
-                      title="Publish vacancy?"
+                      title="Publish job opening?"
                       description="Confirm that you have reviewed this version and its requirements. Organization verification and attention ceilings are checked by the backend."
                       submitLabel="Publish"
                       affirmation="I have reviewed these role terms and requirements."
@@ -301,21 +301,21 @@ export function VacanciesPage() {
                         execute(
                           "vacancy.activate",
                           { id: v.id, expected_version: v.version },
-                          "Vacancy published.",
+                          "Job opening published.",
                         )
                       }
                     />
                   )}
                   <ActionDialog
-                    trigger="Close vacancy"
-                    title="Close vacancy?"
-                    description="This closes pending introductions. A closed vacancy cannot be reopened."
-                    submitLabel="Close vacancy"
+                    trigger="Close job opening"
+                    title="Close job opening?"
+                    description="This closes pending introductions. A closed job opening cannot be reopened."
+                    submitLabel="Close job opening"
                     onSubmit={() =>
                       execute(
                         "vacancy.close",
                         { id: v.id, expected_version: v.version },
-                        "Vacancy closed.",
+                        "Job opening closed.",
                       )
                     }
                   />
@@ -461,8 +461,8 @@ function VacancyDialog({ vacancy: v }: { vacancy?: Vacancy }) {
     );
   return (
     <ActionDialog
-      trigger={v ? "Edit terms" : "New vacancy"}
-      title={v ? "Edit vacancy" : "Create a draft vacancy"}
+      trigger={v ? "Edit terms" : "New job opening"}
+      title={v ? "Edit job opening" : "Create a draft job opening"}
       description={
         v
           ? "Editing an active role pauses it and invalidates previous role terms."
@@ -486,8 +486,8 @@ function VacancyDialog({ vacancy: v }: { vacancy?: Vacancy }) {
             ...(v ? { id: v.id, expected_version: v.version } : {}),
           },
           v
-            ? "Vacancy saved. Review and publish the new version."
-            : "Draft vacancy created.",
+            ? "Job opening saved. Review and publish the new version."
+            : "Draft job opening created.",
         )
       }
     />
@@ -583,11 +583,11 @@ export function PipelinePage() {
         actions={
           <select
             className={selectClass}
-            aria-label="Filter by vacancy"
+            aria-label="Filter by job opening"
             value={vacancyId}
             onChange={(e) => setVacancyId(e.target.value)}
           >
-            <option value="All">All vacancies</option>
+            <option value="All">All job openings</option>
             {data.backend.vacancies.map((v) => (
               <option key={v.id} value={v.id}>
                 {v.title}
@@ -918,7 +918,7 @@ export function OrganizationPage() {
                 </div>
                 <div>
                   <dt className="text-xs text-muted-foreground">
-                    Active vacancy capacity
+                    Active job opening capacity
                   </dt>
                   <dd>{org.active_role_capacity}</dd>
                 </div>
@@ -972,14 +972,14 @@ export function PactPage() {
               description="Requires independently approved signatory authority and recent authentication."
             />
             <Field>
-              <FieldLabel htmlFor="policy-vacancy">Vacancy version</FieldLabel>
+              <FieldLabel htmlFor="policy-vacancy">Job opening version</FieldLabel>
               <select
                 id="policy-vacancy"
                 className={selectClass}
                 value={vacancyId}
                 onChange={(e) => setVacancyId(e.target.value)}
               >
-                <option value="">Choose a vacancy</option>
+                <option value="">Choose a job opening</option>
                 {data.backend.vacancies
                   .filter((v) => ["DRAFT", "ACTIVE"].includes(v.state))
                   .map((v) => (
@@ -1324,10 +1324,10 @@ const MEMBER_ROLES = ["RECRUITER", "HIRING_MANAGER"];
 const PERMISSIONS = [
   [
     "ORG_ADMIN",
-    "Manage organization details, ordinary team invitations and vacancy capacity.",
+    "Manage organization details, ordinary team invitations and job opening capacity.",
   ],
-  ["RECRUITER", "Create and edit vacancies with assigned vacancy access."],
-  ["HIRING_MANAGER", "Review assigned vacancy decisions and hiring processes."],
+  ["RECRUITER", "Create and edit job openings with assigned job opening access."],
+  ["HIRING_MANAGER", "Review assigned job opening decisions and hiring processes."],
   [
     "AUTHORIZED_SIGNATORY",
     "Authorize exact policy terms and issue formal offers with independently approved authority.",
@@ -1347,7 +1347,7 @@ export function TeamPage() {
       <PageHeader
         eyebrow={data.organization.name}
         title="Team & permissions"
-        description="Database memberships and vacancy access govern decisions. Privileged authority requires independent verification."
+        description="Database memberships and job opening access govern decisions. Privileged authority requires independent verification."
       />
       <div className="grid max-w-5xl gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="flex flex-col gap-6">

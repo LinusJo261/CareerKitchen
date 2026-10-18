@@ -422,7 +422,7 @@ export function ProfilePage() {
         description="Your profile and preferences guide introductions. You control when it is active."
         actions={
           <Button variant="outline" asChild>
-            <Link href="/onboarding/candidate">Edit preferences</Link>
+            <Link href="/onboarding/candidate">Edit full profile</Link>
           </Button>
         }
       />

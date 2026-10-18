@@ -41,7 +41,9 @@ class Settings(BaseSettings):
     trusted_hosts: Annotated[list[str], NoDecode] = ["localhost", "127.0.0.1", "testserver"]
     feature_mode: Literal["LIVE", "BASELINE", "SHADOW"] = "LIVE"
     sample_demo_enabled: bool = False
-    sample_api_url: str = Field(default="http://127.0.0.1:8001", validation_alias="CAREER_KITCHEN_SAMPLE_API_URL")
+    sample_api_url: str = Field(
+        default="http://127.0.0.1:8001", validation_alias="CAREER_KITCHEN_SAMPLE_API_URL"
+    )
     matching_model_max_age_days: int = Field(default=90, ge=1, le=3650)
     storage_backend: Literal["local", "supabase"] = "local"
     storage_bucket: str = "career-kitchen-private"

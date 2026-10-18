@@ -53,7 +53,7 @@ const stations: Record<Role, Station[]> = {
     },
     { path: 'matches', name: 'The Table', action: 'Your introductions' },
     { path: 'evidence', name: 'Taste Tests', action: 'Questions & evidence' },
-    { path: 'profile', name: 'Mise en Place', action: 'Profile & preferences' },
+    { path: 'profile', name: 'Profile', action: 'Profile & preferences' },
   ],
   employer: [
     { path: 'vacancies', name: 'Open Orders', action: 'Your positions' },
@@ -136,19 +136,29 @@ export function Shell({
     return (
       <main className="mx-auto flex min-h-screen max-w-xl flex-col items-start justify-center gap-5 p-6">
         <Brand />
-        <h1 className="text-2xl">Your workspace is unavailable</h1>
+        <h1 className="text-2xl">
+          {error?.status === 401 || !error
+            ? 'Sign in to your workspace'
+            : error.status === 403
+              ? 'Workspace access needs attention'
+              : 'Your workspace is temporarily unavailable'}
+        </h1>
         <p className="text-sm text-muted-foreground" role="alert">
-          {error instanceof Error
-            ? error.message
-            : 'Sign in to load your account and saved workspace.'}
+          {error?.status === 401
+            ? 'Your session needs to be refreshed. Sign in again to continue.'
+            : error instanceof Error
+              ? error.message
+              : 'Sign in to load your account and saved workspace.'}
         </p>
         <div className="flex gap-3">
           <Button asChild>
             <Link href={`/sign-in?role=${role}`}>Sign in</Link>
           </Button>
-          <Button variant="outline" onClick={() => refresh()}>
-            Try again
-          </Button>
+          {error?.status !== 401 && (
+            <Button variant="outline" onClick={() => refresh()}>
+              Try again
+            </Button>
+          )}
         </div>
       </main>
     )
@@ -256,9 +266,9 @@ export function Shell({
                 <nav aria-label="Stations" className="flex flex-col">
                   {stationLinks(true)}
                 </nav>
-                <p className="eyebrow px-6 pt-6 pb-2">Back office</p>
+                <p className="eyebrow px-6 pt-6 pb-2">Menu</p>
                 <nav
-                  aria-label="Back office"
+                  aria-label="Workspace menu"
                   className="flex flex-col px-3 pb-6"
                 >
                   {backOffice[role].map(([p, l]) => (
@@ -281,11 +291,7 @@ export function Shell({
                 </nav>
               </SheetContent>
             </Sheet>
-            <span
-              className={cn(
-                employer && '[&_.ticket]:bg-butter [&_.ticket]:text-charcoal',
-              )}
-            >
+            <span>
               <Brand className="hidden sm:flex" />
               <Brand compact className="sm:hidden" />
             </span>
@@ -332,7 +338,7 @@ export function Shell({
                     employer && 'text-flour hover:bg-flour/10 hover:text-flour',
                   )}
                 >
-                  <span className="hidden sm:inline">Back office</span>
+                  <span className="hidden sm:inline">Menu</span>
                   <ChevronDown
                     className="hidden sm:block"
                     data-icon="inline-end"
@@ -342,7 +348,7 @@ export function Shell({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-60">
                 <DropdownMenuLabel className="eyebrow">
-                  Back office
+                  Menu
                 </DropdownMenuLabel>
                 <DropdownMenuGroup>
                   {backOffice[role].map(([p, l]) => (

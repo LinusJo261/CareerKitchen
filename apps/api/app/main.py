@@ -149,7 +149,9 @@ def create_app(settings=None, engine=None) -> FastAPI:
         try:
             with app.state.engine.connect() as conn:
                 revision = conn.scalar(text("SELECT version_num FROM alembic_version"))
-                if revision != "0006_matching_learning":
+                from app.check_schema import EXPECTED_REVISION
+
+                if revision != EXPECTED_REVISION:
                     raise ValueError("Schema mismatch")
             return {"data": {"status": "ready", "queue": "POSTGRES_OUTBOX"}}
         except Exception as exc:

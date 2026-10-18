@@ -1,12 +1,12 @@
 """API acceptance tests for profile ownership and independently approved tenancy."""
 
 import re
-from datetime import timedelta
+from datetime import datetime, timedelta
 from uuid import uuid4
 
 import pytest
 from app.core.auth import mint_dev_token
-from app.db.models import Candidate, OrgMember
+from app.db.models import Candidate, DecisionCard, OrgMember, OutboxEvent
 from app.services.common import utcnow
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -82,6 +82,150 @@ def test_new_candidate_persisted_onboarding_preferences_and_capacity(market, eng
         row = db.scalar(select(Candidate).where(Candidate.user_id == market.users[3].id))
         assert row.cap == 10 and row.compensation_floor_cipher != "80000.00"
     assert ok(market.call(0, "GET", "/candidates/me"))["id"] != created["id"]
+
+
+def test_onboarding_identity_links_and_history_survive_reload_and_older_profile_editor(market, engine):
+    links = {
+        "linkedin": "https://www.linkedin.com/in/fictional-onboarding-candidate",
+        "portfolio": "https://fictional-portfolio.example.invalid/work",
+    }
+    experience = {
+        "title": "Fictional engineer",
+        "organization_label": "Fictional private organization",
+        "details": "Fictional work history confirmed by its owner",
+        "start_date": "2024-01-01",
+        "end_date": None,
+        "disclose_organization": False,
+    }
+    education = {
+        "qualification": "Fictional engineering degree",
+        "institution": "Fictional private institution",
+        "details": "Fictional owner-provided education",
+    }
+    payload = profile_payload(
+        display_name="Fictional Alex",
+        professional_links=links,
+        experiences=[experience],
+        education=[education],
+        available_from=(utcnow() + timedelta(days=3)).isoformat(),
+        available_until=(utcnow() + timedelta(days=90)).isoformat(),
+    )
+    created = ok(market.call(3, "PUT", "/candidates/me", payload))
+    reloaded = ok(market.call(3, "GET", "/candidates/me"))
+    for result in (created, reloaded):
+        assert result["display_name"] == payload["display_name"]
+        assert result["professional_links"] == links
+        assert result["experiences"] == [experience]
+        assert result["education"] == [education]
+        assert result["available_from"] and result["available_until"]
+    timestamps = {"available_from", "available_until", "confirmed_at"}
+    for field in timestamps:
+        assert datetime.fromisoformat(created[field]) == datetime.fromisoformat(reloaded[field])
+    assert {key: value for key, value in created.items() if key not in timestamps} == {
+        key: value for key, value in reloaded.items() if key not in timestamps
+    }
+
+    # A pre-onboarding editor sends its known fields without the new optional keys.
+    older_payload = {
+        key: value for key, value in payload.items() if key not in {"display_name", "professional_links"}
+    }
+    older_payload.update(expected_version=created["version"], summary="Fictional edited summary")
+    updated = ok(market.call(3, "PUT", "/candidates/me", older_payload))
+    assert updated["version"] == created["version"] + 1
+    assert updated["display_name"] == "Fictional Alex" and updated["professional_links"] == links
+    assert updated["summary"] == "Fictional edited summary"
+    with Session(engine) as db:
+        row = db.get(Candidate, created["id"])
+        assert row.display_name == "Fictional Alex" and row.professional_links == links
+        assert all(
+            "Fictional Alex" not in str(event.payload) and links["portfolio"] not in str(event.payload)
+            for event in db.scalars(select(OutboxEvent))
+        )
+
+    cleared = ok(
+        market.call(
+            3,
+            "PUT",
+            "/candidates/me",
+            {
+                **older_payload,
+                "expected_version": updated["version"],
+                "display_name": "",
+                "professional_links": {},
+            },
+        )
+    )
+    assert cleared["display_name"] == ""
+    assert not any(cleared["professional_links"].values())
+    with Session(engine) as db:
+        assert db.get(Candidate, created["id"]).professional_links == {}
+
+
+def test_optional_onboarding_identity_is_not_disclosed_in_employer_cards_or_matches(market, engine):
+    private_name = "Fictional owner-only name"
+    private_link = "https://www.linkedin.com/in/fictional-owner-only-profile"
+    ok(
+        market.call(
+            0,
+            "PUT",
+            "/candidates/me",
+            profile_payload(
+                expected_version=market.candidate.version,
+                display_name=private_name,
+                professional_links={"linkedin": private_link},
+            ),
+        )
+    )
+    issued = ok(
+        market.call(
+            2,
+            "POST",
+            "/internal/decisions/issue",
+            {
+                "candidate_id": market.candidate.id,
+                "vacancy_id": market.vacancy.id,
+                "role_version": market.vacancy.version,
+                "first_mover": "EMPLOYER",
+                "human_review_reason": "Fictional test reviewed pair",
+            },
+        )
+    )
+    employer_response = market.call(1, "GET", f"/decisions/{issued['decision_id']}")
+    employer_card = ok(employer_response)
+    assert private_name not in employer_response.text and private_link not in employer_response.text
+    assert (
+        "professional_links" not in employer_response.text
+        and "display_name" not in employer_card["candidate"]
+    )
+    ok(
+        market.call(
+            1,
+            "POST",
+            f"/decisions/{issued['decision_id']}/interested",
+            {
+                "expected_cycle_version": employer_card["cycle_version"],
+                "decision_token": employer_card["decision_token"],
+            },
+        )
+    )
+    with Session(engine) as db:
+        candidate_card_id = db.scalar(select(DecisionCard.id).where(DecisionCard.side == "CANDIDATE"))
+    candidate_card = ok(market.call(0, "GET", f"/decisions/{candidate_card_id}"))
+    mutual = ok(
+        market.call(
+            0,
+            "POST",
+            f"/decisions/{candidate_card_id}/interested",
+            {
+                "expected_cycle_version": candidate_card["cycle_version"],
+                "decision_token": candidate_card["decision_token"],
+            },
+        )
+    )
+    match_response = market.call(1, "GET", f"/matches/{mutual['match_id']}")
+    match = ok(match_response)
+    assert private_name not in match_response.text and private_link not in match_response.text
+    assert "display_name" not in match["candidate"] and "professional_links" not in match["candidate"]
 
 
 @pytest.mark.parametrize(

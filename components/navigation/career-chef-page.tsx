@@ -22,7 +22,7 @@ export function CareerChefPage() {
           <h1 className="mt-5 font-serif text-4xl leading-[1.05] tracking-tight sm:text-6xl">Find your way.<br /><span className="italic text-primary">Pull up a chair.</span></h1>
           <p className="mt-4 max-w-md text-sm text-muted-foreground sm:text-base">Meet Career Chef, your guide to Career Kitchen. Start with a quick onboarding guide, or choose Ask AI for help with a question.</p>
           <div className="mt-8 hidden space-y-5 lg:block">
-            <div className="flex items-start gap-3"><Compass aria-hidden="true" className="mt-1 size-4 shrink-0 text-primary" /><div><p className="text-sm font-medium">A guide around the kitchen</p><p className="mt-1 text-sm text-muted-foreground">Find candidate profiles, opportunities, employer vacancies, and the pages in between.</p></div></div>
+            <div className="flex items-start gap-3"><Compass aria-hidden="true" className="mt-1 size-4 shrink-0 text-primary" /><div><p className="text-sm font-medium">A guide around the kitchen</p><p className="mt-1 text-sm text-muted-foreground">Find candidate profiles, opportunities, employer job openings, and the pages in between.</p></div></div>
             <div className="flex items-start gap-3"><LockKeyhole aria-hidden="true" className="mt-1 size-4 shrink-0 text-primary" /><div><p className="text-sm font-medium">You stay in control</p><p className="mt-1 text-sm text-muted-foreground">Chef uses the public guide. It cannot view your account, send messages, or make decisions for you. Refreshing the page clears this chat.</p></div></div>
             <div className="flex items-start gap-3"><Sparkles aria-hidden="true" className="mt-1 size-4 shrink-0 text-primary" /><div><p className="text-sm font-medium">Quick guides, plus optional AI</p><p className="mt-1 text-sm text-muted-foreground">Quick guides work without a connection. AI replies use Google Gemini and need a connected session and your consent before sending.</p></div></div>
           </div>
@@ -30,7 +30,7 @@ export function CareerChefPage() {
             <p className="eyebrow">Know where you are headed?</p>
             <div className="mt-3 flex flex-wrap gap-x-5 gap-y-3 text-sm text-primary">
               <Link href="/candidate/opportunities" className="inline-flex items-center gap-1 hover:underline">Opportunities<ArrowUpRight aria-hidden="true" className="size-3.5" /></Link>
-              <Link href="/employer/vacancies" className="inline-flex items-center gap-1 hover:underline">Vacancies<ArrowUpRight aria-hidden="true" className="size-3.5" /></Link>
+              <Link href="/employer/vacancies" className="inline-flex items-center gap-1 hover:underline">Job openings<ArrowUpRight aria-hidden="true" className="size-3.5" /></Link>
               <Link href="/get-started" className="inline-flex items-center gap-1 hover:underline">Get started<ArrowUpRight aria-hidden="true" className="size-3.5" /></Link>
             </div>
           </div>

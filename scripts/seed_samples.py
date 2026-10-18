@@ -12,6 +12,7 @@ import hmac
 import json
 from datetime import timedelta
 from pathlib import Path
+from typing import Any
 from uuid import NAMESPACE_URL, uuid5
 
 from alembic import command
@@ -57,7 +58,7 @@ def require_local(settings: Settings) -> URL:
     return require_local_configuration(settings).set(database=SAMPLE_DATABASE)
 
 
-def _write(db: Session, model: type, rows: list[dict]) -> None:
+def _write(db: Session, model: type[Any], rows: list[dict]) -> None:
     if rows:
         db.execute(insert(model.__table__), rows)
 
@@ -67,7 +68,7 @@ def _row(label: str, **values: object) -> dict:
 
 
 def _audit(
-    db: Session, model: type, row: dict, payload: dict, *, related: dict[str, list[dict]] | None = None
+    db: Session, model: type[Any], row: dict, payload: dict, *, related: dict[str, list[dict]] | None = None
 ) -> None:
     """Bulk equivalent of common.emit, signed using its exact integrity contract.
 

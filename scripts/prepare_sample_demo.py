@@ -14,6 +14,7 @@ import json
 from collections import defaultdict
 from datetime import timedelta
 from pathlib import Path
+from typing import Any, cast
 
 from app.core.settings import get_settings
 from app.db.models import (
@@ -29,7 +30,7 @@ from app.db.models import (
 )
 from app.services import clearing
 from app.services.common import Actor, digest, lock_scopes, utcnow
-from sqlalchemy import create_engine, func, insert, select, update
+from sqlalchemy import Table, create_engine, func, insert, select, update
 from sqlalchemy.orm import Session
 
 from app.api.demo import (
@@ -45,7 +46,7 @@ from scripts.seed_samples import require_local
 BATCH_SIZE = 500
 
 
-def _audit(db: Session, actor: Actor, model: type, rows: list[dict], payloads: dict[str, dict]) -> None:
+def _audit(db: Session, actor: Actor, model: type[Any], rows: list[dict], payloads: dict[str, dict]) -> None:
     """Bulk common.emit equivalent; one signed aggregate event per changed root."""
     key = get_settings().audit_hmac_key.get_secret_value()
     if len(key) < 32:
@@ -99,11 +100,11 @@ def _audit(db: Session, actor: Actor, model: type, rows: list[dict], payloads: d
             }
         )
     if audits:
-        db.execute(insert(AuditEvent.__table__), audits)
-        db.execute(insert(OutboxEvent.__table__), events)
+        db.execute(insert(cast(Table, AuditEvent.__table__)), audits)
+        db.execute(insert(cast(Table, OutboxEvent.__table__)), events)
 
 
-def _batches(db: Session, model: type):
+def _batches(db: Session, model: type[Any]):
     previous = ""
     while True:
         rows = list(
@@ -271,6 +272,8 @@ def activate_samples(db: Session, settings) -> dict:
         )
     db.expire_all()
     first_candidate = db.get(Candidate, sample_identity("candidate-000001"))
+    if first_candidate is None:
+        raise ValueError("The sample demonstration candidate is missing")
     first_org = sample_identity("org-000001")
     targets = list(
         db.scalars(
@@ -301,7 +304,10 @@ def activate_samples(db: Session, settings) -> dict:
                 .limit(VACANCY_LIMIT)
             )
         )
-    if candidate_targets and all(db.get(Vacancy, item).org_id == first_org for item in candidate_targets):
+    if candidate_targets and all(
+        (vacancy := db.get(Vacancy, item)) is not None and vacancy.org_id == first_org
+        for item in candidate_targets
+    ):
         targets = candidate_targets
     # The default applicant receives actual executor-issued cards, never fabricated
     # decisions. Selecting one candidate avoids competition starving its demo inbox.

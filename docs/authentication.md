@@ -1,5 +1,8 @@
 # Authentication and frontend integration
 
+For LinkedIn OAuth provider configuration and the website callback flow, see
+[LinkedIn sign-in](linkedin-sign-in.md).
+
 Use Supabase Auth in the separately developed v0/Next.js frontend. The API does
 not implement passwords, registration, refresh tokens, or a production token
 issuer. A Next.js backend-for-frontend should keep Supabase sessions in secure

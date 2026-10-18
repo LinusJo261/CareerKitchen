@@ -3,7 +3,13 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSWRConfig } from "swr";
-import { ArrowLeft, ArrowRight, Building2, UserRound } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Building2,
+  Linkedin,
+  UserRound,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -100,8 +106,12 @@ export function AuthForm({ mode }: { mode: "sign-in" | "get-started" }) {
   const [authMode, setAuthMode] = useState<
     "local" | "supabase" | "unconfigured" | null
   >(null);
+  const [linkedin, setLinkedin] = useState<
+    "enabled" | "disabled" | "unavailable" | null
+  >(null);
   const [submitted, setSubmitted] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [oauthBusy, setOauthBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const signUp = mode === "get-started";
@@ -109,11 +119,30 @@ export function AuthForm({ mode }: { mode: "sign-in" | "get-started" }) {
   const passwordError = password.length < 8;
 
   useEffect(() => {
-    const requestedRole = new URLSearchParams(window.location.search).get(
-      "role",
-    );
+    const parameters = new URLSearchParams(window.location.search);
+    const requestedRole = parameters.get("role");
     if (requestedRole === "candidate" || requestedRole === "employer")
       setRole(requestedRole);
+    const authError = parameters.get("auth_error");
+    if (authError === "cancelled")
+      setError(
+        "LinkedIn sign-in was cancelled. You can try again or use email.",
+      );
+    else if (authError === "failed")
+      setError(
+        "LinkedIn sign-in could not be completed. Please try again or use email.",
+      );
+    else if (authError === "email_required")
+      setError(
+        "That sign-in did not provide a confirmed email address. Please create an account or sign in using email.",
+      );
+    else if (
+      authError === "expired" ||
+      parameters.get("confirmation") === "failed"
+    )
+      setError(
+        "That sign-in link expired or was opened in a different browser. Sign in again, or open your confirmation link in the browser where you created your account.",
+      );
     const controller = new AbortController();
     fetch("/api/auth/config", { signal: controller.signal, cache: "no-store" })
       .then(async (response) => {
@@ -121,6 +150,7 @@ export function AuthForm({ mode }: { mode: "sign-in" | "get-started" }) {
           throw new Error("Unable to load sign-in configuration.");
         const configuration = await response.json();
         setAuthMode(configuration.mode);
+        setLinkedin(configuration.linkedin || "unavailable");
       })
       .catch((cause) => {
         if (!controller.signal.aborted)
@@ -165,7 +195,7 @@ export function AuthForm({ mode }: { mode: "sign-in" | "get-started" }) {
         );
       if (result.needsEmailConfirmation) {
         setNotice(
-          "Check your email to confirm your account, then return to sign in.",
+          "Check your email to confirm your account. Open the link in this browser to continue your setup, or return here to sign in after confirming.",
         );
         setPassword("");
         return;
@@ -176,10 +206,7 @@ export function AuthForm({ mode }: { mode: "sign-in" | "get-started" }) {
         { revalidate: false },
       );
       router.push(
-        result.redirectTo ||
-          (signUp && role === "candidate"
-            ? "/onboarding/candidate"
-            : `/${role}`),
+        result.redirectTo || (signUp ? `/onboarding/${role}` : `/${role}`),
       );
       router.refresh();
     } catch (cause) {
@@ -190,6 +217,36 @@ export function AuthForm({ mode }: { mode: "sign-in" | "get-started" }) {
       );
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function signInWithLinkedIn() {
+    if (busy || authMode !== "supabase" || linkedin !== "enabled") return;
+    setBusy(true);
+    setOauthBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const response = await fetch("/api/auth/oauth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role, mode }),
+      });
+      const result = await response.json();
+      if (!response.ok || typeof result.redirectTo !== "string")
+        throw new Error(
+          result.error?.message ||
+            "LinkedIn sign-in could not start. Please use email or try again.",
+        );
+      window.location.assign(result.redirectTo);
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "LinkedIn sign-in could not start. Please try again.",
+      );
+      setBusy(false);
+      setOauthBusy(false);
     }
   }
 
@@ -215,6 +272,36 @@ export function AuthForm({ mode }: { mode: "sign-in" | "get-started" }) {
           </p>
         </div>
         <RolePicker value={role} onChange={setRole} />
+        {authMode === "supabase" && (
+          <div className="flex flex-col gap-3">
+            <Button
+              type="button"
+              size="lg"
+              variant="outline"
+              disabled={busy || linkedin !== "enabled"}
+              aria-describedby="linkedin-note"
+              onClick={signInWithLinkedIn}
+            >
+              <Linkedin aria-hidden="true" />
+              {oauthBusy ? "Opening LinkedIn…" : "Continue with LinkedIn"}
+            </Button>
+            <p
+              id="linkedin-note"
+              className="text-center text-xs text-muted-foreground"
+            >
+              {linkedin === "enabled"
+                ? "LinkedIn shares basic account details. You’ll add your experience and preferences yourself."
+                : linkedin === "disabled"
+                  ? "LinkedIn sign-in is being set up. Use email to continue."
+                  : "LinkedIn sign-in is temporarily unavailable. Use email to continue."}
+            </p>
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <span className="h-px flex-1 bg-border" />
+              <span>or continue with email</span>
+              <span className="h-px flex-1 bg-border" />
+            </div>
+          </div>
+        )}
         {authMode === "local" ? (
           <>
             <Alert>
@@ -303,7 +390,7 @@ export function AuthForm({ mode }: { mode: "sign-in" | "get-started" }) {
           size="lg"
           disabled={busy || !authMode || authMode === "unconfigured"}
         >
-          {busy
+          {busy && !oauthBusy
             ? "Signing in…"
             : authMode === "local"
               ? "Open test workspace"

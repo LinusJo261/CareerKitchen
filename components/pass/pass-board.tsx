@@ -79,15 +79,15 @@ export function PassBoard() {
           <p className="eyebrow">Employer introductions</p>
           <h1 className="display mt-2 text-6xl md:text-7xl">The Pass</h1>
           <p className="mt-3 text-pretty text-muted-foreground">
-            Review the introductions delivered to this vacancy. Each decision
-            respects candidate and vacancy attention ceilings, and the process
+            Review the introductions delivered to this job opening. Each decision
+            respects candidate and job opening attention ceilings, and the process
             opens only after both sides opt in.
           </p>
         </div>
         {data.backend.vacancies.length > 0 && (
           <select
             className="border-input bg-background min-h-9 max-w-full rounded-md border px-3 py-2 text-sm"
-            aria-label="Choose vacancy for introductions"
+            aria-label="Choose job opening for introductions"
             value={vacancy?.id ?? ''}
             onChange={(e) => setSelected(e.target.value)}
           >
@@ -102,8 +102,8 @@ export function PassBoard() {
       {!vacancy ? (
         <EmptyNote
           icon={BriefcaseBusiness}
-          title="Create a vacancy to begin"
-          description="Once a verified, active vacancy receives introductions, its decision cards appear here."
+          title="Create a job opening to begin"
+          description="Once a verified, active job opening receives introductions, its decision cards appear here."
         />
       ) : (
         <div className="grid items-start gap-8 lg:grid-cols-[320px_minmax(0,1fr)]">
@@ -191,7 +191,7 @@ export function PassBoard() {
                   <p className="font-serif text-2xl">The rail is empty</p>
                   <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
                     No active employer decision cards are available for this
-                    vacancy. Introductions appear when the backend delivers them
+                    job opening. Introductions appear when the backend delivers them
                     within both attention ceilings.
                   </p>
                 </div>
