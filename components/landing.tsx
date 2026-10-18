@@ -1,43 +1,66 @@
-import Image from 'next/image'
-import Link from 'next/link'
-import { ArrowRight } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Brand } from './brand'
-import { ProvenanceGlyph, ProvenanceLegend } from './pass/provenance'
-import { cn } from '@/lib/utils'
+import Link from "next/link";
+import {
+  ArrowRight,
+  Check,
+  HeartHandshake,
+  ListFilter,
+  MessageCircle,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Brand } from "./brand";
+import { ProvenanceGlyph, ProvenanceLegend } from "./pass/provenance";
+import { cn } from "@/lib/utils";
 
 const courses = [
   {
-    station: 'Mise en Place',
-    title: 'Everyone preps first.',
-    text: 'Candidates set out what they want and what they will not compromise on. Employers write the recipe: requirements, preferences, and real constraints.',
+    station: "Mise en Place",
+    title: "Everyone preps first.",
+    text: "Start with what matters. Candidates share their goals and must-haves; employers set out the role, requirements, and working arrangements.",
   },
   {
-    station: 'The Pass',
-    title: 'A short rail, not an endless feed.',
-    text: 'Each side reviews a limited set of introductions. Active decision ceilings keep the next step focused and manageable.',
+    station: "The Pass",
+    title: "A short rail, not an endless feed.",
+    text: "Review a small set of possibilities with the reasons behind each one. Keep your attention on the people and roles you actually want to consider.",
   },
   {
-    station: 'Taste Test',
-    title: 'Evidence with a purpose.',
-    text: 'Candidates submit factual claims for independent review and choose which employer and role may receive verified evidence.',
+    station: "Taste Test",
+    title: "Ask before you assume.",
+    text: "See which details are stated, which are inferred, and which still need a question. A suggestion is a starting point for a conversation.",
   },
   {
-    station: 'The Table',
-    title: 'Introductions, when both say yes.',
-    text: 'Nobody is introduced until both sides opt in. Then the conversation moves to the table.',
+    station: "The Table",
+    title: "Introductions, when both say yes.",
+    text: "An introduction needs a yes from both sides. Once interest is mutual, take the next step together.",
   },
-]
+];
+
+const principles = [
+  {
+    icon: ListFilter,
+    title: "A shorter shortlist",
+    text: "Make room for the possibilities that matter.",
+  },
+  {
+    icon: Check,
+    title: "Reasons you can read",
+    text: "Know what is stated and what needs a question.",
+  },
+  {
+    icon: HeartHandshake,
+    title: "A yes from both sides",
+    text: "Every introduction begins with mutual interest.",
+  },
+];
 
 const demoLines: {
-  label: string
-  status: 'confirmed' | 'inferred' | 'unknown'
-  word: string
+  label: string;
+  status: "confirmed" | "inferred" | "unknown";
+  word: string;
 }[] = [
-  { label: 'Ships design systems', status: 'confirmed', word: 'Yes' },
-  { label: 'B2B SaaS experience', status: 'inferred', word: 'Yes' },
-  { label: 'Hybrid, 2 days NYC', status: 'unknown', word: '?' },
-]
+  { label: "Ships design systems", status: "confirmed", word: "Yes" },
+  { label: "B2B SaaS experience", status: "inferred", word: "Yes" },
+  { label: "Hybrid, 2 days NYC", status: "unknown", word: "?" },
+];
 
 function SampleTicket({
   className,
@@ -45,13 +68,13 @@ function SampleTicket({
   title,
   stamp,
 }: {
-  className?: string
-  name: string
-  title: string
-  stamp: 'Ready' | 'To verify'
+  className?: string;
+  name: string;
+  title: string;
+  stamp: "Ready" | "To verify";
 }) {
   return (
-    <div className={cn('ticket-shadow relative w-60 shrink-0 pt-4', className)}>
+    <div className={cn("ticket-shadow relative w-60 shrink-0 pt-4", className)}>
       <span
         aria-hidden="true"
         className="absolute top-0 left-1/2 z-10 h-6 w-12 -translate-x-1/2 rounded-b-[3px] bg-steel"
@@ -63,10 +86,10 @@ function SampleTicket({
           </span>
           <span
             className={cn(
-              'stamp',
-              stamp === 'Ready'
-                ? 'border-primary text-primary'
-                : 'border-paprika-ink text-paprika-ink',
+              "stamp",
+              stamp === "Ready"
+                ? "border-primary text-primary"
+                : "border-paprika-ink text-paprika-ink",
             )}
           >
             {stamp}
@@ -80,25 +103,25 @@ function SampleTicket({
             <li key={l.label} className="flex items-center gap-2.5 text-sm">
               <span
                 className={
-                  l.status === 'unknown'
-                    ? 'text-muted-foreground'
-                    : 'text-primary'
+                  l.status === "unknown"
+                    ? "text-muted-foreground"
+                    : "text-primary"
                 }
               >
                 <ProvenanceGlyph
-                  status={stamp === 'Ready' && i === 2 ? 'confirmed' : l.status}
+                  status={stamp === "Ready" && i === 2 ? "confirmed" : l.status}
                 />
               </span>
               <span className="flex-1 truncate">{l.label}</span>
               <span className="font-mono text-xs">
-                {stamp === 'Ready' && i === 2 ? 'Yes' : l.word}
+                {stamp === "Ready" && i === 2 ? "Yes" : l.word}
               </span>
             </li>
           ))}
         </ul>
       </div>
     </div>
-  )
+  );
 }
 
 export function Landing() {
@@ -110,11 +133,11 @@ export function Landing() {
       >
         Skip to content
       </a>
-      <header className="page-width flex h-20 items-center justify-between gap-6">
+      <header className="page-width flex min-h-20 flex-wrap items-center justify-between gap-x-4 gap-y-3 py-4">
         <Brand />
         <nav
           aria-label="Main"
-          className="hidden items-center gap-8 text-sm md:flex"
+          className="hidden items-center gap-6 text-sm lg:flex"
         >
           <a href="#service" className="hover:text-primary">
             How service works
@@ -127,11 +150,14 @@ export function Landing() {
           </a>
         </nav>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" asChild>
+          <Button variant="ghost" className="hidden sm:inline-flex" asChild>
             <Link href="/sign-in">Sign in</Link>
           </Button>
           <Button asChild>
-            <Link href="/get-started">Get started</Link>
+            <Link href="/get-started">
+              Get started
+              <ArrowRight aria-hidden="true" className="hidden sm:block" />
+            </Link>
           </Button>
         </div>
       </header>
@@ -139,16 +165,16 @@ export function Landing() {
       <main id="main">
         <section
           aria-labelledby="hero"
-          className="page-width pt-10 pb-20 md:pt-16"
+          className="page-width pt-8 pb-14 md:pt-16 md:pb-20"
         >
           <div className="flex items-center gap-4 font-mono text-[11px] tracking-[0.16em] text-muted-foreground uppercase">
             <span>Front of House</span>
             <span className="h-px flex-1 bg-border" aria-hidden="true" />
-            <span>Now seating</span>
+            <span className="whitespace-nowrap">Thoughtful introductions</span>
           </div>
           <h1
             id="hero"
-            className="display mt-8 text-[clamp(3.4rem,10vw,9.5rem)] leading-[0.88] text-balance"
+            className="display mt-8 text-[clamp(2.75rem,10.5vw,9.5rem)] leading-[0.92] text-balance"
           >
             Fewer plates.
             <br />
@@ -156,37 +182,59 @@ export function Landing() {
           </h1>
           <div className="mt-10 grid gap-10 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] md:items-end">
             <p className="max-w-md text-lg leading-relaxed text-pretty">
-              Career Kitchen is a two-sided matching kitchen. Instead of a board
-              with a thousand listings, each side receives a small set of
-              mutually relevant introductions — prepared, checked, and sent to
-              the pass.
+              A calmer way to find your next role — or your next teammate.
+              Explore a small menu of possibilities, with clear reasons and a
+              yes from both sides.
             </p>
-            <div className="flex flex-wrap gap-3 md:justify-end">
-              <Button size="lg" asChild>
-                <Link href="/get-started">
-                  Find your next role
-                  <ArrowRight data-icon="inline-end" />
-                </Link>
-              </Button>
-              <Button size="lg" variant="outline" asChild>
-                <Link href="/employer/pass">Open employer workspace</Link>
-              </Button>
+            <div className="flex flex-col gap-4 md:items-end">
+              <div className="flex flex-wrap gap-3">
+                <Button size="lg" asChild>
+                  <Link href="/get-started?role=candidate">
+                    Find your next role
+                    <ArrowRight aria-hidden="true" data-icon="inline-end" />
+                  </Link>
+                </Button>
+                <Button size="lg" variant="outline" asChild>
+                  <Link href="/get-started?role=employer">
+                    Find your next teammate
+                  </Link>
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Start with your preferences. Move forward when interest is
+                mutual.
+              </p>
             </div>
           </div>
         </section>
 
-        <section aria-label="The kitchen" className="relative">
-          <div className="page-width">
-            <div className="relative aspect-[16/7] overflow-hidden rounded-sm border">
-              <Image
-                src="/images/the-pass.png"
-                alt="Order tickets clipped to a steel rail above a kitchen pass"
-                fill
-                priority
-                sizes="(min-width: 1280px) 1200px, 100vw"
-                className="object-cover"
-              />
-            </div>
+        <section
+          aria-label="A more thoughtful introduction"
+          className="page-width"
+        >
+          <div className="grid border-y md:grid-cols-3">
+            {principles.map(({ icon: Icon, title, text }, i) => (
+              <div
+                key={title}
+                className={cn(
+                  "flex items-start gap-4 py-6 md:py-8",
+                  i > 0 && "border-t md:border-t-0 md:border-l md:pl-7",
+                  i < 2 && "md:pr-7",
+                )}
+              >
+                <Icon
+                  aria-hidden="true"
+                  className="mt-0.5 size-5 shrink-0 text-primary"
+                  strokeWidth={1.5}
+                />
+                <div>
+                  <h2 className="font-serif text-xl tracking-normal">
+                    {title}
+                  </h2>
+                  <p className="mt-1 text-sm text-muted-foreground">{text}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </section>
 
@@ -240,7 +288,7 @@ export function Landing() {
                 id="employers-title"
                 className="mt-3 text-5xl leading-tight text-balance"
               >
-                Clear role terms. Thoughtful introductions.
+                Good hiring starts with a clear recipe.
               </h2>
               <p className="mt-5 max-w-md leading-relaxed opacity-85">
                 Review the people introduced for your roles, record your
@@ -251,7 +299,7 @@ export function Landing() {
               <Button variant="secondary" size="lg" className="mt-8" asChild>
                 <Link href="/employer/pass">
                   Open employer workspace
-                  <ArrowRight data-icon="inline-end" />
+                  <ArrowRight aria-hidden="true" data-icon="inline-end" />
                 </Link>
               </Button>
             </div>
@@ -291,15 +339,15 @@ export function Landing() {
           </div>
           <div className="flex flex-col gap-5">
             <p className="text-lg leading-relaxed text-pretty">
-              No infinite scroll, no applying into silence. You see a handful of
-              roles that fit what you told us — with the reasons written out —
-              and say yes only to the ones you want.
+              Start with your goals, work preferences, and non-negotiables.
+              Review a handful of roles with the reasons written out, then
+              decide what deserves your attention.
             </p>
             <ul className="flex flex-col border-t">
               {[
-                'Your compensation minimum stays private',
-                'You choose which verified evidence to share for each role',
-                'Introductions need both sides to say yes',
+                "Your compensation minimum stays private",
+                "You choose which verified evidence to share for each role",
+                "An introduction needs both sides to say yes",
               ].map((t) => (
                 <li key={t} className="flex gap-3 border-b py-3 text-sm">
                   <span className="mt-1.5 text-primary">
@@ -312,7 +360,34 @@ export function Landing() {
             <Button size="lg" className="self-start" asChild>
               <Link href="/candidate/opportunities">
                 Open candidate workspace
-                <ArrowRight data-icon="inline-end" />
+                <ArrowRight aria-hidden="true" data-icon="inline-end" />
+              </Link>
+            </Button>
+          </div>
+        </section>
+
+        <section aria-labelledby="chef-help-title" className="page-width pb-20">
+          <div className="flex flex-wrap items-center justify-between gap-6 rounded-md border bg-secondary px-6 py-7 md:px-8">
+            <div className="flex max-w-xl items-start gap-4">
+              <MessageCircle
+                aria-hidden="true"
+                className="mt-1 size-6 shrink-0 text-primary"
+                strokeWidth={1.5}
+              />
+              <div>
+                <h2 id="chef-help-title" className="text-2xl">
+                  A little help from the kitchen.
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Career Chef can explain the steps and help you find your way.
+                  Open the chat in the corner whenever you need a hand.
+                </p>
+              </div>
+            </div>
+            <Button variant="outline" asChild>
+              <Link href="/career-chef">
+                Meet Career Chef
+                <ArrowRight aria-hidden="true" />
               </Link>
             </Button>
           </div>
@@ -320,7 +395,7 @@ export function Landing() {
       </main>
 
       <footer className="double-rule">
-        <div className="page-width flex flex-wrap items-center justify-between gap-4 py-8 text-sm text-muted-foreground">
+        <div className="page-width flex flex-wrap items-center justify-between gap-4 py-8 pb-28 text-sm text-muted-foreground sm:pb-8">
           <Brand />
           <p>
             Illustrations use fictional examples. Workspace changes are saved to
@@ -329,5 +404,5 @@ export function Landing() {
         </div>
       </footer>
     </>
-  )
+  );
 }

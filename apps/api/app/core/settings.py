@@ -32,7 +32,12 @@ class Settings(BaseSettings):
     jwt_max_lifetime_seconds: int = Field(default=3600, ge=60, le=86400)
     encryption_key: SecretStr = SecretStr("")
     audit_hmac_key: SecretStr = SecretStr("")
-    cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:3000"]
+    cors_origins: Annotated[list[str], NoDecode] = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+    ]
     trusted_hosts: Annotated[list[str], NoDecode] = ["localhost", "127.0.0.1", "testserver"]
     feature_mode: Literal["BASELINE", "SHADOW"] = "SHADOW"
     storage_backend: Literal["local", "supabase"] = "local"
@@ -50,6 +55,9 @@ class Settings(BaseSettings):
     decision_ttl_hours: int = Field(default=72, ge=1, le=168)
     rate_limit_per_minute: int = Field(default=120, ge=1, le=10000)
     readiness_token: SecretStr = SecretStr("")
+    gemini_api_key: SecretStr = SecretStr("")
+    gemini_model: str = Field(default="gemini-3.8-flash", pattern=r"^gemini-[a-z0-9.-]+$")
+    gemini_timeout_seconds: float = Field(default=20, ge=1, le=30)
 
     @field_validator("cors_origins", "trusted_hosts", mode="before")
     @classmethod

@@ -2,6 +2,8 @@
 
 Next.js frontend connected to the persistent FastAPI backend. Workspace pages use
 authenticated server routes and PostgreSQL state rather than in-memory demo data.
+Career Chef adds public onboarding guides and an optional, consent-based Gemini
+conversation through the server-side API bridge.
 
 The API implements candidate/employer onboarding, organization verification and
 team ACLs, versioned vacancies and requirements, reciprocal decision cards,
@@ -18,7 +20,18 @@ the baseline executes live matching; advanced execution is disabled and reliabil
 is `CANNOT_CERTIFY`.
 
 Start with [implementation status](docs/STATUS.md), [v0 integration](docs/v0-integration.md),
-[API contracts](docs/api.md), and [deployment](docs/deployment.md).
+[API contracts](docs/api.md), and [deployment](docs/deployment.md). The complete
+archived blueprint is not present in this checkout.
+
+## Test Career Chef
+
+Career Chef answers navigation questions using Gemini at `POST /v1/navigation/chat`.
+The Next.js website includes a floating **Career Chef** assistant and a standalone
+test page at `http://127.0.0.1:3000/career-chef`. See [website and API testing](docs/career-chef-testing.md).
+Test API messages separately in Swagger at `http://127.0.0.1:8000/docs`;
+the answer appears in `data.reply`. The [API walkthrough](docs/navigation-chat.md)
+covers PostgreSQL setup, safe local authentication, Gemini configuration and errors.
+Opening Swagger alone does not verify that those dependencies are ready.
 
 ## Run locally
 
@@ -40,11 +53,11 @@ Run the persistent worker in another terminal:
 .\.venv\Scripts\python.exe -m app.workers.runner
 ```
 
-This implementation workspace already has an ignored `.venv`, random local `.env`
-secrets, and a local PostgreSQL instance on port 55432. Those machine-local files
-are excluded from version control and distribution. Fresh machines can use
-Compose PostgreSQL with the native loopback API; see the deployment guide for
-container authentication and production configuration.
+An ignored `.venv`, `.env` or local PostgreSQL runtime may exist on an individual
+machine; these are not included in the checkout. Fresh machines can use Compose
+PostgreSQL with the native loopback API; see the deployment guide for container
+authentication and production configuration. `python -m scripts.local_dev init`
+can create explicit fictional local auth configuration without overwriting `.env`.
 
 Interactive API reference: [local Swagger UI](http://127.0.0.1:8000/docs).
 Liveness: `/v1/health`; readiness: `/v1/ready`. Hosted readiness requires a private

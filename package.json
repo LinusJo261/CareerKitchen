@@ -8,7 +8,7 @@
     "build": "next build",
     "typecheck": "tsc --noEmit",
     "start": "next start",
-    "test": "node --conditions=react-server --test tests/*.test.mjs",
+    "test": "node --conditions=react-server --test tests/*.test.mjs && node --test scripts/test-navigation.cjs scripts/test-demo-privacy.cjs",
     "smoke:frontend": "node scripts/smoke_frontend.mjs",
     "check:contracts": "node packages/api-client/scripts/check-generated.mjs"
   },

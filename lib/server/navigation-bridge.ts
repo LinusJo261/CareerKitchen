@@ -1,0 +1,208 @@
+import { createHmac, randomUUID } from 'node:crypto'
+
+type Environment = Record<string, string | undefined>
+type SessionResolver = (request: Request) => Promise<string>
+
+const loopback = new Set(['localhost', '127.0.0.1', '[::1]'])
+const responseHeaders = { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' }
+
+function fail(status: number, code: string, message: string) {
+  return Response.json({ error: { code, message } }, { status, headers: responseHeaders })
+}
+
+export function apiBase(env: Environment): URL {
+  const base = new URL(env.CAREER_KITCHEN_API_URL || 'http://127.0.0.1:8000')
+  if (
+    base.username || base.password || base.search || base.hash ||
+    (base.protocol !== 'https:' && !(base.protocol === 'http:' && loopback.has(base.hostname)))
+  ) throw new Error('Use an HTTPS API URL or a loopback development URL')
+  base.pathname = base.pathname.replace(/\/$/, '') + '/'
+  return base
+}
+
+export function localAuthentication(env: Environment, base: URL): boolean {
+  return env.NODE_ENV === 'development' && env.ENVIRONMENT === 'development' &&
+    env.AUTH_MODE === 'local' && env.ALLOW_DEV_AUTH?.toLowerCase() === 'true' &&
+    loopback.has(base.hostname) && (env.DEV_JWT_SECRET?.length ?? 0) >= 32 &&
+    loopback.has(new URL(env.DEV_JWT_ISSUER || 'http://127.0.0.1:8000/dev-auth').hostname)
+}
+
+function localToken(env: Environment) {
+  const now = Math.floor(Date.now() / 1000)
+  const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url')
+  const claims = Buffer.from(JSON.stringify({
+    sub: '8ac07b4e-e703-4a60-b0ed-35ff610b8235',
+    session_id: randomUUID(),
+    iss: env.DEV_JWT_ISSUER || 'http://127.0.0.1:8000/dev-auth',
+    aud: env.SUPABASE_JWT_AUDIENCE || 'authenticated',
+    iat: now, exp: now + 300, auth_time: now,
+    email: 'website-chef-tester@fictional.example.invalid', email_verified: true,
+  })).toString('base64url')
+  const signature = createHmac('sha256', env.DEV_JWT_SECRET!).update(`${header}.${claims}`).digest('base64url')
+  return `${header}.${claims}.${signature}`
+}
+
+function websiteAddress(request: Request): URL | null {
+  // Next can normalize request.url to localhost while the browser uses 127.0.0.1.
+  // Use the incoming Host authority, never a caller-selected forwarded host.
+  try {
+    const address = new URL(request.url)
+    const host = request.headers.get('host')
+    if (host !== null) {
+      // URL.host assignments can silently ignore malformed authorities. Parse a
+      // separate URL and reject path/credential delimiters before trusting it.
+      if (!host || /[\\/?#@\s]/.test(host)) return null
+      return new URL(`${address.protocol}//${host}`)
+    }
+    return address
+  } catch {
+    return null
+  }
+}
+
+function localWebsite(request: Request): boolean {
+  const address = websiteAddress(request)
+  return address !== null && loopback.has(address.hostname) &&
+    loopback.has(new URL(request.url).hostname)
+}
+
+function sameOrigin(request: Request) {
+  const expected = websiteAddress(request)
+  const origin = request.headers.get('origin')
+  return expected !== null && (!origin || origin === expected.origin) &&
+    request.headers.get('sec-fetch-site') !== 'cross-site'
+}
+
+// Injectable dependencies keep authentication and proxy behavior testable without Google calls.
+export function createNavigationBridge(env: Environment, fetcher: typeof fetch = fetch, sessionToken?: SessionResolver) {
+  return {
+    async GET(request: Request) {
+      if (!sameOrigin(request)) return fail(403, 'ORIGIN_FORBIDDEN', 'Use Career Chef from this website.')
+      let authentication = 'session'
+      let sessionAvailable = false
+      try {
+        const base = apiBase(env)
+        authentication = localAuthentication(env, base) && localWebsite(request) ? 'local' : 'session'
+        if (sessionToken) {
+          try {
+            const token = await sessionToken(request)
+            sessionAvailable = Boolean(token) && !/\s/.test(token) && token.length <= 16393
+          } catch { /* Sign-in is optional for connection health. */ }
+        }
+        const health = await fetcher(new URL('v1/health', base), {
+          cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(3000),
+        })
+        return Response.json({ data: {
+          authentication,
+          api_reachable: health.ok,
+          ...(sessionToken ? { session_available: sessionAvailable } : {}),
+        } }, { headers: responseHeaders })
+      } catch {
+        return Response.json({ data: { authentication, api_reachable: false, ...(sessionToken ? { session_available: sessionAvailable } : {}) } }, {
+          headers: responseHeaders,
+        })
+      }
+    },
+    async POST(request: Request) {
+      if (!sameOrigin(request)) return fail(403, 'ORIGIN_FORBIDDEN', 'Use Career Chef from this website.')
+      let base: URL
+      let useLocal: boolean
+      try {
+        base = apiBase(env)
+        useLocal = localAuthentication(env, base) && localWebsite(request)
+      } catch {
+        return fail(503, 'CHAT_UNAVAILABLE', 'Career Chef is temporarily unavailable. Please try again shortly.')
+      }
+      const supplied = request.headers.get('authorization')
+      if (supplied && (!/^Bearer [^\s]+$/.test(supplied) || supplied.length > 16400)) {
+        return fail(401, 'INVALID_TOKEN', 'Enter a valid session access token.')
+      }
+      let authorization = supplied
+      if (!authorization && sessionToken) {
+        try {
+          const token = await sessionToken(request)
+          if (!token || /\s/.test(token) || token.length > 16393) {
+            return fail(401, 'INVALID_TOKEN', 'Your session expired. Please sign in again.')
+          }
+          authorization = `Bearer ${token}`
+        } catch (error) {
+          const status = typeof error === 'object' && error && 'status' in error ? error.status : undefined
+          const code = typeof error === 'object' && error && 'code' in error ? error.code : undefined
+          if (status === 403) return fail(403, 'FORBIDDEN', 'Your session cannot use Career Chef. Please sign in again.')
+          if (!useLocal || (status !== 401 && code !== 'AUTH_NOT_CONFIGURED')) {
+            return status === 401
+              ? fail(401, 'UNAUTHORIZED', 'Sign in to your workspace to ask Career Chef.')
+              : fail(503, 'AUTH_UNAVAILABLE', 'Sign-in is temporarily unavailable. Please try again shortly.')
+          }
+        }
+      }
+      if (!authorization && !useLocal) return fail(401, 'UNAUTHORIZED', 'Sign in to your workspace to ask Career Chef.')
+      const key = request.headers.get('idempotency-key') || ''
+      if (!/^[A-Za-z0-9_.:-]{8,128}$/.test(key)) {
+        return fail(422, 'IDEMPOTENCY_KEY_REQUIRED', 'Supply an Idempotency-Key for this message.')
+      }
+      if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json')) {
+        return fail(415, 'UNSUPPORTED_MEDIA_TYPE', 'Send the chat request as JSON.')
+      }
+      // Bound the decoded request before forwarding. FastAPI performs the schema validation.
+      const reader = request.body?.getReader()
+      if (!reader) return fail(422, 'VALIDATION_ERROR', 'A chat request body is required.')
+      const parts: Uint8Array[] = []
+      let length = 0
+      try {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          length += value.byteLength
+          if (length > 100000) {
+            await reader.cancel()
+            return fail(413, 'REQUEST_TOO_LARGE', 'This conversation exceeds the request limit.')
+          }
+          parts.push(value)
+        }
+      } catch {
+        return fail(400, 'INVALID_REQUEST', 'The message could not be read. Try it again.')
+      }
+      const body = Buffer.concat(parts)
+      try { JSON.parse(body.toString('utf8')) } catch {
+        return fail(422, 'VALIDATION_ERROR', 'Send a valid JSON chat request.')
+      }
+      try {
+        const upstream = await fetcher(new URL('v1/navigation/chat', base), {
+          method: 'POST', cache: 'no-store', redirect: 'error',
+          headers: {
+            'Content-Type': 'application/json', 'Idempotency-Key': key,
+            Authorization: authorization || `Bearer ${localToken(env)}`,
+          },
+          body, signal: AbortSignal.timeout(40000),
+        })
+        if (upstream.status === 404 || upstream.status === 405) {
+          return fail(503, 'CHAT_UNAVAILABLE', 'AI chat is not available on the connected service. Quick guides are still available.')
+        }
+        const payload: unknown = await upstream.json()
+        if (!upstream.ok) {
+          // Never reflect provider, validation input, stack traces, or authentication details.
+          const code = typeof payload === 'object' && payload && 'error' in payload &&
+            typeof payload.error === 'object' && payload.error && 'code' in payload.error &&
+            typeof payload.error.code === 'string' ? payload.error.code : 'CHAT_UNAVAILABLE'
+          const messages: Record<string, string> = {
+            CHAT_UNAVAILABLE: 'Career Chef is temporarily unavailable. Please retry your question shortly.',
+            UNAUTHORIZED: 'Sign in to your workspace to ask Career Chef.',
+            INVALID_TOKEN: 'Your session expired. Please sign in again.',
+            AUTH_UNAVAILABLE: 'The authentication service is unavailable. Try again shortly.',
+            RATE_LIMITED: 'Too many messages. Wait a minute, then retry.',
+            IDEMPOTENCY_CONFLICT: 'This request key was already used. Start a new message.',
+            VALIDATION_ERROR: 'Check your message, Google consent and conversation length.',
+            ORIGIN_FORBIDDEN: 'Career Chef cannot connect from this website right now. Please try again later.',
+          }
+          const known = Object.hasOwn(messages, code)
+          return fail(upstream.status, known ? code : 'CHAT_UNAVAILABLE',
+            known ? messages[code] : 'Career Chef could not complete your question. Please try again shortly.')
+        }
+        return Response.json(payload, { status: upstream.status, headers: responseHeaders })
+      } catch {
+        return fail(503, 'API_UNAVAILABLE', 'Career Chef could not connect. Please retry your saved question shortly.')
+      }
+    },
+  }
+}

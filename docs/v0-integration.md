@@ -1,5 +1,9 @@
 # Connected Next.js frontend
 
+The [Gemini navigation chat contract](navigation-chat.md) describes Career Chef's
+read-only `POST /v1/navigation/chat` endpoint, including server configuration,
+user consent, authentication, and retry behavior.
+
 The existing Next.js pages connect to FastAPI through server-side route handlers.
 `GET /api/workspace` assembles authorized data for the selected workspace;
 `POST /api/workspace/commands` translates explicit actions into versioned API
