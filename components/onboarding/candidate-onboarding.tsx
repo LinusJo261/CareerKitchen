@@ -473,7 +473,7 @@ function CandidateWizard({
     >
       <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-16">
         <aside className="lg:sticky lg:top-8 lg:self-start">
-          <p className="eyebrow mb-3">Mise en place</p>
+          <p className="eyebrow mb-3">Profile</p>
           <p className="font-serif text-3xl">
             A little preparation.
             <br className="hidden lg:block" /> A better introduction.
