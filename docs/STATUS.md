@@ -77,6 +77,10 @@ consent revocation.
 - After frontend integration, the complete backend suite passed **226 tests**.
   The final targeted contract, authorization and workflow run passed **27 tests**,
   including viewer-specific interview permissions and persisted start reports.
+- The backend CI isolation regression run passed **229 tests** with migrated
+  `public` tables present. Each fixture owns all 44 tables in its private schema
+  and excludes `public` from its search path. CI coverage selects `apps/api/app`
+  explicitly to avoid the frontend's root `app` directory.
 - The connected frontend passed **28 gateway tests**, strict TypeScript checking
   and a production build. All **six** generated-client runtime tests also passed.
 - A real HTTP frontend-to-PostgreSQL smoke passed sign-in, HttpOnly session
@@ -86,7 +90,8 @@ consent revocation.
   workspace at the standard local app port. These used explicit fictional local
   accounts; live Supabase authentication and external delivery were not tested.
 
-Docker image execution, GitHub-hosted CI execution and hosted Supabase/Railway
-end-to-end checks have not been run. The deployment configuration and workflows
-are provided for those environments; local verification does not establish cloud
-availability or hiring-model reliability.
+GitHub-hosted CI has been exercised; current check outcomes and CI fixes are
+recorded on the [repository pull requests](https://github.com/LinusJo261/CareerKitchen/pulls).
+Docker image execution and hosted Supabase/Railway end-to-end checks have not
+been run. Local and CI verification do not establish cloud availability or
+hiring-model reliability.
