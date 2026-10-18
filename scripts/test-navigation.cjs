@@ -264,9 +264,12 @@ test('curated onboarding guides link only to existing local website pages', () =
   for (const guide of chefGuides) {
     for (const step of guide.steps) {
       if (!step.path) continue
-      assert.match(step.path, /^\/(?:candidate|employer|onboarding)\/[a-z-]+$/)
+      const destination = new URL(step.path, 'https://career.example.invalid')
+      assert.equal(destination.origin, 'https://career.example.invalid')
+      assert.match(destination.pathname, /^(?:\/get-started|\/(?:candidate|employer|onboarding)\/[a-z-]+)$/)
+      if (destination.search) assert.equal(destination.search, '?role=candidate')
       assert.equal(typeof step.label, 'string')
-      const page = path.resolve(__dirname, '..', 'app', step.path.slice(1), 'page.tsx')
+      const page = path.resolve(__dirname, '..', 'app', destination.pathname.slice(1), 'page.tsx')
       assert.ok(fs.existsSync(page), `Missing guide page: ${step.path}`)
     }
   }

@@ -1,6 +1,7 @@
 import { createHmac, randomUUID } from 'node:crypto'
 
 type Environment = Record<string, string | undefined>
+type SessionResolver = (request: Request) => Promise<string>
 
 const loopback = new Set(['localhost', '127.0.0.1', '[::1]'])
 const responseHeaders = { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' }
@@ -73,22 +74,31 @@ function sameOrigin(request: Request) {
 }
 
 // Injectable dependencies keep authentication and proxy behavior testable without Google calls.
-export function createNavigationBridge(env: Environment, fetcher: typeof fetch = fetch) {
+export function createNavigationBridge(env: Environment, fetcher: typeof fetch = fetch, sessionToken?: SessionResolver) {
   return {
     async GET(request: Request) {
+      if (!sameOrigin(request)) return fail(403, 'ORIGIN_FORBIDDEN', 'Use Career Chef from this website.')
       let authentication = 'session'
+      let sessionAvailable = false
       try {
         const base = apiBase(env)
         authentication = localAuthentication(env, base) && localWebsite(request) ? 'local' : 'session'
+        if (sessionToken) {
+          try {
+            const token = await sessionToken(request)
+            sessionAvailable = Boolean(token) && !/\s/.test(token) && token.length <= 16393
+          } catch { /* Sign-in is optional for connection health. */ }
+        }
         const health = await fetcher(new URL('v1/health', base), {
           cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(3000),
         })
         return Response.json({ data: {
           authentication,
           api_reachable: health.ok,
+          ...(sessionToken ? { session_available: sessionAvailable } : {}),
         } }, { headers: responseHeaders })
       } catch {
-        return Response.json({ data: { authentication, api_reachable: false } }, {
+        return Response.json({ data: { authentication, api_reachable: false, ...(sessionToken ? { session_available: sessionAvailable } : {}) } }, {
           headers: responseHeaders,
         })
       }
@@ -107,7 +117,26 @@ export function createNavigationBridge(env: Environment, fetcher: typeof fetch =
       if (supplied && (!/^Bearer [^\s]+$/.test(supplied) || supplied.length > 16400)) {
         return fail(401, 'INVALID_TOKEN', 'Enter a valid session access token.')
       }
-      if (!supplied && !useLocal) return fail(401, 'UNAUTHORIZED', 'Connect a session access token to chat.')
+      let authorization = supplied
+      if (!authorization && sessionToken) {
+        try {
+          const token = await sessionToken(request)
+          if (!token || /\s/.test(token) || token.length > 16393) {
+            return fail(401, 'INVALID_TOKEN', 'Your session expired. Please sign in again.')
+          }
+          authorization = `Bearer ${token}`
+        } catch (error) {
+          const status = typeof error === 'object' && error && 'status' in error ? error.status : undefined
+          const code = typeof error === 'object' && error && 'code' in error ? error.code : undefined
+          if (status === 403) return fail(403, 'FORBIDDEN', 'Your session cannot use Career Chef. Please sign in again.')
+          if (!useLocal || (status !== 401 && code !== 'AUTH_NOT_CONFIGURED')) {
+            return status === 401
+              ? fail(401, 'UNAUTHORIZED', 'Sign in to your workspace to ask Career Chef.')
+              : fail(503, 'AUTH_UNAVAILABLE', 'Sign-in is temporarily unavailable. Please try again shortly.')
+          }
+        }
+      }
+      if (!authorization && !useLocal) return fail(401, 'UNAUTHORIZED', 'Sign in to your workspace to ask Career Chef.')
       const key = request.headers.get('idempotency-key') || ''
       if (!/^[A-Za-z0-9_.:-]{8,128}$/.test(key)) {
         return fail(422, 'IDEMPOTENCY_KEY_REQUIRED', 'Supply an Idempotency-Key for this message.')
@@ -143,7 +172,7 @@ export function createNavigationBridge(env: Environment, fetcher: typeof fetch =
           method: 'POST', cache: 'no-store', redirect: 'error',
           headers: {
             'Content-Type': 'application/json', 'Idempotency-Key': key,
-            Authorization: supplied || `Bearer ${localToken(env)}`,
+            Authorization: authorization || `Bearer ${localToken(env)}`,
           },
           body, signal: AbortSignal.timeout(40000),
         })
@@ -158,8 +187,8 @@ export function createNavigationBridge(env: Environment, fetcher: typeof fetch =
             typeof payload.error.code === 'string' ? payload.error.code : 'CHAT_UNAVAILABLE'
           const messages: Record<string, string> = {
             CHAT_UNAVAILABLE: 'Career Chef is temporarily unavailable. Please retry your question shortly.',
-            UNAUTHORIZED: 'Connect a session access token to chat.',
-            INVALID_TOKEN: 'Your session has expired or is invalid. Connect a fresh access token.',
+            UNAUTHORIZED: 'Sign in to your workspace to ask Career Chef.',
+            INVALID_TOKEN: 'Your session expired. Please sign in again.',
             AUTH_UNAVAILABLE: 'The authentication service is unavailable. Try again shortly.',
             RATE_LIMITED: 'Too many messages. Wait a minute, then retry.',
             IDEMPOTENCY_CONFLICT: 'This request key was already used. Start a new message.',

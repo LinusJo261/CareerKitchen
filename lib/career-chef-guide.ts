@@ -6,7 +6,7 @@ export const chefGuides = [
     description: 'A little prep for a more thoughtful search.',
     introduction: 'Start with what a good next step looks like for you. Here is the recipe.',
     steps: [
-      { title: 'Set out your ingredients', text: 'Choose your role, work preferences and must-haves. In the demo, you can try the three-step setup without creating an account.', label: 'Start candidate setup', path: '/onboarding/candidate' },
+      { title: 'Set out your ingredients', text: 'Create an account or sign in, then choose your role, work preferences and must-haves in the three-step setup.', label: 'Start candidate setup', path: '/get-started?role=candidate' },
       { title: 'Keep your plate manageable', text: 'Choose how many opportunities you want to consider, up to ten. Review the role details before expressing interest.', label: 'Explore Today’s Menu', path: '/candidate/opportunities' },
       { title: 'Meet when it is mutual', text: 'An introduction opens only after you and the employer both opt in. One-sided interest is still waiting for a response.', label: 'Understand your introductions', path: '/candidate/matches' },
     ],
@@ -17,7 +17,7 @@ export const chefGuides = [
     description: 'Prepare a clear brief and meet with care.',
     introduction: 'A useful introduction starts with a clear role. Take it one course at a time.',
     steps: [
-      { title: 'Prepare your organization', text: 'Review your organization details and team permissions. Demo verification labels describe fictional fixtures.', label: 'Visit your organization', path: '/employer/organization' },
+      { title: 'Prepare your organization', text: 'Review your organization details, verification status and team permissions before publishing a vacancy.', label: 'Visit your organization', path: '/employer/organization' },
       { title: 'Write an open order', text: 'Set the role requirements, compensation and work arrangement. Keep the active candidate capacity at ten or fewer.', label: 'Review your vacancies', path: '/employer/vacancies' },
       { title: 'Review, then introduce', text: 'Read candidate information and clarify unknowns. Conversations open when both sides agree to an introduction.', label: 'Explore The Pass', path: '/employer/pass' },
     ],

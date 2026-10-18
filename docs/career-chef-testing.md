@@ -15,7 +15,7 @@ Open **http://127.0.0.1:3000/career-chef** for the standalone chat, or
    employer help. Check that the next-step links reach the relevant pages. This
    authored guide works without an API session, Google consent, or a Gemini call.
 2. Switch to the AI conversation. Check the consent box to send your question and
-   recent conversation to Google. Connect an API session first when required.
+   recent conversation to Google. Sign in to connect your workspace session when required.
 3. Ask `Where can I find job opportunities?` and select **Send question**.
 4. Follow a suggested page link, or ask a follow-up question.
 
@@ -128,24 +128,25 @@ roles and is distinct from the CLI tester. FastAPI still authenticates and
 transactionally processes each request with its existing limits and audit
 behavior.
 
-Production builds and hosted APIs require a real bearer access token for the AI
-conversation. For manual testing, open the full `/career-chef` page, expand
-**Session connection**, and enter a valid session token. Existing demo sign-in
-forms do not authenticate with the API. The quick guide remains available without
-that setup. The bridge does not return JWT signing secrets or Gemini keys to the
-browser.
+Production builds and hosted APIs use the signed-in workspace session for the AI
+conversation. The bridge reads its HttpOnly authentication cookies on the server
+and forwards the access token only to the configured API. For separate manual API
+testing, open the full `/career-chef` page, expand **Session connection**, and enter
+a valid session token. Quick guides remain available without sign-in. The bridge
+does not return session credentials, JWT signing secrets or Gemini keys to the browser.
 
 ## Verification
 
 ```powershell
 pnpm typecheck
-node --test scripts/test-navigation.cjs
+pnpm test
 python -m pytest apps/api/tests/unit/test_navigation.py apps/api/tests/unit/test_navigation_origins.py apps/api/tests/integration/test_navigation_api.py
 ```
 
 The frontend regression suite tests transport and authentication guards, local
 identity restrictions under normalized Host headers, sanitized errors, retry
-payloads, Unicode history budgets and safe links. Backend tests include real
+payloads, cookie session forwarding, Unicode history budgets, safe links and
+private compensation boundaries in the connected employer workspace. Backend tests include real
 PostgreSQL transactions with mocked Gemini HTTP responses. Live Google generation
 requires the configured key and is a separate check.
 

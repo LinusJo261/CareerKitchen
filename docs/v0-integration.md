@@ -1,20 +1,21 @@
-# Integrating the separately generated v0 frontend
+# Connected Next.js frontend
 
-The [Gemini navigation chat contract](navigation-chat.md) describes the read-only
-`POST /v1/navigation/chat` endpoint for a separately implemented chatbox, including
-server configuration, user consent, authentication, and retry behavior.
+The [Gemini navigation chat contract](navigation-chat.md) describes Career Chef's
+read-only `POST /v1/navigation/chat` endpoint, including server configuration,
+user consent, authentication, and retry behavior.
 
-The existing Next.js frontend is an interactive preview with fictional, in-memory
-workspace data. Career Chef's optional AI conversation uses a server-side bridge;
-the other workflows still need an authenticated backend-for-frontend (BFF)
-integration before they can operate on real accounts. The runnable contract is
+The existing Next.js pages connect to FastAPI through server-side route handlers.
+`GET /api/workspace` assembles authorized data for the selected workspace;
+`POST /api/workspace/commands` translates explicit actions into versioned API
+requests. The shared SWR hook refreshes after successful changes, on focus and
+periodically; it never presents fixture records as live state. The runnable contract is
 `docs/openapi.json`; Swagger is available at `/docs`, ReDoc at `/redoc`, and the
 generated TypeScript interfaces are in `packages/api-client/src/schema.ts`.
 
 ## Configuration and authentication
 
-The Next.js application needs its existing Supabase SSR session helper, the public
-Supabase project URL/publishable key, and a **server-only** `CAREER_KITCHEN_API_URL`
+The Next.js application uses `@supabase/ssr`, the server-configured
+`SUPABASE_URL`/`SUPABASE_PUBLISHABLE_KEY`, and a **server-only** `CAREER_KITCHEN_API_URL`
 such as `https://api.example.com`. Configure FastAPI `CORS_ORIGINS` with exact
 approved Vercel origins and `TRUSTED_HOSTS` with the API hostname. Preview
 environments need their own database and Supabase project. Never pass service-role,
@@ -130,7 +131,24 @@ currently require authorized manual delivery; notification records persist even
 when outbound email is unconfigured. Billing cannot affect matching rank.
 Account erasure retains necessary audit history and may need provider review.
 
-Map the existing pages/forms/buttons to these contracts while preserving the UI.
-Live Vercel cookies, Supabase redirects, provider delivery, and deployment smoke
-tests require real service configuration and credentials.
+Local fictional sign-in is an explicit development-only mode, enabled with
+`FRONTEND_LOCAL_DEMO=true`, `AUTH_MODE=local` and `ALLOW_DEV_AUTH=true`.
+It is limited to loopback hostnames, accepts only the known fictional candidate
+and employer fixture names, and stores a short-lived access token in an HttpOnly
+cookie. It cannot select verifier/operations fixtures or approve platform roles.
+Production builds require configured Supabase authentication.
+
+Mutating BFF requests require a matching Origin/Host and an operation key.
+Behind a proxy, set `CAREER_KITCHEN_SITE_URL` to the exact public HTTPS origin;
+forwarded host headers are not trusted for CSRF authorization. Reviewed versions
+and payloads are retained across exact retries. A 409/412 requires renewed review.
+
+The Pass renders authorized employer decision cards. Unsupported demo taste tests,
+private compensation inspection, local-only policy approvals and candidate
+self-confirmation of employment have been removed. Invitations expose their actual
+manual-delivery token to the authorized administrator; no email delivery is claimed.
+
+The local smoke check is `pnpm smoke:frontend`. Live Vercel cookies, Supabase email
+confirmation/refresh, ClamAV, external provider delivery and deployed end-to-end
+checks still require actual service credentials and deployment configuration.
 

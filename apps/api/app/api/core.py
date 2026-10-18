@@ -434,7 +434,14 @@ def list_orgs(db: Session = DB, actor: Actor = AUTH):
             for org in db.scalars(
                 select(Organization)
                 .join(OrgMember, OrgMember.org_id == Organization.id)
-                .where(OrgMember.user_id == actor.user_id)
+                .where(
+                    OrgMember.user_id == actor.user_id,
+                    (OrgMember.expires_at.is_(None) | (OrgMember.expires_at > utcnow())),
+                    (
+                        (OrgMember.status == "ACTIVE")
+                        | ((OrgMember.status == "PENDING") & (Organization.created_by == actor.user_id))
+                    ),
+                )
                 .distinct()
             )
         ]
@@ -488,7 +495,14 @@ def list_members(org_id: UUID, db: Session = DB, actor: Actor = AUTH):
     require_org_role(db, actor, str(org_id), {"ORG_ADMIN"})
     return {
         "data": [
-            {"id": m.id, "version": m.version, "user_id": m.user_id, "role": m.role, "status": m.status}
+            {
+                "id": m.id,
+                "version": m.version,
+                "org_id": m.org_id,
+                "user_id": m.user_id,
+                "role": m.role,
+                "status": m.status,
+            }
             for m in db.scalars(select(OrgMember).where(OrgMember.org_id == str(org_id)))
         ]
     }
@@ -947,7 +961,7 @@ def propose_interview(match_id: UUID, data: s.InterviewInput, db: Session = DB, 
 def interview_proposals(match_id: UUID, db: Session = DB, actor: Actor = AUTH):
     from app.db.models import InterviewProposal
 
-    workflow.participant(db, actor, str(match_id))
+    _, _, candidate, _, is_candidate = workflow.participant(db, actor, str(match_id))
     return {
         "data": [
             {
@@ -957,6 +971,8 @@ def interview_proposals(match_id: UUID, db: Session = DB, actor: Actor = AUTH):
                 "timezone_label": row.timezone_label,
                 "status": row.status,
                 "initiator_id": row.initiator_id,
+                "can_confirm": row.status == "PROPOSED"
+                and (row.initiator_id == candidate.user_id) != is_candidate,
             }
             for row in db.scalars(
                 select(InterviewProposal).where(InterviewProposal.match_id == str(match_id))
@@ -1179,10 +1195,12 @@ def get_export(db: Session = DB, actor: Actor = AUTH):
 def request_deletion(db: Session = DB, actor: Actor = AUTH):
     if actor.auth_time < utcnow() - timedelta(minutes=10):
         raise AppError(403, "REAUTH_REQUIRED", "Reauthenticate before requesting deletion")
+    user = load(db, User, actor.user_id, lock=True)
     candidate = db.scalar(select(Candidate).where(Candidate.user_id == actor.user_id))
     if candidate:
         lock_scopes(db, f"candidate:{candidate.id}")
-        candidate.state = "DEACTIVATED"
+        candidate = load(db, Candidate, candidate.id, lock=True)
+        candidate.state, candidate.version = "DEACTIVATED", candidate.version + 1
         for cycle in db.scalars(
             select(PairCycle).where(PairCycle.candidate_id == candidate.id, PairCycle.closed_at.is_(None))
         ):
@@ -1197,8 +1215,9 @@ def request_deletion(db: Session = DB, actor: Actor = AUTH):
                 assert isinstance(consent, (EvidenceGrant, TermConsent))
                 consent.revoked_at, consent.version = utcnow(), consent.version + 1
                 emit(db, actor, "candidate.consent_revoked", consent)
-    user = load(db, User, actor.user_id)
+        emit(db, actor, "candidate.deactivated", candidate)
     user.status, user.version = "DEACTIVATED", user.version + 1
+    emit(db, actor, "account.deactivated", user)
     row = PrivacyRequest(user_id=actor.user_id, kind="DELETE")
     db.add(row)
     emit(db, actor, "privacy.delete_requested", row)
@@ -1269,9 +1288,11 @@ def account_status(user_id: UUID, data: s.AccountStatusInput, db: Session = DB, 
     candidate = db.scalar(select(Candidate).where(Candidate.user_id == user.id))
     if candidate and data.status == "SUSPENDED":
         lock_scopes(db, f"candidate:{candidate.id}")
-        candidate.state = "PAUSED"
+        candidate = load(db, Candidate, candidate.id, lock=True)
+        candidate.state, candidate.version = "PAUSED", candidate.version + 1
         clearing.cancel_candidate_pending(db, actor, candidate.id, "ACCOUNT_SUSPENDED")
         invalidate(db, actor=actor, candidate_id=candidate.id, reason="ACCOUNT_SUSPENDED")
+        emit(db, actor, "candidate.paused", candidate)
     user.status, user.version = data.status, user.version + 1
     emit(db, actor, "account.status_changed", user, payload={"reason_hash": digest(data.reason)})
     return {"data": {"status": user.status, "version": user.version}}

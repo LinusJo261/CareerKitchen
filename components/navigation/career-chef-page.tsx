@@ -37,7 +37,7 @@ export function CareerChefPage() {
         </div>
         <div className="flex h-[min(780px,calc(100dvh-7rem))] min-h-[570px] flex-col overflow-hidden rounded-2xl border border-primary/20 shadow-[0_14px_45px_-25px_rgba(40,37,33,.3)]"><ChatPanel /></div>
       </main>
-      <footer className="page-width pb-8"><p className="font-mono text-[10px] leading-relaxed tracking-wide text-muted-foreground">Demo workspace pages use fictional data. Chef provides navigation guidance; it does not confirm account activity.</p></footer>
+      <footer className="page-width pb-8"><p className="font-mono text-[10px] leading-relaxed tracking-wide text-muted-foreground">Workspace pages use your signed-in account. Chef provides public navigation guidance; it does not read or confirm account activity.</p></footer>
     </div>
   )
 }

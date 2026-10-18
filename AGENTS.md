@@ -1,8 +1,7 @@
 # Career Kitchen backend
 
-The user-provided request overrides the archived blueprint: build backend,
-infrastructure and integration contracts only. Do not create a frontend.
-Read blueprint/Career_Kitchen_Codex_Master_Blueprint/AGENTS.md and relevant specs.
+Build backend, infrastructure and integration contracts only. Do not create a
+frontend in this repository; the frontend is maintained separately.
 
 Use FastAPI, SQLAlchemy, Alembic and Supabase PostgreSQL/Auth/Storage. Never trust
 JWT role metadata for application authorization. Experimental matching stays in

@@ -6,7 +6,7 @@ import { CareerChefWidget } from './career-chef-widget'
 import { MAX_MESSAGE_LENGTH, navigationError, navigationHistory, parseNavigationReply, type NavigationMessage } from '@/lib/navigation-chat'
 
 type PendingQuestion = { id: string; message: string; body: string }
-type Connection = { authentication: 'local' | 'session'; apiReachable: boolean } | null
+type Connection = { authentication: 'local' | 'session'; apiReachable: boolean; sessionAvailable: boolean } | null
 
 function useCareerChefState() {
   const [messages, setMessages] = useState<NavigationMessage[]>([])
@@ -40,7 +40,7 @@ function useCareerChefState() {
       const response = await fetch('/api/navigation/chat', { cache: 'no-store', signal: controller.signal })
       const result: unknown = await response.json()
       if (response.ok && result && typeof result === 'object' && 'data' in result && result.data && typeof result.data === 'object' && 'authentication' in result.data && 'api_reachable' in result.data && (result.data.authentication === 'local' || result.data.authentication === 'session') && typeof result.data.api_reachable === 'boolean') {
-        setConnection({ authentication: result.data.authentication, apiReachable: result.data.api_reachable })
+        setConnection({ authentication: result.data.authentication, apiReachable: result.data.api_reachable, sessionAvailable: 'session_available' in result.data && result.data.session_available === true })
       } else setConnection(null)
     } catch {
       if (!controller.signal.aborted) setConnection(null)
