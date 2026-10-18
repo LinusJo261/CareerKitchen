@@ -114,7 +114,7 @@ def require_vacancy(db: Session, actor: Actor, vacancy_id: str, permission: str 
         else "can_review",
     )
     if not permitted:
-        raise AppError(403, "VACANCY_FORBIDDEN", "You are not assigned to this vacancy")
+        raise AppError(403, "VACANCY_FORBIDDEN", "You are not assigned to this job opening")
     return vacancy
 
 

@@ -29,7 +29,7 @@ class CreatePolicy(Input):
     @classmethod
     def unique_roles(cls, roles: list[RoleTerms]) -> list[RoleTerms]:
         if len({r.vacancy_id for r in roles}) != len(roles):
-            raise ValueError("Each exact vacancy can appear once")
+            raise ValueError("Each exact job opening can appear once")
         return roles
 
 

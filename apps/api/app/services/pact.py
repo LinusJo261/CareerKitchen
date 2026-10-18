@@ -77,7 +77,7 @@ def active_vacancy(db: Session, vacancy_id: str) -> Vacancy:
         or org.verification_state != "VERIFIED"
         or (vacancy.deadline_at and not future(vacancy.deadline_at))
     ):
-        raise AppError(409, "ROLE_UNAVAILABLE", "The verified vacancy must be active")
+        raise AppError(409, "ROLE_UNAVAILABLE", "The verified job opening must be active")
     return vacancy
 
 
@@ -284,7 +284,7 @@ def document_content(db: Session, actor: Actor, claim_id: str, vacancy_id: str |
     if candidate.user_id != actor.user_id:
         if vacancy_id is None:
             raise AppError(
-                403, "EXACT_VACANCY_REQUIRED", "Document access requires an exact consented vacancy"
+                403, "EXACT_VACANCY_REQUIRED", "Document access requires an exact consented job opening"
             )
         vacancy = require_vacancy(db, actor, vacancy_id)
         active_vacancy(db, vacancy_id)
@@ -476,7 +476,9 @@ def disclosed_claim(db: Session, actor: Actor, claim_id: str, vacancy_id: str) -
     active_vacancy(db, vacancy_id)
     if not any(c.id == claim_id for c, _ in current_evidence(db, claim.candidate_id, vacancy)):
         raise AppError(
-            403, "DISCLOSURE_NOT_CONSENTED", "A current exact-vacancy disclosure grant is required"
+            403,
+            "DISCLOSURE_NOT_CONSENTED",
+            "A current disclosure grant for this exact job opening is required",
         )
     emit(db, actor, "evidence.summary_accessed", claim, org_id=vacancy.org_id)
     return claim_out(claim)
@@ -563,7 +565,7 @@ def evaluator(db: Session, actor: Actor, candidate_id: str, vacancy_id: str) -> 
         require_vacancy(db, actor, vacancy_id)
         # A member may not probe undisclosed candidates' readiness by guessed UUID.
         if not current_evidence(db, candidate_id, vacancy):
-            raise AppError(403, "CANDIDATE_NOT_DISCLOSED", "Candidate has not consented to this vacancy")
+            raise AppError(403, "CANDIDATE_NOT_DISCLOSED", "Candidate has not consented to this job opening")
     return candidate, vacancy
 
 
