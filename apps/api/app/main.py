@@ -18,6 +18,10 @@ from app.core.settings import get_settings
 from app.schemas import responses as r
 from app.schemas.core import ErrorEnvelope
 
+# Python releases use different HTTPStatus phrases for these codes. Keep the
+# published OpenAPI contract stable across the supported Python versions.
+OPENAPI_STATUS_DESCRIPTIONS = {413: "Content Too Large", 422: "Unprocessable Content"}
+
 
 def create_app(settings=None, engine=None) -> FastAPI:
     from app.api.core import router
@@ -174,7 +178,7 @@ def create_app(settings=None, engine=None) -> FastAPI:
                     operation["responses"].pop("200", None)
                 for status in (401, 403, 404, 409, 412, 413, 415, 422, 429, 500, 503):
                     operation["responses"][str(status)] = {
-                        "description": HTTPStatus(status).phrase,
+                        "description": OPENAPI_STATUS_DESCRIPTIONS.get(status, HTTPStatus(status).phrase),
                         "content": {
                             "application/json": {"schema": {"$ref": "#/components/schemas/ErrorEnvelope"}}
                         },

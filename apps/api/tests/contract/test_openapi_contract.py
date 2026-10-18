@@ -1,5 +1,7 @@
 import json
+from http import HTTPStatus
 from pathlib import Path
+from types import SimpleNamespace
 
 from app.main import create_app
 from fastapi.routing import APIRoute
@@ -12,6 +14,30 @@ def test_checked_in_openapi_matches_runtime_contract():
     application = create_app()
     try:
         assert json.loads((ROOT / "docs/openapi.json").read_text(encoding="utf-8")) == application.openapi()
+    finally:
+        application.state.engine.dispose()
+
+
+def test_error_response_descriptions_are_stable_with_legacy_http_status_phrases(monkeypatch):
+    legacy_phrases = {413: "Request Entity Too Large", 422: "Unprocessable Entity"}
+
+    def legacy_http_status(status):
+        return SimpleNamespace(phrase=legacy_phrases.get(status, HTTPStatus(status).phrase))
+
+    monkeypatch.setattr("app.main.HTTPStatus", legacy_http_status)
+    application = create_app()
+    try:
+        for path, methods in application.openapi()["paths"].items():
+            if path in {"/v1/health", "/v1/ready"}:
+                continue
+            for method, operation in methods.items():
+                if method not in METHODS:
+                    continue
+                assert operation["responses"]["413"]["description"] == "Content Too Large", (path, method)
+                assert operation["responses"]["422"]["description"] == "Unprocessable Content", (
+                    path,
+                    method,
+                )
     finally:
         application.state.engine.dispose()
 
