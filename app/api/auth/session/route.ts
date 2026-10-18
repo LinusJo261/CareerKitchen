@@ -71,7 +71,7 @@ export async function POST(request: Request) {
           'INVALID_FIXTURE',
           'Choose the demonstration candidate or employer account.',
         )
-      const token = sampleToken(account)
+      const token = await sampleToken(account)
       const sample = new Backend(token, 'sample')
       const status = await sample.get<{ ready: boolean }>('/v1/demo/status')
       if (status?.ready !== true)

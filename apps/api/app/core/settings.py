@@ -91,10 +91,16 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def check_security(self) -> "Settings":
-        if self.sample_demo_enabled and (
-            self.environment not in {"development", "test"} or self.auth_mode != "local"
-        ):
-            raise ValueError("Sample demo mode requires explicit local development authentication")
+        if self.sample_demo_enabled:
+            from sqlalchemy.engine import make_url
+
+            sample_url = make_url(self.database_url)
+            local_demo = self.environment in {"development", "test"} and self.auth_mode == "local"
+            hosted_demo = self.environment in {"staging", "production"} and self.auth_mode == "supabase"
+            if not (local_demo or hosted_demo):
+                raise ValueError("Sample demo requires explicit local or hosted Supabase authentication")
+            if hosted_demo and sample_url.database != "career_kitchen_samples":
+                raise ValueError("Hosted demo requires its dedicated synthetic sample database")
         if "*" in self.cors_origins or "*" in self.trusted_hosts:
             raise ValueError("Explicit CORS origins and trusted hosts are required")
         if self.auth_mode == "local":

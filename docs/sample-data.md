@@ -172,3 +172,30 @@ TypeScript and backend type checks, generated API contract checks, 69 frontend
 checks, and 25 PostgreSQL regression cases for import, retrieval and the demo.
 The browser walkthrough verified entry, a matching run, catalogue search and
 paging, role switching and a mutual introduction after two separate choices.
+
+
+## Hosted website demo
+
+Hosted samples use a separate Railway environment and PostgreSQL database named
+`career_kitchen_samples`, HTTPS, and confirmed Supabase fixture users. Development
+JWTs remain disabled. The normal API and its database are never used for demo requests.
+
+Build the sample API with `Dockerfile.demo`; it downloads only the pinned synthetic
+source and verifies its hashes. Configure production Supabase/storage settings,
+`SAMPLE_DEMO_ENABLED=true`, `ALLOW_DEV_AUTH=false`, TLS database URLs, and independent
+audit, encryption, readiness, and sample account secrets. Run
+`python -m scripts.bootstrap_hosted_samples` as a private-network pre-deploy job.
+`MIGRATION_DATABASE_URL` uses the database owner; `DATABASE_URL` uses the restricted
+`career_kitchen_samples_app` login and `SAMPLE_RUNTIME_PASSWORD`. The setup job refuses
+unmarked nonempty databases, imports and activates samples transactionally, binds only
+two confirmed Supabase fixture identities, and grants the runtime role its reviewed
+allowlist. It never imports participant outcomes or enables learning consent.
+
+In Vercel set server-only `FRONTEND_SAMPLE_DEMO=true`,
+`CAREER_KITCHEN_SAMPLE_API_URL` to the separate HTTPS API,
+`SAMPLE_SESSION_SECRET` (random, at least 32 characters),
+`SAMPLE_SUPABASE_URL`, `SAMPLE_SUPABASE_PUBLISHABLE_KEY`,
+`SAMPLE_CANDIDATE_PASSWORD`, and `SAMPLE_EMPLOYER_PASSWORD`. The two account passwords
+must match those used in the setup job. Do not enable local authentication on Vercel.
+Hosted demo cookies are Secure, HttpOnly, signed, expiring, and bound to the sample
+API destination. Visitors share explicitly synthetic fixture accounts and activity.

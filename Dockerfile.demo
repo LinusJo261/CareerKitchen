@@ -1,0 +1,19 @@
+FROM python:3.12-slim
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+WORKDIR /app
+RUN addgroup --system app && adduser --system --ingroup app app
+COPY pyproject.toml ./
+COPY requirements.lock ./
+COPY apps/api ./apps/api
+RUN python -m pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -c requirements.lock .
+COPY alembic.ini ./
+COPY migrations ./migrations
+COPY scripts ./scripts
+COPY infra/postgres ./infra/postgres
+RUN pip install --no-cache-dir pyarrow==19.0.1
+RUN mkdir -p /app/.local/storage && chown -R app:app /app/.local
+USER app
+RUN python -m scripts.sample_dataset --download
+EXPOSE 8000
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers"]
+

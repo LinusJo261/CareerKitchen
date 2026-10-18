@@ -79,6 +79,12 @@ const request = (input = {}, headers = {}, origin = ORIGIN) =>
     body: JSON.stringify(input),
   });
 const enabled = {
+  FRONTEND_SAMPLE_DEMO: "",
+  SAMPLE_SESSION_SECRET: "",
+  SAMPLE_SUPABASE_URL: "",
+  SAMPLE_SUPABASE_PUBLISHABLE_KEY: "",
+  SAMPLE_CANDIDATE_PASSWORD: "",
+  SAMPLE_EMPLOYER_PASSWORD: "",
   NODE_ENV: "development",
   FRONTEND_LOCAL_DEMO: "true",
   AUTH_MODE: "local",
@@ -363,3 +369,50 @@ test("logout clears sample mode even when its dedicated API is offline", async (
     assert.equal(cookieValues.has("ck-sample-session"), false);
     assert.equal(cookieValues.has("ck-local-session"), false);
   }));
+
+function hosted() {
+  Object.assign(process.env, {
+    NODE_ENV: "production", FRONTEND_SAMPLE_DEMO: "true", FRONTEND_LOCAL_DEMO: "false",
+    AUTH_MODE: "supabase", ALLOW_DEV_AUTH: "false", DEV_JWT_SECRET: "",
+    SAMPLE_SESSION_SECRET: "independent-sample-session-secret-32-characters",
+    CAREER_KITCHEN_API_URL: "https://api.career.example",
+    CAREER_KITCHEN_SAMPLE_API_URL: "https://sample.career.example",
+    SAMPLE_SUPABASE_URL: "https://sample.supabase.co",
+    SAMPLE_SUPABASE_PUBLISHABLE_KEY: "publishable-test-key",
+    SAMPLE_CANDIDATE_PASSWORD: "candidate-private-password-at-least-32",
+    SAMPLE_EMPLOYER_PASSWORD: "employer-private-password-at-least-32",
+  });
+}
+
+test("hosted sample uses Supabase, separate HTTPS destination and Secure HttpOnly cookies", async () => fixture(async () => {
+  hosted();
+  const token = Buffer.from(JSON.stringify({alg:"ES256"})).toString("base64url") + ".test.signature";
+  const calls = [];
+  globalThis.fetch = async (url, options) => {
+    calls.push({url:String(url),options});
+    return String(url).includes("/auth/v1/token") ? Response.json({access_token:token}) : Response.json({data:{ready:true}});
+  };
+  assert.equal(session.sampleDemoAvailable(new Request("https://career.example")),true);
+  const response = await login(request({mode:"sample",account:"employer"},{},"https://career.example"));
+  assert.equal(response.status,200);
+  assert.equal(calls[0].url,"https://sample.supabase.co/auth/v1/token?grant_type=password");
+  assert.deepEqual(JSON.parse(calls[0].options.body), {email:"employer@samples.example.invalid",password:process.env.SAMPLE_EMPLOYER_PASSWORD});
+  assert.ok(calls.slice(1).every(c => c.url.startsWith("https://sample.career.example/")));
+  assert.equal(cookieOptions.get("ck-sample-session").secure,true);
+  assert.equal(cookieOptions.get("ck-sample-session").httpOnly,true);
+  assert.equal((await session.sessionConnection(new Request("https://career.example"))).token,token);
+  assert.equal(JSON.stringify(await response.json()).includes(token),false);
+}));
+
+test("hosted sample rejects development tokens, missing credentials and a normal API destination", async () => fixture(async () => {
+  hosted();
+  globalThis.fetch = async () => Response.json({access_token:Buffer.from(JSON.stringify({alg:"HS256"})).toString("base64url")+".test.signature"});
+  await assert.rejects(() => session.sampleToken("employer"),errorCode("DEMO_AUTH_UNAVAILABLE"));
+  assert.equal(cookieValues.size,0);
+  process.env.CAREER_KITCHEN_SAMPLE_API_URL = process.env.CAREER_KITCHEN_API_URL;
+  assert.throws(() => session.sampleApiBase(),errorCode("DEMO_NOT_CONFIGURED"));
+  process.env.CAREER_KITCHEN_SAMPLE_API_URL = "http://sample.career.example";
+  assert.throws(() => session.sampleApiBase(),errorCode("DEMO_NOT_CONFIGURED"));
+  process.env.SAMPLE_EMPLOYER_PASSWORD = "";
+  assert.equal(session.sampleDemoAvailable(new Request("https://career.example")),false);
+}));
