@@ -82,6 +82,12 @@ Its actual symlink check still needs the Linux CI environment.
 
 ## Machine learning and actual accuracy
 
+The subsequent [public relevance measurement](matching-accuracy-measurement.md)
+scores the actual compatibility core through a fixed ESCO text adapter. It exposes
+a weakness against text baselines: 17.2% human first-choice agreement and
+TalentCLEF MAP 0.556. These adapter-conditioned component results do not measure
+live mutual interest or hiring accuracy.
+
 The implementation supports regularized logistic regression with training-only
 imputation/scaling, missingness indicators and optional held-out calibration.
 Both candidate and organization must explicitly opt in before an introduction
