@@ -1,4 +1,4 @@
-"""Cooperative sparse maximum-weight assignment for research snapshots.
+"""Cooperative sparse maximum-weight assignment for immutable scored inputs.
 
 Successive shortest residual paths can reroute any number of existing proposals.
 There are no database, execution, consent or prediction capabilities here. Results
@@ -35,27 +35,33 @@ def maximum_weight_assignment(
     weights: Mapping[tuple[str, str], float],
     vacancy_capacities: Mapping[str, int],
     budget: PlanningBudget,
+    *,
+    candidate_capacities: Mapping[str, int] | None = None,
 ) -> SparseAssignment:
-    """Maximize positive sparse utility with candidate capacity one and job caps.
+    """Maximize positive sparse utility with explicit endpoint capacities.
 
-    An incomplete search raises PlanningBudgetExceeded; the shadow boundary then
-    preserves the committed baseline. No partial assignment escapes on exhaustion.
+    Candidate capacity defaults to one for the research allocation contract.
+    An incomplete search raises PlanningBudgetExceeded; callers preserve their
+    complete baseline. No partial assignment escapes on exhaustion.
     Zero/negative utility edges are never filler. Stable IDs settle numerical ties.
     """
     budget.tick()
     if len(weights) > budget.limits.max_edges:
         raise PlanningBudgetExceeded("sparse edge budget exceeded")
-    for capacity in vacancy_capacities.values():
+    for capacity in (*vacancy_capacities.values(), *(candidate_capacities or {}).values()):
         budget.tick()
         if isinstance(capacity, bool) or not isinstance(capacity, int) or capacity < 0:
-            raise ValueError("vacancy capacities must be nonnegative integers")
+            raise ValueError("assignment capacities must be nonnegative integers")
     usable = {}
     for pair, weight in sorted(weights.items()):
         budget.tick()
         if isinstance(weight, bool) or not isinstance(weight, (int, float)) or not isfinite(weight):
             raise ValueError("assignment weights must be finite numbers")
-        if weight > NUMERICAL_TOLERANCE and vacancy_capacities.get(pair[1], 0) > 0:
+        candidate_capacity = 1 if candidate_capacities is None else candidate_capacities.get(pair[0], 0)
+        if weight > NUMERICAL_TOLERANCE and vacancy_capacities.get(pair[1], 0) > 0 and candidate_capacity > 0:
             usable[pair] = weight
+    if not isfinite(sum(usable.values())):
+        raise ValueError("aggregate assignment utility must remain finite")
     candidates = sorted({candidate for candidate, _ in usable})
     vacancies = sorted({vacancy for _, vacancy in usable})
     source, sink = 0, 1
@@ -72,7 +78,8 @@ def maximum_weight_assignment(
 
     for candidate in candidates:
         budget.tick()
-        connect(source, candidate_nodes[candidate], 1, 0)
+        capacity = 1 if candidate_capacities is None else candidate_capacities.get(candidate, 0)
+        connect(source, candidate_nodes[candidate], capacity, 0)
     for vacancy in vacancies:
         budget.tick()
         connect(vacancy_nodes[vacancy], sink, vacancy_capacities[vacancy], 0)

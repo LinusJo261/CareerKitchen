@@ -1,9 +1,10 @@
 # Career Kitchen matching implementation
 
-## Live reciprocal compatibility baseline
+## Live reciprocal scoring and attention allocation
 
 The live `services.clearing.reconcile` path now uses
-`reciprocal.score_reciprocal`, version `reciprocal-compatibility-v1`. The older
+`reciprocal.score_reciprocal`, version `reciprocal-compatibility-v1`, when no qualified
+observed-outcome model is available. The older
 four-weight heuristic and supplied-probability formulas below remain available
 for research/replay; they are not this live path's scoring formula.
 
@@ -14,17 +15,44 @@ aliases. Employer fit averages role compatibility and optional skill coverage;
 when no preferences exist, skill coverage is not applicable and is excluded.
 Candidate fit averages stated acceptable role, employment type and work mode.
 Pair relevance is the geometric mean of the two fits. Directional attention and
-congestion costs remain separate, with no new probabilities or model training.
+congestion costs remain separate. These cold-start scores are nonprobabilistic.
 
 Current candidate fields express acceptable sets, not ranked preferences; eligible
 pairs therefore currently have candidate fit one. Experience and evidence lack
 structured optional scoring targets and are explicitly unknown, not assigned zero
 or inferred from prose. Essential evidence checks remain mandatory. This baseline
-does not yet implement richer ranked preferences, semantic skill inference,
-global allocation, or a trained predictor. Equal applicable weights are versioned
+does not implement richer ranked preferences or semantic skill inference.
+Equal applicable weights are versioned
 engineering choices, not empirical coefficients.
 
-Role-family and explicit consent filters run in SQL before the live bounded
+`matching.live.allocate_live` replaces greedy issuance with sparse maximum-weight
+flow. Each pair retains the scorer's preferred first mover. Candidate-first
+introductions use candidate active slots and vacancy receiving slots;
+employer-first introductions use vacancy active slots and candidate receiving
+slots. These resource graphs are disjoint and can be optimized separately.
+Residual paths can rearrange earlier proposals to improve total supplied utility.
+Capacity can exceed one, while each pair can appear only once. A one-second/
+one-million-operation budget returns the complete feasible greedy fallback on
+exhaustion; incomplete improvements never escape. Numerical guards preserve the
+baseline objective. This optimizes the supplied bounded graph, not every person
+in the marketplace or an observed hiring outcome.
+
+Receiving space includes actual waiting items and unresolved first-side decisions
+that may enter the receiving queue. That reservation prevents separate matching
+runs from overpromising the same attention capacity. The executor locks selected
+participants, rechecks the model, eligibility, versions, cooldown and capacities,
+then issues audited cards transactionally. Concurrent changes can reduce actual
+issuance below the planned objective; the next durable reconciliation retries.
+
+The optional [outcome-learning pipeline](matching-learning.md) fits regularized
+logistic regression and optional calibration from explicitly consented frozen
+decisions. A qualified registry model supplies ranking utility for the declared
+historical explicit-resolution population. It cannot change eligibility or
+manufacture a human decision. Invalid, future or stale artifacts use deterministic
+scoring. No observed model is active in the evaluated empty local database.
+
+Role, preference, availability, participant-role conflict, block, prior-cycle,
+attention and explicit consent filters run in SQL before the live bounded
 candidate limit. Older unrelated or nonconsenting profiles therefore cannot
 consume the whole retrieval pool. Remaining feasibility checks still run before
 scoring and under issuance locks. This fixes retrieval scope; it does not change
@@ -35,10 +63,12 @@ candidate/vacancy versions, feature hash, weights version, both fits, both
 directional scores and price snapshot. No raw private compensation, resume or
 evidence contents enter this trace. Existing immutable exposure timestamps and
 decision cards/events retain issue, response, expiry and cancellation separately.
-Issuance is not proof of viewing; no view event is currently available. A future
-training exporter must exclude unresolved/expired/cancelled cards from explicit
-rejection labels, respect consent/retention, and account for exposure selection.
-No training exporter or dataset is created by this change.
+Issuance is not proof of viewing; no view event is currently available. The
+training exporter excludes unresolved/expired/cancelled cards from explicit
+rejection labels. Both candidate and organization must explicitly opt in before
+exposure and retain the same consent epoch through resolution and export.
+Immutable resolutions are captured in the answer transaction. Historical traces
+are never retroactively backfilled using edited profiles.
 
 Focused reciprocal tests can run without external services:
 `PYTHONPATH=apps/api python -m unittest discover -s apps/api/tests/algorithm -p test_reciprocal.py -v`.
@@ -69,7 +99,8 @@ The four interest predictions remain separate. The downstream target is offer
 acceptance, with legacy quality fixed to one. It is not a verified employment start.
 All probabilities are supplied by the caller, finite, bounded in `[0,1]`, versioned,
 and unavailable if their cutoff lies in the future. This package trains no model and
-contains no default response, acceptance, or employment probabilities.
+contains no default response, acceptance, or employment probabilities. The separate
+observed-outcome trainer does not fit these legacy downstream probabilities.
 
 `baseline.HeuristicPairScorer` provides the cold-start route when no forecast is
 supplied. Its trace is explicitly `NONPROBABILISTIC`. It combines four disclosed,
@@ -120,7 +151,7 @@ resolved decisions. The same `g/H/sqrt(H+1)` legacy update adjusts `lambda` or
 `kappa`, clamps at `CONGESTION_PRICE_MAX`, records exact counts and versions, and
 retains `gradient_h` across restarts. Oldest/uncontrolled scopes are visited first
 in bounded batches. Price updates never assume acceptance or verified employment.
-The live baseline and shadow snapshot consume these persisted prices.
+The live scorer and shadow snapshot consume these persisted prices.
 
 ## Eligibility and retrieval
 

@@ -39,7 +39,8 @@ class Settings(BaseSettings):
         "http://127.0.0.1:8000",
     ]
     trusted_hosts: Annotated[list[str], NoDecode] = ["localhost", "127.0.0.1", "testserver"]
-    feature_mode: Literal["BASELINE", "SHADOW"] = "SHADOW"
+    feature_mode: Literal["LIVE", "BASELINE", "SHADOW"] = "LIVE"
+    matching_model_max_age_days: int = Field(default=90, ge=1, le=3650)
     storage_backend: Literal["local", "supabase"] = "local"
     storage_bucket: str = "career-kitchen-private"
     local_storage_dir: Path = Path(".local/storage")

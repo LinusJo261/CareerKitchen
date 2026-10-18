@@ -95,9 +95,13 @@ only test-created roles after verification.
 ## Railway
 
 Set `ENVIRONMENT=production`, `AUTH_MODE=supabase`, `ALLOW_DEV_AUTH=false`,
-`STORAGE_BACKEND=supabase`, `FEATURE_MODE=SHADOW`, and all keys from
-`.env.example`. Start with SHADOW so advanced algorithms run read-only while the
-baseline remains the live executor and fallback. Set `CORS_ORIGINS` to exact HTTPS Vercel frontend origins and
+`STORAGE_BACKEND=supabase`, `FEATURE_MODE=LIVE`, and all keys from
+`.env.example`. Apply migration `0006_matching_learning` and the reviewed runtime
+role allowlist before starting this release. Live deterministic attention
+allocation uses the transactional executor; learned scoring requires qualified
+observed outcomes and explicit registry activation. `MATCHING_MODEL_MAX_AGE_DAYS`
+defaults to 90; expired or invalid models use deterministic scoring. SHADOW
+additionally records read-only scenario diagnostics. Set `CORS_ORIGINS` to exact HTTPS Vercel frontend origins and
 `TRUSTED_HOSTS` to API domain names **and `healthcheck.railway.app`**; Railway sends
 deployment probes with that Host value. Wildcards are rejected. Generate independent
 Fernet encryption, audit HMAC, and private readiness secrets. Keep encryption keys

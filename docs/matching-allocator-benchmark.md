@@ -4,7 +4,8 @@ The stronger portfolio allocator improves optimization of a declared mathematica
 objective. Its evaluation uses fictional sparse markets and an independent
 exhaustive oracle. It does not measure real matching accuracy, mutual interest,
 hiring, job satisfaction or verified employment. Experimental planning remains
-read-only `SHADOW`; the transactional live matching baseline remains authoritative.
+read-only `SHADOW`. The separate [live attention optimizer](live-matching-verification.md)
+now executes through the transactional matching service.
 
 The implementation is `scripts/benchmark_matching_allocator.py`, with independent
 checks in `tests/research/test_matching_allocator_benchmark.py`. It compares the

@@ -1,11 +1,12 @@
 """Versioned cold-start compatibility; never a learned probability."""
 
 from dataclasses import asdict, dataclass
-from math import sqrt
+from datetime import datetime
+from math import isfinite, sqrt
 
 from .attention import MarketPrices
 from .score import DirectionScore
-from .types import Side, boolean, probability, stable_hash
+from .types import Side, aware, boolean, probability, stable_hash
 
 
 def normalize_skill(value: str) -> str:
@@ -42,15 +43,34 @@ class ReciprocalFeatures:
     eligible: bool
 
     def __post_init__(self) -> None:
+        for name in ("candidate_id", "vacancy_id"):
+            value = getattr(self, name)
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(f"{name} must be a nonempty ID")
+        for name in ("candidate_version", "vacancy_version"):
+            value = getattr(self, name)
+            if type(value) is not int or value < 1:
+                raise ValueError(f"{name} must be a positive integer")
+        if not isinstance(self.as_of, str):
+            raise ValueError("as_of must be a timezone-aware ISO datetime")
+        try:
+            snapshot_time = datetime.fromisoformat(self.as_of)
+        except ValueError as exc:
+            raise ValueError("as_of must be a timezone-aware ISO datetime") from exc
+        aware(snapshot_time, "as_of")
         boolean(self.eligible, "eligible")
-        for value in (
-            self.employer_skills,
-            self.candidate_role,
-            self.candidate_work_mode,
-            self.candidate_employment_type,
+        for name in (
+            "employer_skills",
+            "candidate_role",
+            "candidate_work_mode",
+            "candidate_employment_type",
         ):
-            if value is not None:
-                probability(value, "compatibility")
+            value = getattr(self, name)
+            if value is None and name == "employer_skills":
+                continue
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise ValueError(f"{name} must be numeric, not boolean")
+            probability(value, name)
 
 
 def score_reciprocal(features: ReciprocalFeatures, prices: MarketPrices) -> dict:
@@ -83,6 +103,17 @@ def score_reciprocal(features: ReciprocalFeatures, prices: MarketPrices) -> dict
             relevance - prices.mu_employer - prices.candidate_congestion,
         ),
     ]
+    if any(
+        not isfinite(value)
+        for direction in directions
+        for value in (
+            direction.gross_value,
+            direction.attention_cost,
+            direction.congestion_cost,
+            direction.net_surplus,
+        )
+    ):
+        raise ValueError("reciprocal score arithmetic must remain finite")
     best = max(directions, key=lambda direction: direction.net_surplus)
     return {
         "model_version": "reciprocal-compatibility-v1",

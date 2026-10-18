@@ -4,8 +4,11 @@ Build backend, infrastructure and integration contracts only. Do not create a
 frontend in this repository; the frontend is maintained separately.
 
 Use FastAPI, SQLAlchemy, Alembic and Supabase PostgreSQL/Auth/Storage. Never trust
-JWT role metadata for application authorization. Experimental matching stays in
-read-only shadow mode; no unsupported reliability certification. Preserve double
+JWT role metadata for application authorization. Use the tested deterministic
+optimizer for live matching through the transactional executor. Scenario research
+remains read-only; learned models require consented outcomes and validated,
+versioned promotion with a deterministic fallback. No unsupported reliability
+certification. Preserve double
 opt-in, candidate and vacancy attention ceilings, consent and tenant isolation.
 All mutations are transactional, versioned, idempotent, audited and use outbox.
 Test each vertical slice before considering it done. Report unexecuted external

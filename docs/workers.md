@@ -21,11 +21,17 @@ It cannot express human interest, approve a hiring policy, send a human message,
 or verify employment automatically.
 
 Reconciliation is triggered by materially relevant candidate/vacancy changes,
-answers/expiry, evidence/consent changes and price windows. The baseline executor
+answers/expiry, evidence/consent changes, model activation and price windows. The live executor
 retains its locks, feasibility checks, cooldowns, chosen lower caps and outbox
 audit. A generated `decision.issued` event creates a notification only and cannot
 recursively trigger more clearing. Pending decisions with stale role terms or
 missing essential eligibility close; human mutual commitments remain intact.
+Maintenance commits an audited `matching.allocation_requested` follow-up event.
+Its next transaction resolves the original authoritative event's scope and runs
+allocation without retaining maintenance's earlier participant locks. The source
+event's inbox receipt prevents duplicate follow-up creation. The allocation
+transaction locks all selected participants in a consistent order before the
+model registry; conflicts retain the durable retry/dead-letter behavior.
 An explicit `shortlist.replan_requested` is a separate research event: consumption
 commits first, then records read-only shadow diagnostics when SHADOW is enabled.
 It never calls live clearing, issues a card or creates a human notification.
@@ -47,7 +53,7 @@ authenticated services. The email adapter is not configured; records explicitly
 say `NOT_CONFIGURED` and never claim an email was sent. This build does not claim
 external calendar or email delivery.
 
-In `FEATURE_MODE=SHADOW`, the baseline transaction commits first. A separate
+In `FEATURE_MODE=SHADOW`, the live allocation transaction commits first. A separate
 authorized snapshot builder collects only sanctioned derived inputs and current
 price/role/profile versions, then closes its database session. The pure planner
 receives only frozen objects. A separate recorder writes `ShadowRun` diagnostics;

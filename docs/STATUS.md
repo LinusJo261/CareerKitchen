@@ -2,9 +2,11 @@
 
 The implementation is a locally testable application with a Next.js frontend
 connected to the persistent FastAPI backend. It has not been deployed to a live
-Supabase/Railway/Vercel environment. Initial
-`FEATURE_MODE=SHADOW` keeps advanced proposals read-only while the original
-baseline owns live decisions.
+Supabase/Railway/Vercel environment. `FEATURE_MODE=LIVE` now selects the normal
+configuration. The deterministic attention optimizer issues through the existing
+transactional executor. Consented outcome learning has a gated model registry;
+no observed model or hiring accuracy claim exists yet. Scenario research remains
+read-only. Current verification is in [live matching verification](live-matching-verification.md).
 
 | Blueprint phases | Implemented backend scope |
 | --- | --- |
@@ -14,7 +16,7 @@ baseline owns live decisions.
 | P5–P6 | Immutable shadow snapshots, baseline parity/isolation tests, original reciprocal formulas, persistent attention/congestion dual controllers, correlated scenario risk, global sparse allocation/exchanges/pruning, minimum shortlist math, WITNESS dependencies/budgets and adaptive exposure |
 | P7 | Fictional resettable market, OpenAPI and generated types, connected Next.js workspace pages, server-side Supabase session handling, scoped BFF reads and versioned actions |
 | P8 | Durable worker/retries/dead letters/receipts, in-app notifications/reminders, interviews, encrypted written offers, separate corroborated starts/disputes, privacy export/deletion and moderation/report workflow |
-| P9 | Advanced live execution intentionally refuses pilot approval. External prospective evidence, employer/candidate enrollment, independent governance and deployment approval are required before this can be enabled |
+| P9 | Live deterministic attention allocation and consented outcome collection; learned models require held-out gains and versioned activation. Scenario reliability certification remains unavailable |
 | P10 | CI, dependency/source checks, migration round trips, browser-role RLS denial, immutable audit triggers, Railway/Compose configuration and backup/restore runbooks; actual cloud load/security review and restore drill remain external deployment work |
 
 ## Limits that are deliberate or need external configuration
@@ -41,8 +43,8 @@ baseline owns live decisions.
   background checks or opaque global employability score is included.
 - The existing frontend uses live backend state. Production Supabase confirmation,
   cookie refresh and hosted deployment checks still need configured environments.
-- Git was initialized locally. No remote repository, push, cloud deployment or
-  production credential was invented or created.
+- Matching changes are reviewed through the existing GitHub repository. No
+  production credential or hosted deployment is created by this change.
 
 ## Executed verification
 

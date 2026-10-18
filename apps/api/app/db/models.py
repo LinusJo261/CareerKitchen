@@ -84,6 +84,8 @@ class Candidate(Entity, Base):
     privacy_accepted: Mapped[bool] = mapped_column(Boolean, default=False)
     confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     resume_object_ref: Mapped[str | None] = mapped_column(String(250))
+    matching_learning_opt_in: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    matching_learning_consent_version: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
 
 
 class Skill(Entity, Base):
@@ -112,6 +114,8 @@ class Organization(Entity, Base):
     verification_source_hash: Mapped[str | None] = mapped_column(String(64))
     verified_by: Mapped[str | None] = mapped_column(ForeignKey("users.id"))
     active_role_capacity: Mapped[int] = mapped_column(Integer, default=3)
+    matching_learning_opt_in: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    matching_learning_consent_version: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
 
 
 class OrgMember(Entity, Base):
@@ -455,6 +459,41 @@ class CongestionPrice(Entity, Base):
     controlled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class MatchingLearningState(Entity, Base):
+    __tablename__ = "matching_learning_state"
+    # Singleton coordination row. Its version changes on every learning-consent change.
+    scope: Mapped[str] = mapped_column(String(20), unique=True, default="GLOBAL")
+
+
+class MatchingModel(Entity, Base):
+    __tablename__ = "matching_models"
+    __table_args__ = (
+        CheckConstraint("status IN ('ACTIVE','RETIRED')"),
+        Index(
+            "uq_matching_model_active",
+            "status",
+            unique=True,
+            postgresql_where=text("status = 'ACTIVE'"),
+            sqlite_where=text("status = 'ACTIVE'"),
+        ),
+    )
+    model_key: Mapped[str] = mapped_column(String(64), unique=True)
+    artifact: Mapped[dict[str, Any]] = mapped_column(JSON)
+    evaluation: Mapped[dict[str, Any]] = mapped_column(JSON)
+    status: Mapped[str] = mapped_column(String(20), default="ACTIVE")
+    activated_by: Mapped[str] = mapped_column(ForeignKey("users.id"))
+
+
+class MatchingObservation(Entity, Base):
+    __tablename__ = "matching_observations"
+    __table_args__ = (Index("ix_matching_observations_created_at_id", "created_at", "id"),)
+    pair_cycle_id: Mapped[str] = mapped_column(ForeignKey("pair_cycles.id"), unique=True)
+    candidate_id: Mapped[str] = mapped_column(ForeignKey("candidate_profiles.id"), index=True)
+    vacancy_id: Mapped[str] = mapped_column(ForeignKey("vacancies.id"), index=True)
+    # An as-observed outcome snapshot, never today's profile joined to an old label.
+    observation: Mapped[dict[str, Any]] = mapped_column(JSON)
+
+
 class ShadowRun(Entity, Base):
     __tablename__ = "shadow_runs"
     event_id: Mapped[str] = mapped_column(ForeignKey("outbox_events.id"), unique=True)
@@ -469,6 +508,6 @@ def _immutable(mapper: Any, connection: Any, target: Any) -> None:
     raise ValueError("Append-only event cannot be changed")
 
 
-for _model in (AuditEvent, Exposure, StageEvent):
+for _model in (AuditEvent, Exposure, StageEvent, MatchingObservation):
     event.listen(_model, "before_update", _immutable)
     event.listen(_model, "before_delete", _immutable)

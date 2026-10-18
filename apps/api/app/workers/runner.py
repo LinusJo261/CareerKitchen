@@ -68,6 +68,7 @@ WORKER_ISSUER = "urn:career-kitchen:internal-worker"
 WORKER_SUBJECT = "outbox-runner"
 MAX_ATTEMPTS = 5
 RESEARCH_EVENTS = frozenset({"shortlist.replan_requested"})
+ALLOCATION_EVENT = "matching.allocation_requested"
 RECONCILE_EVENTS = frozenset(
     {
         "candidate.activated",
@@ -95,6 +96,7 @@ RECONCILE_EVENTS = frozenset(
         "pact.policy_revoked",
         "employment_start.verified",
         "market.price_updated",
+        "matching.model_activated",
     }
 )
 
@@ -352,6 +354,12 @@ def handle_event(db: Session, actor: Actor, event: OutboxEvent) -> list[dict[str
 
         process_privacy_request(db, actor, event.aggregate_id)
         return []
+    if event.kind == ALLOCATION_EVENT:
+        source = db.get(OutboxEvent, event.aggregate_id)
+        if source is None or source.kind not in RECONCILE_EVENTS:
+            raise ValueError("Allocation requires an authoritative source event")
+        scopes = affected_vacancies(db, source)
+        return clearing.reconcile(db, actor, vacancy_ids=scopes, pool_limit=50) if scopes else []
     enqueue_notifications(db, event)
     if event.kind not in RECONCILE_EVENTS:
         return []  # decision.issued must not recursively issue more cards.
@@ -359,7 +367,11 @@ def handle_event(db: Session, actor: Actor, event: OutboxEvent) -> list[dict[str
     clearing.release_waiting(db, actor)
     scopes = affected_vacancies(db, event)
     invalidate_pending(db, actor, scopes)
-    return clearing.reconcile(db, actor, vacancy_ids=scopes, pool_limit=50) if scopes else []
+    # Maintenance retains participant locks until commit. Queue allocation in a
+    # separate transaction so its sorted lock set cannot invert those locks.
+    if scopes:
+        emit(db, actor, ALLOCATION_EVENT, event)
+    return []
 
 
 def invalidate_pending(db: Session, actor: Actor, vacancy_ids: list[str], limit: int = 200) -> int:
@@ -810,7 +822,7 @@ def process_one(factory: sessionmaker[Session], *, shadow: bool | None = None) -
         if event is None:
             return False, False
         event_id = event.id
-        research_requested = event.kind in RECONCILE_EVENTS or event.kind in RESEARCH_EVENTS
+        research_requested = event.kind == ALLOCATION_EVENT or event.kind in RESEARCH_EVENTS
         if db.get(InboxConsumption, (CONSUMER, event.id)):
             event.dispatched_at = utcnow()
             return True, True

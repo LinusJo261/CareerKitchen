@@ -13,11 +13,14 @@ offers, independently attested starts, notifications, abuse reports, and privacy
 jobs. PostgreSQL owns state, transactions, locks, idempotency, audit and the durable
 worker queue. Supabase provides production identity and private storage.
 
-The original reciprocal formulas remain available. Cold start uses explicitly
-nonprobabilistic relevance routing. R99, WITNESS and adaptive exposure are research
-components. The initial `FEATURE_MODE=SHADOW` records read-only diagnostics while
-the baseline executes live matching; advanced execution is disabled and reliability
-is `CANNOT_CERTIFY`.
+Live matching optimizes reciprocal compatibility across both participants' actual
+attention limits. `FEATURE_MODE=LIVE` is the default; the transactional executor
+rechecks consent, eligibility, versions and capacity. Optional machine learning
+uses explicitly consented, frozen outcomes and requires held-out improvement
+before activation. No observed model has been trained yet. R99, WITNESS and
+scenario research remain read-only and cannot certify employment reliability.
+See [matching verification](docs/live-matching-verification.md) and
+[outcome learning](docs/matching-learning.md).
 
 Start with [implementation status](docs/STATUS.md), [v0 integration](docs/v0-integration.md),
 [API contracts](docs/api.md), and [deployment](docs/deployment.md). The complete
