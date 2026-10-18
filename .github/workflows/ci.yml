@@ -54,7 +54,7 @@ jobs:
       - run: alembic upgrade head
       - run: alembic downgrade base
       - run: alembic upgrade head
-      - run: pytest --cov=app --cov-report=term-missing
+      - run: pytest --cov=apps/api/app --cov-report=term-missing
       - run: python scripts/export_openapi.py --check
       - uses: actions/setup-node@v4
         with:
