@@ -61,7 +61,23 @@ export async function supabaseServer() {
   })
 }
 
+function hostedSampleDemo() {
+  return process.env.FRONTEND_SAMPLE_DEMO === 'true' &&
+    (process.env.SAMPLE_SESSION_SECRET?.length || 0) >= 32 &&
+    Boolean(process.env.SAMPLE_SUPABASE_URL?.startsWith('https://') &&
+      process.env.SAMPLE_SUPABASE_PUBLISHABLE_KEY &&
+      process.env.SAMPLE_CANDIDATE_PASSWORD && process.env.SAMPLE_EMPLOYER_PASSWORD)
+}
+
 export function sampleApiBase() {
+  if (hostedSampleDemo()) {
+    const url = new URL(process.env.CAREER_KITCHEN_SAMPLE_API_URL || '')
+    const normal = new URL(process.env.CAREER_KITCHEN_API_URL || 'http://127.0.0.1:8000')
+    if (url.protocol !== 'https:' || isLoopbackHost(url.hostname) || url.username ||
+      url.password || url.search || url.hash || url.pathname !== '/' || url.origin === normal.origin)
+      throw new GatewayError(503, 'DEMO_NOT_CONFIGURED', 'Configure a separate HTTPS sample API.')
+    return url.origin
+  }
   if (authMode() !== 'local')
     throw new GatewayError(
       403,
@@ -103,6 +119,9 @@ export function sampleApiBase() {
 }
 
 export function sampleDemoAvailable(request: Request) {
+  if (hostedSampleDemo()) {
+    try { sampleApiBase(); return true } catch { return false }
+  }
   if (
     authMode(requestHostname(request)) !== 'local' ||
     !isLoopbackHost(new URL(request.url).hostname)
@@ -117,7 +136,7 @@ export function sampleDemoAvailable(request: Request) {
 }
 
 function sampleSignature(content: string) {
-  return createHmac('sha256', process.env.DEV_JWT_SECRET!)
+  return createHmac('sha256', hostedSampleDemo() ? process.env.SAMPLE_SESSION_SECRET! : process.env.DEV_JWT_SECRET!)
     .update(`career-kitchen/sample-session/v1:${content}`)
     .digest('base64url')
 }
@@ -336,7 +355,27 @@ export function sampleIdentity(account: string) {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
 }
 
-export function sampleToken(account: string) {
+export async function sampleToken(account: string) {
+  if (hostedSampleDemo()) {
+    if (!['employer', 'candidate-000001'].includes(account))
+      throw new GatewayError(422, 'INVALID_FIXTURE', 'Choose a demonstration account.')
+    sampleApiBase()
+    const provider = new URL(process.env.SAMPLE_SUPABASE_URL!)
+    if (provider.protocol !== 'https:' || provider.username || provider.password || provider.search || provider.hash || provider.pathname !== '/')
+      throw new GatewayError(503, 'DEMO_NOT_CONFIGURED', 'Configure the sample authentication provider.')
+    const email = account === 'employer' ? 'employer@samples.example.invalid' : 'candidate-000001@samples.example.invalid'
+    const response = await fetch(new URL('/auth/v1/token?grant_type=password', provider), {
+      method: 'POST', redirect: 'error', cache: 'no-store',
+      headers: { 'Content-Type': 'application/json', apikey: process.env.SAMPLE_SUPABASE_PUBLISHABLE_KEY! },
+      body: JSON.stringify({ email, password: account === 'employer' ? process.env.SAMPLE_EMPLOYER_PASSWORD : process.env.SAMPLE_CANDIDATE_PASSWORD }),
+      signal: AbortSignal.timeout(10000),
+    })
+    const data = await response.json().catch(() => null)
+    if (!response.ok || typeof data?.access_token !== 'string' ||
+      !['ES256', 'RS256'].includes(accessTokenAlgorithm(data.access_token) || ''))
+      throw new GatewayError(503, 'DEMO_AUTH_UNAVAILABLE', 'The sample sign-in service is unavailable.')
+    return data.access_token as string
+  }
   return localToken(
     sampleIdentity(account),
     `${account}@samples.example.invalid`,
@@ -393,7 +432,7 @@ export async function setSampleSession(token: string) {
   store.set(SAMPLE_COOKIE, `${content}.${sampleSignature(content)}`, {
     httpOnly: true,
     sameSite: 'strict',
-    secure: false,
+    secure: process.env.NODE_ENV === 'production',
     path: '/',
     maxAge: 1800,
   })

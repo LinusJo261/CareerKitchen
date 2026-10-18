@@ -42,13 +42,26 @@ def require_sample_database(db: Session, settings) -> dict:
     """Fail closed before reading sample profiles or changing fictional state."""
     configured = make_url(settings.database_url)
     actual = db.get_bind().engine.url
+    hosted = (
+        settings.environment in {"staging", "production"}
+        and settings.auth_mode == "supabase"
+        and settings.sample_demo_enabled
+        and not settings.allow_dev_auth
+        and configured.query.get("sslmode") in {"require", "verify-ca", "verify-full"}
+        and actual.query.get("sslmode") in {"require", "verify-ca", "verify-full"}
+    )
+    local = (
+        settings.environment in {"development", "test"}
+        and settings.auth_mode == "local"
+        and settings.allow_dev_auth
+        and configured.host in {"127.0.0.1", "localhost", "::1"}
+        and actual.host in {"127.0.0.1", "localhost", "::1"}
+    )
     if (
-        settings.environment not in {"development", "test"}
-        or settings.auth_mode != "local"
-        or not settings.allow_dev_auth
-        or configured.host not in {"127.0.0.1", "localhost", "::1"}
+        not (hosted or local)
+        or configured.host != actual.host
+        or configured.port != actual.port
         or configured.database != SAMPLE_DATABASE
-        or actual.host not in {"127.0.0.1", "localhost", "::1"}
         or actual.database != SAMPLE_DATABASE
         or set(configured.query) - {"sslmode"}
         or set(actual.query) - {"sslmode"}

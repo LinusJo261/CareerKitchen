@@ -45,6 +45,12 @@ def actor_dep(request: Request) -> Actor:
     user = db.scalar(
         select(User).where(User.issuer == identity.issuer, User.subject == str(identity.subject))
     )
+    if settings.sample_demo_enabled:
+        from app.api.demo import require_sample_database
+
+        require_sample_database(db, settings)
+        if user is None:
+            raise AppError(403, "DEMO_ACCOUNT_REQUIRED", "Use an imported fictional sample account")
     if user is None:
         user = User(
             id=str(identity.subject),
