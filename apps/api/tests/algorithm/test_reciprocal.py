@@ -34,6 +34,11 @@ class ReciprocalTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             score_reciprocal(replace(self.features, eligible=False), MarketPrices())
 
+    def test_truthy_values_cannot_assert_eligibility(self):
+        for invalid in ("false", "true", 1, None):
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                replace(self.features, eligible=invalid)
+
     def test_snapshot_is_versioned_and_replayable(self):
         result = score_reciprocal(self.features, MarketPrices())
         self.assertEqual(result, score_reciprocal(self.features, MarketPrices()))

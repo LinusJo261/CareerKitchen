@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import secrets
-from datetime import timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
 from hmac import compare_digest
 
-from sqlalchemy import func, select
+from sqlalchemy import cast, func, select
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Session
 
 from app.core.errors import AppError
@@ -45,6 +46,33 @@ from app.services.common import (
 )
 
 POST_MATCH = {"MUTUAL_MATCH", "INTERVIEWING", "OFFERED", "OFFER_ACCEPTED", "START_CONFIRMED"}
+
+
+def compatibility_features(
+    candidate: Candidate,
+    vacancy: Vacancy,
+    confirmed_skills: tuple[tuple[str, tuple[str, ...]], ...],
+    preferred: tuple[str, ...],
+    as_of: datetime,
+) -> ReciprocalFeatures:
+    """Shared live/shadow feature contract for an already eligibility-checked pair.
+
+    Missing experience/evidence targets stay unknown. Only confirmed taxonomy
+    skills and stated preferences enter compatibility; feasibility is a separate
+    gate that callers must apply before constructing these features.
+    """
+    return ReciprocalFeatures(
+        candidate_id=candidate.id,
+        vacancy_id=vacancy.id,
+        candidate_version=candidate.version,
+        vacancy_version=vacancy.version,
+        as_of=as_of.isoformat(),
+        employer_skills=skill_coverage(confirmed_skills, preferred),
+        candidate_role=float(vacancy.role_family in candidate.role_families),
+        candidate_work_mode=float(vacancy.work_mode in candidate.work_modes),
+        candidate_employment_type=float(vacancy.employment_type in candidate.employment_types),
+        eligible=True,
+    )
 
 
 def feasible(db: Session, candidate: Candidate, vacancy: Vacancy) -> tuple[bool, list[str]]:
@@ -537,7 +565,13 @@ def reconcile(
         )
         candidates = db.scalars(
             select(Candidate)
-            .where(Candidate.state == "ACTIVE")
+            .where(
+                Candidate.state == "ACTIVE",
+                Candidate.terms_accepted.is_(True),
+                Candidate.privacy_accepted.is_(True),
+                Candidate.confirmed_at.is_not(None),
+                cast(Candidate.role_families, JSONB).contains([vacancy.role_family]),
+            )
             .order_by(Candidate.created_at, Candidate.id)
             .limit(pool_limit)
         )
@@ -568,18 +602,7 @@ def reconcile(
                     )
                 )
             )
-            features = ReciprocalFeatures(
-                candidate_id=candidate.id,
-                vacancy_id=vacancy.id,
-                candidate_version=candidate.version,
-                vacancy_version=vacancy.version,
-                as_of=utcnow().isoformat(),
-                employer_skills=skill_coverage(skills, preferred),
-                candidate_role=float(vacancy.role_family in candidate.role_families),
-                candidate_work_mode=float(vacancy.work_mode in candidate.work_modes),
-                candidate_employment_type=float(vacancy.employment_type in candidate.employment_types),
-                eligible=True,  # feasible() above; issuance rechecks under locks.
-            )
+            features = compatibility_features(candidate, vacancy, skills, preferred, utcnow())
             candidate_congestion = db.scalar(
                 select(CongestionPrice).where(
                     CongestionPrice.scope_id == candidate.id, CongestionPrice.side == "CANDIDATE"

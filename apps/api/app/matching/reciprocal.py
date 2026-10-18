@@ -5,7 +5,7 @@ from math import sqrt
 
 from .attention import MarketPrices
 from .score import DirectionScore
-from .types import Side, probability, stable_hash
+from .types import Side, boolean, probability, stable_hash
 
 
 def normalize_skill(value: str) -> str:
@@ -42,6 +42,7 @@ class ReciprocalFeatures:
     eligible: bool
 
     def __post_init__(self) -> None:
+        boolean(self.eligible, "eligible")
         for value in (
             self.employer_skills,
             self.candidate_role,

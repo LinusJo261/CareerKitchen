@@ -126,6 +126,13 @@ def plan_baseline(
             scores.append(score)
     candidate_free = {key: value.free for key, value in candidate_capacities.items()}
     vacancy_free = {key: value.free for key, value in vacancy_capacities.items()}
+    candidate_waiting_free = {
+        key: max(0, value.waiting_maximum - value.waiting_count)
+        for key, value in candidate_capacities.items()
+    }
+    vacancy_waiting_free = {
+        key: max(0, value.waiting_maximum - value.waiting_count) for key, value in vacancy_capacities.items()
+    }
     result: list[AllocationProposal] = []
     for score in sorted(
         scores, key=lambda item: (-item.best.net_surplus, item.candidate_id, item.vacancy_id)
@@ -135,13 +142,15 @@ def plan_baseline(
         if candidate is None or vacancy is None:
             continue  # Unknown capacity is never assumed free.
         if score.best.side == Side.CANDIDATE:
-            if candidate_free[score.candidate_id] <= 0 or vacancy.waiting_count >= vacancy.waiting_maximum:
+            if candidate_free[score.candidate_id] <= 0 or vacancy_waiting_free[score.vacancy_id] <= 0:
                 continue
             candidate_free[score.candidate_id] -= 1
+            vacancy_waiting_free[score.vacancy_id] -= 1
         else:
-            if vacancy_free[score.vacancy_id] <= 0 or candidate.waiting_count >= candidate.waiting_maximum:
+            if vacancy_free[score.vacancy_id] <= 0 or candidate_waiting_free[score.candidate_id] <= 0:
                 continue
             vacancy_free[score.vacancy_id] -= 1
+            candidate_waiting_free[score.candidate_id] -= 1
         result.append(
             AllocationProposal(
                 score.candidate_id,

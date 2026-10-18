@@ -57,6 +57,19 @@ shadow diagnostic; research results are not a correctness dependency or a public
 claim. The package ships without empirical scenario models or a public reliability
 validator, so all claims remain `CANNOT_CERTIFY`.
 
+The bounded shadow population applies role and consent filters before its
+100-candidate limit and includes at most 20 vacancies. It uses the live scorer's
+shared structured feature builder, confirmed taxonomy skills and curated aliases,
+not-applicable optional skills, and the same congestion clamps. One observation
+time applies across all scored pairs. Recent closed pairs respect the live
+30-day cooldown. Current attention usage and receiving waiting ceilings gate
+new edges. Open commitments on selected vacancies are never silently truncated;
+candidates committed outside that vacancy sample cannot supply new contingent
+edges inside it. Existing fixed human decisions remain even above a new limit.
+Recorded diagnostics identify the input scorer, planner version, solver,
+objective, bounded population and search-completion state. They describe an
+internal routing comparison, not calibrated outcome probabilities.
+
 The worker implements encrypted owner export and local erasure as described in
 [privacy.md](privacy.md). Supabase provider identity deletion and remote orphan
 inventory remain explicit operator review steps. No data is claimed erased beyond

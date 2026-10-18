@@ -252,6 +252,12 @@ def test_shadow_after_commit_persists_diagnostics_without_changing_live_state(wo
         assert run.side_effect_count == 0
         assert run.diagnostics["certification_state"] == "CANNOT_CERTIFY"
         assert run.diagnostics["model_coverage"] == 0
+        assert run.diagnostics["planner_version"] == "sparse-portfolio-v2"
+        assert run.diagnostics["solver"] == "SPARSE_RESIDUAL_ASSIGNMENT"
+        assert run.diagnostics["search_complete"] is True
+        assert run.diagnostics["objective"] == 1
+        assert run.diagnostics["operation_count"] > 0
+        assert run.diagnostics["snapshot_scope"] == {"vacancy_limit": 20, "candidate_limit": 100}
 
 
 def test_shadow_failure_never_reverts_baseline_commit(worker_market, monkeypatch):
