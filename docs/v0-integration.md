@@ -1,5 +1,9 @@
 # Integrating the separately generated v0 frontend
 
+The [Gemini navigation chat contract](navigation-chat.md) describes the read-only
+`POST /v1/navigation/chat` endpoint for a separately implemented chatbox, including
+server configuration, user consent, authentication, and retry behavior.
+
 No frontend has been created or redesigned. Connect the existing Next.js pages to
 this API through a server-side backend-for-frontend (BFF). The runnable contract is
 `docs/openapi.json`; Swagger is available at `/docs`, ReDoc at `/redoc`, and the

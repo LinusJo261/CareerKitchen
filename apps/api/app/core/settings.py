@@ -50,6 +50,9 @@ class Settings(BaseSettings):
     decision_ttl_hours: int = Field(default=72, ge=1, le=168)
     rate_limit_per_minute: int = Field(default=120, ge=1, le=10000)
     readiness_token: SecretStr = SecretStr("")
+    gemini_api_key: SecretStr = SecretStr("")
+    gemini_model: str = Field(default="gemini-2.5-flash", pattern=r"^gemini-[a-z0-9.-]+$")
+    gemini_timeout_seconds: float = Field(default=20, ge=1, le=60)
 
     @field_validator("cors_origins", "trusted_hosts", mode="before")
     @classmethod

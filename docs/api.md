@@ -87,7 +87,7 @@ Pydantic before commit; an invalid response rolls back the transaction.
 
 <!-- BEGIN GENERATED ENDPOINT INVENTORY -->
 
-108 operations across 95 paths.
+109 operations across 96 paths.
 
 | Method | Path | Request schema | Success schema |
 |---|---|---|---|
@@ -146,6 +146,7 @@ Pydantic before commit; an invalid response rolls back the transaction.
 | POST | `/v1/matches/{match_id}/starts/report` | StartInput | 200: Envelope_StartOut_ |
 | POST | `/v1/matches/{match_id}/starts/verify` | StartVerifyInput | 200: Envelope_StartOut_ |
 | POST | `/v1/matches/{match_id}/withdraw` | VersionInput | 200: Envelope_PairStateOut_ |
+| POST | `/v1/navigation/chat` | NavigationChatIn | 200: Envelope_NavigationChatOut_ |
 | GET | `/v1/notifications` | — | 200: PageEnvelope_NotificationOut_ |
 | GET | `/v1/notifications/preferences` | — | 200: Envelope_NotificationPreferencesOut_ |
 | PUT | `/v1/notifications/preferences` | NotificationInput | 200: Envelope_NotificationPreferencesOut_ |

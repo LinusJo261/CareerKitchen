@@ -21,6 +21,7 @@ from app.schemas.core import ErrorEnvelope
 
 def create_app(settings=None, engine=None) -> FastAPI:
     from app.api.core import router
+    from app.api.navigation import router as navigation_router
     from app.api.pact import router as pact_router
     from app.api.research import router as research_router
 
@@ -150,6 +151,7 @@ def create_app(settings=None, engine=None) -> FastAPI:
     app.include_router(router, prefix="/v1")
     app.include_router(pact_router, prefix="/v1")
     app.include_router(research_router, prefix="/v1")
+    app.include_router(navigation_router, prefix="/v1")
     # OpenAPI represents every authenticated route and write idempotency requirement.
     original_openapi = app.openapi
 
