@@ -18,14 +18,14 @@ import { cn } from '@/lib/utils'
 
 const PIPELINE: PipelineStage[] = ['Introduced', 'Mutual interest', 'Interviewing', 'Offer', 'Employment confirmed']
 
-export function VacanciesPage() {
+export function VacanciesPage({ openNew = false }: { openNew?: boolean }) {
   const { data, update } = useDemo()
   const [filter, setFilter] = useState<'All' | Vacancy['status']>('All')
   const list = data.vacancies.filter((v) => filter === 'All' || v.status === filter)
   const setStatus = (id: string, status: Vacancy['status']) => update((s) => ({ ...s, vacancies: s.vacancies.map((v) => v.id === id ? { ...v, status } : v) }), status === 'Active' ? 'Vacancy published.' : 'Vacancy closed.')
   return (
     <>
-      <PageHeader eyebrow={data.organization.name} title="Vacancies" description="Clear roles attract the right people. Active vacancies are eligible for introductions." actions={<VacancyDialog />} />
+      <PageHeader eyebrow={data.organization.name} title="Vacancies" description="Clear roles attract the right people. Active vacancies are eligible for introductions." actions={<VacancyDialog defaultOpen={openNew} />} />
       <ToggleGroup type="single" variant="outline" size="sm" value={filter} onValueChange={(v) => v && setFilter(v as typeof filter)} className="mb-5" aria-label="Filter vacancies">
         {(['All', 'Active', 'Draft', 'Closed'] as const).map((f) => <ToggleGroupItem key={f} value={f}>{f}</ToggleGroupItem>)}
       </ToggleGroup>
@@ -51,9 +51,9 @@ export function VacanciesPage() {
   )
 }
 
-function VacancyDialog() {
+function VacancyDialog({ defaultOpen = false }: { defaultOpen?: boolean }) {
   const { update } = useDemo()
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(defaultOpen)
   const [submitted, setSubmitted] = useState(false)
   const [f, setF] = useState({ title: '', salary: '', location: '', arrangement: 'Hybrid', skills: '', summary: '' })
   const errors = { title: !f.title.trim(), salary: !f.salary.trim(), summary: f.summary.trim().length < 20 }
