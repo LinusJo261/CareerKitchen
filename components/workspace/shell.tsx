@@ -290,11 +290,7 @@ export function Shell({
                 </nav>
               </SheetContent>
             </Sheet>
-            <span
-              className={cn(
-                employer && '[&_.ticket]:bg-butter [&_.ticket]:text-charcoal',
-              )}
-            >
+            <span>
               <Brand className="hidden sm:flex" />
               <Brand compact className="sm:hidden" />
             </span>
