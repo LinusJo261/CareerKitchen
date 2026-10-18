@@ -18,6 +18,8 @@ const human = (value: string) =>
   value
     .replaceAll('_', ' ')
     .toLowerCase()
+    .replace(/\bvacancies\b/g, 'job openings')
+    .replace(/\bvacancy\b/g, 'job opening')
     .replace(/^./, (x) => x.toUpperCase())
 const date = (value: string | null | undefined) =>
   value
@@ -534,7 +536,7 @@ export async function workspaceState(
       recipient:
         state.vacancies.find((v) => v.id === row.vacancy_id)?.company ||
         'Exact employer',
-      purpose: `Terms for vacancy ${row.vacancy_id}, version ${row.role_version}`,
+      purpose: `Terms for job opening ${row.vacancy_id}, version ${row.role_version}`,
       expires: date(row.expires_at),
       expiresAt: row.expires_at,
       granted: currentTerms(
@@ -553,7 +555,7 @@ export async function workspaceState(
       recipient:
         state.vacancies.find((v) => v.id === row.vacancy_id)?.company ||
         'Exact employer',
-      purpose: `Claim ${row.claim_id} for vacancy ${row.vacancy_id}, version ${row.role_version}`,
+      purpose: `Claim ${row.claim_id} for job opening ${row.vacancy_id}, version ${row.role_version}`,
       expires: date(row.expires_at),
       expiresAt: row.expires_at,
       granted: currentDisclosure(

@@ -106,7 +106,7 @@ export function Dashboard({ role }: { role: Role }) {
               href={employer ? '/employer/vacancies' : '/candidate/profile'}
             >
               {employer ? <BriefcaseBusiness data-icon="inline-start" /> : null}
-              {employer ? 'Manage vacancies' : 'Your preferences'}
+              {employer ? 'Manage job openings' : 'Your preferences'}
               <ArrowUpRight data-icon="inline-end" />
             </Link>
           </Button>

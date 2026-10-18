@@ -282,7 +282,7 @@ export function EmployerOnboarding() {
                       <p>
                         Submission creates a pending organization and pending
                         membership. It does not verify your organization, grant
-                        approved hiring authority, or publish a vacancy.
+                        approved hiring authority, or publish a job opening.
                       </p>
                     </div>
                     <label className="flex items-start gap-3 text-sm leading-relaxed">
