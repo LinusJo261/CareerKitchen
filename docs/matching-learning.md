@@ -57,12 +57,23 @@ the repository root, after obtaining an actual observed export:
 These dates illustrate the command, not an existing training dataset. On Unix,
 use `.venv-research/bin/python` and the shell's line continuation syntax.
 
-The deterministic split intersects candidate-disjoint and vacancy-disjoint hash
-groups with forward-time cohorts. Rows outside their designated group/time
-cohort are discarded and counted. Training observations must be historically
-known before the training cutoff. A global export time cannot be copied into
-every row's historical `observed_at`. Organization overlap is reported and
-blocks review eligibility.
+The deterministic split policy `candidate-organization-forward-time-v2` assigns
+stable candidate and organization hash groups before applying forward-time
+cohorts. Each vacancy must belong to exactly one organization across the entire
+source export, including unresolved or otherwise excluded rows. Keeping employers
+disjoint therefore also keeps their vacancies disjoint. All vacancies posted by
+a recurring employer share that employer's cohort; repeated employers do not
+automatically make every refresh ineligible.
+
+Rows outside their designated candidate/organization group and time cohort are
+discarded and counted. Candidate, organization and vacancy disjointness are
+checked before fitting. Policy version, grouping fields, identity counts, seed
+and date cutoffs are frozen in artifact provenance and its integrity hash.
+Training observations must be historically known before the training cutoff.
+A global export time cannot be copied into every row's historical `observed_at`.
+Organization overlap remains a fail-closed review check. The requirement for at
+least 20 evaluation employers is unchanged: a small marketplace can still lack
+enough genuinely independent employer observations to qualify a learned model.
 
 Training rows alone determine median imputation, centering, scaling and logistic
 coefficients. Explicit missingness is encoded separately. Four L2 strengths are

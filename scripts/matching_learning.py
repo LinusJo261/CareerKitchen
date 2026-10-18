@@ -13,6 +13,7 @@ import math
 import shutil
 import sys
 import tempfile
+from collections.abc import Iterable
 from pathlib import Path
 
 import numpy as np
@@ -22,8 +23,8 @@ from scripts.mutual_matching_research import (
     LIMITATIONS,
     TARGET,
     binary_metrics,
+    identity_group,
     load_records,
-    split_records,
     timestamp,
 )
 
@@ -40,12 +41,85 @@ INPUT_FEATURE_NAMES = (
     "candidate_employment_type_preference_alignment",
 )
 L2_GRID = (0.001, 0.01, 0.1, 1.0)
+SPLIT_POLICY_VERSION = "candidate-organization-forward-time-v2"
 
 
 def canonical_hash(value: dict) -> str:
     return hashlib.sha256(
         json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
     ).hexdigest()
+
+
+def _vacancy_organizations(records: Iterable[dict]) -> dict[str, str]:
+    assignments: dict[str, str] = {}
+    for row in records:
+        vacancy, organization = row["vacancy_id"], row["organization_id"]
+        if vacancy in assignments and assignments[vacancy] != organization:
+            raise ValueError("Every vacancy must belong to exactly one organization across the source export")
+        assignments[vacancy] = organization
+    return assignments
+
+
+def split_learning_records(
+    records: list[dict], seed: int, train_before: str, validate_before: str
+) -> tuple[dict[str, list[dict]], dict]:
+    """Assign employers before time filtering, without using labels or scores.
+
+    Organization disjointness implies vacancy disjointness once immutable vacancy
+    ownership is verified. A separate vacancy hash would discard another 85% of
+    otherwise eligible validation/test rows without adding isolation.
+    """
+    first, second = timestamp(train_before), timestamp(validate_before)
+    if first >= second:
+        raise ValueError("train-before must precede validate-before")
+    if type(seed) is not int:
+        raise ValueError("Split seed must be an integer fixed before evaluation")
+    _vacancy_organizations(records)
+    groups: dict[str, list[dict]] = {name: [] for name in ("train", "validation", "test")}
+    excluded = 0
+    for row in records:
+        candidate_group = identity_group("candidate", row["candidate_id"], seed)
+        organization_group = identity_group("organization", row["organization_id"], seed)
+        group = candidate_group if candidate_group == organization_group else None
+        included = (
+            group == "train"
+            and row["observed_at"] < first
+            or group == "validation"
+            and first <= row["first_exposed_at"]
+            and row["observed_at"] < second
+            or group == "test"
+            and row["first_exposed_at"] >= second
+        )
+        if included and group is not None:
+            groups[group].append(row)
+        else:
+            excluded += 1
+    if any(not rows for rows in groups.values()):
+        raise ValueError("Empty evaluation split; obtain more observed pairs or review declared date cutoffs")
+    names = list(groups)
+    for entity in ("candidate_id", "organization_id", "vacancy_id"):
+        identities = {name: {row[entity] for row in rows} for name, rows in groups.items()}
+        for index, left in enumerate(names):
+            if any(identities[left] & identities[right] for right in names[index + 1 :]):
+                raise ValueError(f"Evaluation split must keep {entity} disjoint")
+    return groups, {
+        "policy_version": SPLIT_POLICY_VERSION,
+        "policy": "candidate-disjoint and organization-disjoint hash groups intersected with forward-time cohorts; vacancy ownership verified",
+        "grouping_entities": ["candidate_id", "organization_id"],
+        "disjoint_entities": ["candidate_id", "organization_id", "vacancy_id"],
+        "seed": seed,
+        "train_before": train_before,
+        "validate_before": validate_before,
+        "outside_group_time_cohort": excluded,
+        "counts": {name: len(rows) for name, rows in groups.items()},
+        "identity_counts": {
+            name: {
+                entity: len({row[entity] for row in rows})
+                for entity in ("candidate_id", "organization_id", "vacancy_id")
+            }
+            for name, rows in groups.items()
+        },
+    }
 
 
 def sigmoid(value: np.ndarray) -> np.ndarray:
@@ -452,7 +526,12 @@ def train(
     if fictional and not allow_fictional:
         raise ValueError("Fictional fixtures require --allow-fictional and cannot qualify for activation")
     rows, diagnostics = load_records(input_path, manifest)
-    groups, split = split_records(rows, seed, train_before, validate_before)
+    # Validate ownership across every structurally validated source row, including
+    # censored/unresolved rows excluded from training by load_records.
+    with input_path.open(encoding="utf-8") as handle:
+        source_assignments = _vacancy_organizations(json.loads(line) for line in handle if line.strip())
+    groups, split = split_learning_records(rows, seed, train_before, validate_before)
+    split["source_vacancies_checked"] = len(source_assignments)
     split["class_counts"] = {
         name: {
             "positives": sum(row["label"] == 1 for row in current),

@@ -6,6 +6,7 @@ import json
 import tempfile
 import unittest
 from copy import deepcopy
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import patch
 
@@ -14,6 +15,7 @@ import numpy as np
 from scripts.matching_learning import (
     FEATURE_NAMES,
     INPUT_FEATURE_NAMES,
+    SPLIT_POLICY_VERSION,
     canonical_hash,
     choose_threshold,
     compatibility_baseline,
@@ -26,6 +28,7 @@ from scripts.matching_learning import (
     paired_confidence,
     probabilities,
     sigmoid,
+    split_learning_records,
     train,
     transform,
     validate_artifact,
@@ -36,7 +39,9 @@ from scripts.mutual_matching_research import (
     TARGET,
     identity_group,
     load_records,
-    split_records,
+)
+from scripts.mutual_matching_research import (
+    split_records as legacy_split_records,
 )
 
 
@@ -75,7 +80,7 @@ def fixture_inputs(directory: Path, count: int = 60) -> tuple[Path, Path]:
                     "cycle_id": f"fictional-{group}-{index}",
                     "candidate_id": fixture_identity("candidate", group, index),
                     "vacancy_id": fixture_identity("vacancy", group, index),
-                    "organization_id": f"fictional-organization-{group}-{index}",
+                    "organization_id": fixture_identity("organization", group, index),
                     "candidate_version": 1,
                     "vacancy_version": 1,
                     "policy_version": "fictional-policy",
@@ -108,7 +113,7 @@ def fixture_inputs(directory: Path, count: int = 60) -> tuple[Path, Path]:
 def fixture_groups(tmp_path: Path) -> dict:
     inputs, manifest = fixture_inputs(tmp_path)
     rows, _ = load_records(inputs, json.loads(manifest.read_text()))
-    groups, _ = split_records(rows, 42, "2005-01-01T00:00:00Z", "2015-01-01T00:00:00Z")
+    groups, _ = split_learning_records(rows, 42, "2005-01-01T00:00:00Z", "2015-01-01T00:00:00Z")
     return groups
 
 
@@ -144,6 +149,8 @@ class MatchingLearningTests(unittest.TestCase):
         model_id = artifact.pop("model_id")
         assert model_id == canonical_hash(artifact) == report["model_id"]
         assert artifact["feature_names"] == list(FEATURE_NAMES)
+        assert artifact["provenance"]["split"]["policy_version"] == SPLIT_POLICY_VERSION
+        assert artifact["provenance"]["split"]["grouping_entities"] == ["candidate_id", "organization_id"]
         assert len(artifact["coefficients"]) == 8
         assert artifact["fictional_data"] is True
         assert artifact["evidence"]["eligible_for_review"] is False
@@ -176,6 +183,85 @@ class MatchingLearningTests(unittest.TestCase):
         del changed["test"]
         assert fit_challenger(changed) == (fitted, selection)
         assert fit_compatibility_probability_baseline(changed) == baseline
+
+    def test_recurring_employers_with_multiple_vacancies_get_disjoint_cohorts_upfront(self):
+        base = fixture_groups(self.tmp_path)
+        records = []
+        for calendar_group, source_rows in base.items():
+            for employer_index, employer_group in enumerate(base):
+                for vacancy_index in range(3):
+                    index = employer_index * 3 + vacancy_index
+                    row = deepcopy(source_rows[index])
+                    row["cycle_id"] = f"fictional-recurring-{calendar_group}-{index}"
+                    row["candidate_id"] = fixture_identity("candidate", calendar_group, index)
+                    row["vacancy_id"] = fixture_identity("vacancy", calendar_group, index)
+                    row["organization_id"] = fixture_identity("organization", employer_group, 0)
+                    records.append(row)
+        old, _ = legacy_split_records(records, 42, "2005-01-01T00:00:00Z", "2015-01-01T00:00:00Z")
+        old_orgs = {group: {row["organization_id"] for row in rows} for group, rows in old.items()}
+        assert old_orgs["train"] & old_orgs["validation"] & old_orgs["test"]
+        groups, policy = split_learning_records(records, 42, "2005-01-01T00:00:00Z", "2015-01-01T00:00:00Z")
+        assert policy["policy_version"] == SPLIT_POLICY_VERSION
+        assert policy["counts"] == {"train": 3, "validation": 3, "test": 3}
+        for identity in ("candidate_id", "organization_id", "vacancy_id"):
+            identities = {name: {row[identity] for row in rows} for name, rows in groups.items()}
+            assert not (identities["train"] & identities["validation"])
+            assert not (identities["train"] & identities["test"])
+            assert not (identities["validation"] & identities["test"])
+        assert all(len({row["vacancy_id"] for row in rows}) == 3 for rows in groups.values())
+
+    def test_split_membership_is_independent_of_labels_and_separate_vacancy_hashes(self):
+        records = [row for rows in fixture_groups(self.tmp_path).values() for row in rows]
+        groups, policy = split_learning_records(records, 42, "2005-01-01T00:00:00Z", "2015-01-01T00:00:00Z")
+        altered = deepcopy(records)
+        for index, row in enumerate(altered):
+            row["label"] = 1 - row["label"]
+            row["vacancy_id"] = f"fictional-independent-vacancy-{index}"
+        changed, changed_policy = split_learning_records(
+            altered, 42, "2005-01-01T00:00:00Z", "2015-01-01T00:00:00Z"
+        )
+        assert {name: [row["cycle_id"] for row in rows] for name, rows in groups.items()} == {
+            name: [row["cycle_id"] for row in rows] for name, rows in changed.items()
+        }
+        assert policy == changed_policy
+
+    def test_vacancy_ownership_must_be_consistent_even_in_an_excluded_censored_row(self):
+        inputs, manifest = fixture_inputs(self.tmp_path)
+        records = [json.loads(line) for line in inputs.read_text().splitlines()]
+        censored = deepcopy(records[0])
+        censored["cycle_id"] = "fictional-censored-inconsistent-ownership"
+        censored["organization_id"] = records[-1]["organization_id"]
+        censored["decisions"]["candidate"]["status"] = "INTERESTED"
+        inputs.write_text("".join(json.dumps(row) + "\n" for row in [*records, censored]))
+        # The ordinary label loader excludes the unresolved row. Training still
+        # validates its immutable vacancy ownership before splitting labeled rows.
+        labeled, diagnostics = load_records(inputs, json.loads(manifest.read_text()))
+        assert len(labeled) == 180
+        assert diagnostics["excluded"]["unresolved"] == 1
+        with self.assertRaisesRegex(ValueError, "exactly one organization"):
+            train(
+                inputs,
+                manifest,
+                self.tmp_path / "invalid-ownership",
+                "2005-01-01T00:00:00Z",
+                "2015-01-01T00:00:00Z",
+                bootstrap_replicates=50,
+                allow_fictional=True,
+            )
+        assert not (self.tmp_path / "invalid-ownership").exists()
+
+    def test_new_split_preserves_existing_observed_and_exposure_cutoff_boundaries(self):
+        original = fixture_groups(self.tmp_path)
+        original["train"][0]["observed_at"] = datetime(2005, 1, 1, tzinfo=UTC)
+        original["validation"][0]["first_exposed_at"] = datetime(2005, 1, 1, tzinfo=UTC)
+        original["validation"][1]["observed_at"] = datetime(2015, 1, 1, tzinfo=UTC)
+        original["test"][0]["first_exposed_at"] = datetime(2015, 1, 1, tzinfo=UTC)
+        records = [row for rows in original.values() for row in rows]
+        groups, _ = split_learning_records(records, 42, "2005-01-01T00:00:00Z", "2015-01-01T00:00:00Z")
+        assert len(groups["train"]) == 59
+        assert len(groups["validation"]) == 59
+        assert original["validation"][0] in groups["validation"]
+        assert original["test"][0] in groups["test"]
 
     def test_runtime_model_prediction_matches_offline_numpy_prediction(self):
         inputs, manifest = fixture_inputs(self.tmp_path)

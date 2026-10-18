@@ -72,7 +72,7 @@ That fixture is explicitly fictional, not a candidate success report.
 
 The complete local backend regression run passed **697 tests and four subtests**
 in 426 seconds. Final rolling-window export changes additionally passed three
-PostgreSQL tests; all 46 learning/export/refresh/benchmark research tests passed.
+PostgreSQL tests; all 50 learning/export/refresh/benchmark research tests passed.
 Migration upgrade/downgrade/upgrade and runtime-role isolation passed for all 47
 application tables. Ruff, mypy, OpenAPI consistency, generated TypeScript parity,
 type checking, six client tests and source secret scanning passed. The broader
