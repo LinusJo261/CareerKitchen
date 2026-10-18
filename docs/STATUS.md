@@ -1,8 +1,8 @@
 # Implementation status and verification boundary
 
-The implementation is a locally testable, persistent backend. It has not been
-deployed to a live Supabase/Railway environment or connected to the unavailable v0
-frontend source. The source ZIP was a specification, not an existing application. Initial
+The implementation is a locally testable application with a Next.js frontend
+connected to the persistent FastAPI backend. It has not been deployed to a live
+Supabase/Railway/Vercel environment. Initial
 `FEATURE_MODE=SHADOW` keeps advanced proposals read-only while the original
 baseline owns live decisions.
 
@@ -12,7 +12,7 @@ baseline owns live decisions.
 | P2–P3 | Both first-mover directions, exact double opt-in, global candidate/per-vacancy ceilings, waiting/cooldown/expiry, transaction locks, encrypted durable idempotency, exposure audit, matches and participant messaging |
 | P4 | Exact role/version/stage policies, recent signatory authentication, independent evidence attestations, scoped document/summary grants, candidate terms, revocation and live short-lived readiness proofs, optional-requirement clarification, exclusive holds |
 | P5–P6 | Immutable shadow snapshots, baseline parity/isolation tests, original reciprocal formulas, persistent attention/congestion dual controllers, correlated scenario risk, global sparse allocation/exchanges/pruning, minimum shortlist math, WITNESS dependencies/budgets and adaptive exposure |
-| P7 | Fictional resettable market, OpenAPI and generated typed client, documented v0 authentication/workflow integration; frontend work excluded by user request |
+| P7 | Fictional resettable market, OpenAPI and generated types, connected Next.js workspace pages, server-side Supabase session handling, scoped BFF reads and versioned actions |
 | P8 | Durable worker/retries/dead letters/receipts, in-app notifications/reminders, interviews, encrypted written offers, separate corroborated starts/disputes, privacy export/deletion and moderation/report workflow |
 | P9 | Advanced live execution intentionally refuses pilot approval. External prospective evidence, employer/candidate enrollment, independent governance and deployment approval are required before this can be enabled |
 | P10 | CI, dependency/source checks, migration round trips, browser-role RLS denial, immutable audit triggers, Railway/Compose configuration and backup/restore runbooks; actual cloud load/security review and restore drill remain external deployment work |
@@ -39,8 +39,8 @@ baseline owns live decisions.
   obligations require provider/operator review; the final job records that state.
 - No real third-party profile scraping, JTH dataset, protected-attribute store,
   background checks or opaque global employability score is included.
-- The TypeScript client and contracts are ready for the actual v0 source. Connecting
-  its pages, buttons and forms requires that source and configured environments.
+- The existing frontend uses live backend state. Production Supabase confirmation,
+  cookie refresh and hosted deployment checks still need configured environments.
 - Git was initialized locally. No remote repository, push, cloud deployment or
   production credential was invented or created.
 
@@ -51,7 +51,7 @@ PostgreSQL 17.11. Tests use actual PostgreSQL, including isolated schemas,
 competing sessions, version races, duplicate decisions, tenant negatives and
 consent revocation.
 
-- Final full regression: **185 passed**, one upstream TestClient deprecation
+- Backend regression before frontend integration: **185 passed**, one upstream TestClient deprecation
   warning, **85% measured application coverage**, in 270.07 seconds. Command:
   `python -m pytest -q --cov=app --cov-report=term:skip-covered`.
 - Migration upgrades, populated backfill, downgrade and clean upgrade passed.
@@ -74,6 +74,17 @@ consent revocation.
 - The running API accepted a replan with HTTP 202 and returned its durable outbox
   event ID. The separate running worker consumed it and recorded a `ShadowRun`
   with zero planner side effects.
+- After frontend integration, the complete backend suite passed **226 tests**.
+  The final targeted contract, authorization and workflow run passed **27 tests**,
+  including viewer-specific interview permissions and persisted start reports.
+- The connected frontend passed **28 gateway tests**, strict TypeScript checking
+  and a production build. All **six** generated-client runtime tests also passed.
+- A real HTTP frontend-to-PostgreSQL smoke passed sign-in, HttpOnly session
+  handling, profile save/reload/restore, exact retries, stale-version rejection,
+  tenant-scoped employer reads, CSRF rejection and session revocation/logout.
+  Browser checks confirmed candidate profile persistence and the employer
+  workspace at the standard local app port. These used explicit fictional local
+  accounts; live Supabase authentication and external delivery were not tested.
 
 Docker image execution, GitHub-hosted CI execution and hosted Supabase/Railway
 end-to-end checks have not been run. The deployment configuration and workflows

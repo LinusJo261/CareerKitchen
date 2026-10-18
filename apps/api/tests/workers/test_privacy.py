@@ -248,6 +248,44 @@ def test_expired_dependencies_emit_once_without_fabricating_revocation(worker_ma
         )
 
 
+@pytest.mark.parametrize("model", [EvidenceClaim, EvidenceGrant, TermConsent])
+def test_expiration_rechecks_concurrent_revocation_after_acquiring_scope_lock(
+    worker_market, monkeypatch, model
+):
+    m = worker_market
+    seed_private_records(m)
+    with m.factory.begin() as db:
+        row = db.scalar(select(model))
+        row.expires_at = utcnow() - timedelta(seconds=1)
+        row_id = row.id
+    original_lock = runner.lock_scopes
+    revoked = False
+
+    def revoke_before_lock(db, *keys):
+        nonlocal revoked
+        if not revoked and f"candidate:{m.candidate_id}" in keys:
+            with m.factory.begin() as concurrent:
+                row = concurrent.get(model, row_id)
+                row.revoked_at = utcnow()
+                row.version += 1
+            revoked = True
+        original_lock(db, *keys)
+
+    monkeypatch.setattr(runner, "lock_scopes", revoke_before_lock)
+    with m.factory.begin() as db:
+        actor = runner.worker_actor(db)
+        assert runner.expire_pact_dependencies(db, actor) == 0
+    assert revoked
+    with m.factory() as db:
+        assert db.get(model, row_id).revoked_at is not None
+        assert not db.scalar(
+            select(OutboxEvent.id).where(
+                OutboxEvent.aggregate_id == row_id,
+                OutboxEvent.kind.in_({"candidate.consent_expired", "candidate.evidence_expired"}),
+            )
+        )
+
+
 def test_orphan_cleanup_preserves_referenced_and_recent_blobs_and_requires_retention(
     worker_market, monkeypatch, tmp_path
 ):

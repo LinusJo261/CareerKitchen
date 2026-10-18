@@ -1,7 +1,7 @@
-# Career Kitchen backend
+# Career Kitchen
 
-Persistent FastAPI backend for the separately developed v0 Next.js frontend.
-There is no replacement frontend in this repository.
+Next.js frontend connected to the persistent FastAPI backend. Workspace pages use
+authenticated server routes and PostgreSQL state rather than in-memory demo data.
 
 The API implements candidate/employer onboarding, organization verification and
 team ACLs, versioned vacancies and requirements, reciprocal decision cards,
@@ -18,8 +18,7 @@ the baseline executes live matching; advanced execution is disabled and reliabil
 is `CANNOT_CERTIFY`.
 
 Start with [implementation status](docs/STATUS.md), [v0 integration](docs/v0-integration.md),
-[API contracts](docs/api.md), and [deployment](docs/deployment.md). The complete
-supplied blueprint is preserved under `blueprint/`.
+[API contracts](docs/api.md), and [deployment](docs/deployment.md).
 
 ## Run locally
 
@@ -53,6 +52,35 @@ credential. Production authentication validates Supabase signatures, issuer,
 audience, expiry, session identity and provider-confirmed email; all application
 roles and vacancy permissions are resolved from PostgreSQL.
 
+## Run the connected frontend
+
+Install the root dependencies with `pnpm install --frozen-lockfile`, then run
+`pnpm dev` and open [Career Kitchen](http://localhost:3000). Configure
+`CAREER_KITCHEN_API_URL` in the server environment; Supabase sign-in uses the
+existing `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`. Session credentials remain
+in HttpOnly cookies. Database and service-role credentials never enter browser code.
+
+For the existing local fictional market, set `FRONTEND_LOCAL_DEMO=true` in the
+ignored `.env` alongside the explicit development/local-auth settings. Start
+`python -m scripts.serve_demo` and `python -m scripts.serve_demo --worker` in
+separate terminals. The sign-in page then offers fictional candidate/employer
+accounts backed by `career_kitchen_demo`; it does not create real Supabase users.
+This account selector is disabled in production and on non-loopback hostnames.
+Do not reset an existing demo database just to reconnect the frontend.
+
+Profiles, decision cards, mutual matches, messages, interviews, offers,
+organization/team administration, PACT, consent, notifications and privacy jobs
+use backend endpoints. Authority checks, double opt-in, attention ceilings,
+versions and idempotency remain enforced by FastAPI. Independently verified
+employment, external mail/calendar delivery and model certification are never
+inferred from a button click.
+
+Frontend checks: `pnpm typecheck`, `pnpm test`, and `pnpm build`.
+With the local app and fictional API running, `pnpm smoke:frontend` checks real
+HTTP sign-in, persistent save/restore, exact retry, stale versions, scoped reads,
+CSRF and logout. It temporarily edits and restores candidate-30's fictional
+summary; it never resets the database. See [integration details](docs/v0-integration.md).
+
 ## Fictional development market
 
 ```powershell
@@ -72,7 +100,8 @@ identities, not Supabase accounts or real verifications. For a repeatable real H
 check, follow the [fresh-fixture smoke procedure](docs/demo.md). Get a short-lived token
 with `python -m scripts.demo_token candidate-01`, then use Swagger's **Authorize**
 button. Tokens are printed only when this CLI is explicitly run; never commit
-them. No password/login endpoint or development role-assignment endpoint exists.
+them. FastAPI has no password login or development role-assignment endpoint;
+the frontend uses Supabase or its explicit local fictional account selector.
 
 ## Verify and generate contracts
 

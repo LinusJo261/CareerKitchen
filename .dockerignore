@@ -8,5 +8,6 @@ blueprint
 .mypy_cache
 .ruff_cache
 node_modules
+.next
 *.zip
 

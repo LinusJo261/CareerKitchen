@@ -1,5 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
+from threading import Event, get_ident
 
 import pytest
 from app.core.errors import AppError
@@ -10,7 +11,7 @@ from app.schemas import pact as schema
 from app.services import pact
 from app.services.common import Actor, digest, utcnow
 from pydantic import ValidationError
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -152,6 +153,90 @@ def test_pact_revoke_grant_invalidates_proof_and_access(pact_market):
     assert m.db.get(ReadinessProof, proof["proof_id"]).state == "INVALIDATED"
     assert pact.require_live_readiness(m.db, m.candidate_actor, proof["proof_id"])["status"] == "STALE"
     assert not pact.has_current_evidence(m.db, m.candidate.id, m.vacancy, m.essential.key)
+
+
+@pytest.mark.parametrize("revoked", ["grant", "claim"])
+def test_pact_evidence_access_rechecks_cached_objects_after_revocation(pact_market, pact_engine, revoked):
+    m = pact_market
+    claim = verified(m)
+    grant = evidence_grant(m, claim)
+    m.db.commit()
+    with Session(pact_engine, expire_on_commit=False) as reader:
+        cached_claim = reader.get(EvidenceClaim, claim["id"])
+        cached_grant = reader.get(EvidenceGrant, grant["id"])
+        assert pact.has_current_evidence(reader, m.candidate.id, m.vacancy, m.essential.key)
+        assert cached_claim.status == "VERIFIED" and cached_grant.revoked_at is None
+
+        if revoked == "grant":
+            pact.revoke_consent(m.db, m.candidate_actor, grant["id"], schema.Revoke(expected_version=1))
+        else:
+            pact.revoke_claim(
+                m.db, m.candidate_actor, claim["id"], schema.Revoke(expected_version=claim["version"])
+            )
+        m.db.commit()
+
+        assert not pact.has_current_evidence(reader, m.candidate.id, m.vacancy, m.essential.key)
+        error(
+            "DISCLOSURE_NOT_CONSENTED",
+            lambda: pact.disclosed_claim(reader, m.signatory_actor, claim["id"], m.vacancy.id),
+        )
+
+
+@pytest.mark.concurrency
+def test_pact_revocation_wins_while_authorization_waits_for_role_lock(pact_market, pact_engine, monkeypatch):
+    m = pact_market
+    policy = pact.create_policy(
+        m.db,
+        m.signatory_actor,
+        schema.CreatePolicy(
+            roles=[schema.RoleTerms(**role_payload(m))],
+            policy_text="Explicit human screening authorization for this fictional role.",
+            stage="SCREENING",
+            expires_at=utcnow() + timedelta(days=1),
+        ),
+    )
+    m.db.commit()
+    lock_requested, main_thread = Event(), get_ident()
+    original_lock = pact.lock_scopes
+
+    def observed_lock(db, *keys):
+        if get_ident() != main_thread:
+            lock_requested.set()
+        original_lock(db, *keys)
+
+    monkeypatch.setattr(pact, "lock_scopes", observed_lock)
+
+    def authorize_waiting():
+        with Session(pact_engine) as db:
+            try:
+                pact.authorize_policy(
+                    db,
+                    m.signatory_actor,
+                    policy["id"],
+                    schema.AuthorizePolicy(
+                        expected_version=1, scope_hash=policy["scope_hash"], affirm_human_authority=True
+                    ),
+                )
+                db.commit()
+                return "AUTHORIZED"
+            except AppError as exc:
+                db.rollback()
+                return exc.code
+
+    with Session(pact_engine) as revoker, ThreadPoolExecutor(max_workers=1) as pool:
+        revoker.execute(text("SET LOCAL lock_timeout = '3s'"))
+        original_lock(revoker, f"vacancy:{m.vacancy.id}")
+        future = pool.submit(authorize_waiting)
+        try:
+            assert lock_requested.wait(5), "Authorization did not reach the role lock"
+            result = pact.revoke_policy(
+                revoker, m.signatory_actor, policy["id"], schema.Revoke(expected_version=1)
+            )
+            revoker.commit()
+            assert result["state"] == "REVOKED"
+        finally:
+            revoker.rollback()
+        assert future.result(timeout=10) == "VERSION_CONFLICT"
 
 
 @pytest.mark.parametrize(

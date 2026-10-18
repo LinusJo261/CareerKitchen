@@ -1,8 +1,8 @@
 # Backend implementation roadmap
 
-This workspace contained only the supplied blueprint ZIP; no application or Git
-remote was supplied. The archived documents remain unchanged in `blueprint/`.
-The separately developed v0 frontend is outside this implementation.
+This workspace contains the Career Kitchen backend and its integration
+contracts. The separately developed v0 frontend is maintained outside this
+implementation.
 
 | Milestone | Dependencies | Implementation and acceptance |
 | --- | --- | --- |

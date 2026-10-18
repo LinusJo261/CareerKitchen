@@ -186,8 +186,9 @@ def read_policy(db: Session, actor: Actor, policy_id: str) -> dict:
 
 
 def authorize_policy(db: Session, actor: Actor, policy_id: str, request: schemas.AuthorizePolicy) -> dict:
+    initial = load(db, PactPolicy, policy_id)
+    lock_scopes(db, *(f"vacancy:{i}" for i in sorted(initial.scope)))
     policy = load(db, PactPolicy, policy_id, lock=True)
-    lock_scopes(db, *(f"vacancy:{i}" for i in sorted(policy.scope)))
     require_version(policy, request.expected_version)
     if policy.state != "DRAFT" or not future(policy.expires_at):
         raise AppError(409, "POLICY_UNAVAILABLE", "Policy must be a current draft")
@@ -458,6 +459,7 @@ def current_evidence(
             EvidenceGrant.vacancy_id == vacancy.id,
             EvidenceGrant.org_id == vacancy.org_id,
         )
+        .execution_options(populate_existing=True)
     ).all()
     return [(c, g) for c, g in rows if valid_claim(c) and valid_grant(g, vacancy)]
 
@@ -467,6 +469,8 @@ def has_current_evidence(db: Session, candidate_id: str, vacancy: Vacancy, requi
 
 
 def disclosed_claim(db: Session, actor: Actor, claim_id: str, vacancy_id: str) -> dict:
+    initial = load(db, EvidenceClaim, claim_id)
+    lock_scopes(db, f"candidate:{initial.candidate_id}", f"vacancy:{vacancy_id}")
     vacancy = require_vacancy(db, actor, vacancy_id)
     claim = load(db, EvidenceClaim, claim_id)
     active_vacancy(db, vacancy_id)
@@ -694,6 +698,8 @@ def check_readiness(db: Session, actor: Actor, request: schemas.CheckReadiness) 
 
 
 def require_live_readiness(db: Session, actor: Actor, proof_id: str) -> dict:
+    initial = load(db, ReadinessProof, proof_id)
+    lock_scopes(db, f"candidate:{initial.candidate_id}", f"vacancy:{initial.vacancy_id}")
     proof = load(db, ReadinessProof, proof_id)
     candidate, vacancy = evaluator(db, actor, proof.candidate_id, proof.vacancy_id)
     state = readiness_state(db, candidate, vacancy)

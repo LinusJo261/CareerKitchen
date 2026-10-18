@@ -110,6 +110,7 @@ def vacancy_out(db: Session, vacancy: Vacancy) -> dict:
         "terms_hash",
     )
     result = {key: getattr(vacancy, key) for key in fields}
+    result["organization_name"] = load(db, Organization, vacancy.org_id).display_name
     result["requirements"] = [
         {key: getattr(r, key) for key in ("id", "version", "key", "description", "kind", "lawful_reason")}
         for r in db.scalars(
