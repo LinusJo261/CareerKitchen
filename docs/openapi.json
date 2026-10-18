@@ -853,6 +853,30 @@
         "title": "ClarificationOut",
         "type": "object"
       },
+      "ConfirmedOnboardingSkill": {
+        "additionalProperties": false,
+        "properties": {
+          "level": {
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Level",
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "pattern": "^[\\w .+#/-]+$",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "level"
+        ],
+        "title": "ConfirmedOnboardingSkill",
+        "type": "object"
+      },
       "ConsentEvidence": {
         "additionalProperties": false,
         "properties": {
@@ -1372,6 +1396,48 @@
         "title": "DecisionInbox",
         "type": "object"
       },
+      "DraftSkill": {
+        "additionalProperties": false,
+        "properties": {
+          "assessment_note": {
+            "default": "",
+            "maxLength": 2000,
+            "title": "Assessment Note",
+            "type": "string"
+          },
+          "evidence": {
+            "default": "",
+            "maxLength": 2000,
+            "title": "Evidence",
+            "type": "string"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "maximum": 5.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level"
+          },
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "pattern": "^[\\w .+#/-]+$",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "DraftSkill",
+        "type": "object"
+      },
       "EducationInput": {
         "additionalProperties": false,
         "properties": {
@@ -1774,6 +1840,36 @@
           "data"
         ],
         "title": "Envelope[OfferOut]",
+        "type": "object"
+      },
+      "Envelope_OnboardingChatOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/OnboardingChatOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "Envelope[OnboardingChatOut]",
+        "type": "object"
+      },
+      "Envelope_OnboardingConfirmationOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/OnboardingConfirmationOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "Envelope[OnboardingConfirmationOut]",
         "type": "object"
       },
       "Envelope_OperationOut_": {
@@ -3715,6 +3811,396 @@
           "start_at"
         ],
         "title": "OfferOut",
+        "type": "object"
+      },
+      "OnboardingChatIn": {
+        "additionalProperties": false,
+        "properties": {
+          "consent_to_gemini": {
+            "const": true,
+            "title": "Consent To Gemini",
+            "type": "boolean"
+          },
+          "draft": {
+            "$ref": "#/components/schemas/OnboardingDraft"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/NavigationTurn"
+            },
+            "maxItems": 20,
+            "title": "History",
+            "type": "array"
+          },
+          "message": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message",
+          "consent_to_gemini"
+        ],
+        "title": "OnboardingChatIn",
+        "type": "object"
+      },
+      "OnboardingChatOut": {
+        "additionalProperties": false,
+        "properties": {
+          "draft": {
+            "$ref": "#/components/schemas/OnboardingDraft"
+          },
+          "missing_fields": {
+            "items": {
+              "enum": [
+                "headline",
+                "region",
+                "role_families",
+                "employment_types",
+                "work_modes",
+                "locations",
+                "compensation_floor",
+                "currency",
+                "compensation_period",
+                "skills",
+                "summary",
+                "available_from",
+                "available_until",
+                "compensation",
+                "availability",
+                "review"
+              ],
+              "type": "string"
+            },
+            "title": "Missing Fields",
+            "type": "array"
+          },
+          "question": {
+            "$ref": "#/components/schemas/OnboardingQuestion"
+          },
+          "ready_for_review": {
+            "title": "Ready For Review",
+            "type": "boolean"
+          },
+          "reply": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Reply",
+            "type": "string"
+          },
+          "version": {
+            "const": 1,
+            "default": 1,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "reply",
+          "question",
+          "draft",
+          "missing_fields",
+          "ready_for_review"
+        ],
+        "title": "OnboardingChatOut",
+        "type": "object"
+      },
+      "OnboardingConfirmationIn": {
+        "additionalProperties": false,
+        "properties": {
+          "profile": {
+            "$ref": "#/components/schemas/CandidateInput"
+          },
+          "skills": {
+            "items": {
+              "$ref": "#/components/schemas/ConfirmedOnboardingSkill"
+            },
+            "maxItems": 8,
+            "title": "Skills",
+            "type": "array"
+          },
+          "skills_confirmed": {
+            "const": true,
+            "title": "Skills Confirmed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "profile",
+          "skills",
+          "skills_confirmed"
+        ],
+        "title": "OnboardingConfirmationIn",
+        "type": "object"
+      },
+      "OnboardingConfirmationOut": {
+        "properties": {
+          "candidate": {
+            "$ref": "#/components/schemas/CandidateOut"
+          },
+          "skills": {
+            "items": {
+              "$ref": "#/components/schemas/SkillOut"
+            },
+            "title": "Skills",
+            "type": "array"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "candidate",
+          "skills",
+          "version"
+        ],
+        "title": "OnboardingConfirmationOut",
+        "type": "object"
+      },
+      "OnboardingDraft": {
+        "additionalProperties": false,
+        "properties": {
+          "available_from": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Available From"
+          },
+          "available_until": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Available Until"
+          },
+          "compensation_floor": {
+            "anyOf": [
+              {
+                "maxLength": 15,
+                "pattern": "^(?:0|[1-9][0-9]{0,11})(?:\\.[0-9]{1,2})?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Compensation Floor"
+          },
+          "compensation_period": {
+            "anyOf": [
+              {
+                "enum": [
+                  "ANNUAL",
+                  "MONTHLY",
+                  "HOURLY"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Compensation Period"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "employment_types": {
+            "items": {
+              "enum": [
+                "FULL_TIME",
+                "PART_TIME",
+                "CONTRACT",
+                "INTERNSHIP",
+                "TEMPORARY"
+              ],
+              "type": "string"
+            },
+            "maxItems": 5,
+            "title": "Employment Types",
+            "type": "array"
+          },
+          "headline": {
+            "anyOf": [
+              {
+                "maxLength": 180,
+                "minLength": 3,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Headline"
+          },
+          "locations": {
+            "items": {
+              "maxLength": 120,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Locations",
+            "type": "array"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          },
+          "role_families": {
+            "items": {
+              "maxLength": 120,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Role Families",
+            "type": "array"
+          },
+          "skills": {
+            "items": {
+              "$ref": "#/components/schemas/DraftSkill"
+            },
+            "maxItems": 8,
+            "title": "Skills",
+            "type": "array"
+          },
+          "skipped_fields": {
+            "items": {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 30,
+            "title": "Skipped Fields",
+            "type": "array"
+          },
+          "summary": {
+            "default": "",
+            "maxLength": 10000,
+            "title": "Summary",
+            "type": "string"
+          },
+          "work_modes": {
+            "items": {
+              "enum": [
+                "REMOTE",
+                "HYBRID",
+                "ONSITE"
+              ],
+              "type": "string"
+            },
+            "maxItems": 3,
+            "title": "Work Modes",
+            "type": "array"
+          }
+        },
+        "title": "OnboardingDraft",
+        "type": "object"
+      },
+      "OnboardingQuestion": {
+        "additionalProperties": false,
+        "properties": {
+          "choices": {
+            "items": {
+              "maxLength": 120,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 6,
+            "title": "Choices",
+            "type": "array"
+          },
+          "field": {
+            "enum": [
+              "headline",
+              "region",
+              "role_families",
+              "employment_types",
+              "work_modes",
+              "locations",
+              "compensation_floor",
+              "currency",
+              "compensation_period",
+              "skills",
+              "summary",
+              "available_from",
+              "available_until",
+              "compensation",
+              "availability",
+              "review"
+            ],
+            "title": "Field",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "preference",
+              "skill_probe",
+              "clarification",
+              "review"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "prompt": {
+            "maxLength": 1800,
+            "minLength": 1,
+            "title": "Prompt",
+            "type": "string"
+          },
+          "skill": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skill"
+          }
+        },
+        "required": [
+          "field",
+          "kind",
+          "prompt"
+        ],
+        "title": "OnboardingQuestion",
         "type": "object"
       },
       "OperationOut": {
@@ -8147,6 +8633,166 @@
         "summary": "Candidate Matches",
         "tags": [
           "matches"
+        ]
+      }
+    },
+    "/v1/candidates/me/onboarding": {
+      "post": {
+        "description": "Explicit user confirmation saves profile preferences and selected skill levels atomically. AI exercises are informal guidance, not independent verification. Existing skills not in the request are preserved. New profiles remain drafts until explicitly activated.",
+        "operationId": "confirm_onboarding_v1_candidates_me_onboarding_post",
+        "parameters": [
+          {
+            "description": "Persisted for seven days; same actor/route/key with a different request returns 409",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 8,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnboardingConfirmationIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_OnboardingConfirmationOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Precondition Failed"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Content Too Large"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unsupported Media Type"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "SupabaseBearer": []
+          }
+        ],
+        "summary": "Confirm a reviewed onboarding profile and self-reported skills",
+        "tags": [
+          "onboarding"
         ]
       }
     },
@@ -15151,6 +15797,165 @@
           }
         ],
         "summary": "Ask Career Chef for application guidance",
+        "tags": [
+          "navigation"
+        ]
+      }
+    },
+    "/v1/navigation/onboarding": {
+      "post": {
+        "operationId": "onboarding_chat_v1_navigation_onboarding_post",
+        "parameters": [
+          {
+            "description": "Persisted for seven days; same actor/route/key with a different request returns 409",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 8,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnboardingChatIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_OnboardingChatOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Precondition Failed"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Content Too Large"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unsupported Media Type"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "SupabaseBearer": []
+          }
+        ],
+        "summary": "Onboarding Chat",
         "tags": [
           "navigation"
         ]

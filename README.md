@@ -5,6 +5,12 @@ authenticated server routes and PostgreSQL state rather than in-memory demo data
 Career Chef adds public onboarding guides and an optional, consent-based Gemini
 conversation through the server-side API bridge.
 
+Candidate onboarding now uses an editable conversation to narrow acceptable job
+preferences and offer practice questions for named skills. Review and explicitly
+confirm the profile and self-reported levels before saving. See
+[adaptive onboarding](docs/adaptive-onboarding.md) and open
+`/onboarding/candidate` in the running website.
+
 The API implements candidate/employer onboarding, organization verification and
 team ACLs, versioned vacancies and requirements, reciprocal decision cards,
 double opt-in, bounded attention, waiting/expiry/replenishment, PACT, scoped

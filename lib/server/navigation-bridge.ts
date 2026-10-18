@@ -74,7 +74,7 @@ function sameOrigin(request: Request) {
 }
 
 // Injectable dependencies keep authentication and proxy behavior testable without Google calls.
-export function createNavigationBridge(env: Environment, fetcher: typeof fetch = fetch, sessionToken?: SessionResolver) {
+export function createNavigationBridge(env: Environment, fetcher: typeof fetch = fetch, sessionToken?: SessionResolver, target: 'v1/navigation/chat' | 'v1/navigation/onboarding' = 'v1/navigation/chat') {
   return {
     async GET(request: Request) {
       if (!sameOrigin(request)) return fail(403, 'ORIGIN_FORBIDDEN', 'Use Career Chef from this website.')
@@ -168,7 +168,7 @@ export function createNavigationBridge(env: Environment, fetcher: typeof fetch =
         return fail(422, 'VALIDATION_ERROR', 'Send a valid JSON chat request.')
       }
       try {
-        const upstream = await fetcher(new URL('v1/navigation/chat', base), {
+        const upstream = await fetcher(new URL(target, base), {
           method: 'POST', cache: 'no-store', redirect: 'error',
           headers: {
             'Content-Type': 'application/json', 'Idempotency-Key': key,

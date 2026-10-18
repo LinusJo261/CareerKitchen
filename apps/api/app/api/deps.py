@@ -7,6 +7,7 @@ from datetime import timedelta
 from typing import Any
 from uuid import uuid4
 
+from anyio import CapacityLimiter, from_thread, to_thread
 from fastapi import Request, Response
 from fastapi.routing import APIRoute
 from sqlalchemy import select
@@ -88,13 +89,47 @@ def _rate_limit(db: Session, actor: Actor, settings) -> None:
     bucket.count += 1
 
 
+async def _idempotency_body(request: Request) -> Any:
+    """Read ASGI/body/file operations on their event loop, with the same bounds."""
+    limit = (
+        request.app.state.settings.max_resume_bytes + 100000
+        if "multipart/form-data" in request.headers.get("content-type", "")
+        else 100000
+    )
+    buffered = bytearray()
+    async for chunk in request.stream():
+        if len(buffered) + len(chunk) > limit:
+            raise AppError(413, "REQUEST_TOO_LARGE", "Request exceeds the size limit")
+        buffered.extend(chunk)
+    raw = bytes(buffered)
+    request._body = raw
+    content_type = request.headers.get("content-type", "")
+    if "multipart/form-data" in content_type:
+        form = await request.form(max_files=1, max_fields=10, max_part_size=limit)
+        parts: list[tuple] = []
+        for name, value in form.multi_items():
+            if isinstance(value, StarletteUploadFile):
+                file_bytes = await value.read(limit + 1)
+                await value.seek(0)
+                parts.append(
+                    (name, value.filename, value.content_type, hashlib.sha256(file_bytes).hexdigest())
+                )
+            else:
+                parts.append((name, value))
+        return sorted(parts, key=lambda value: value[0])
+    try:
+        return json.loads(raw) if raw and "application/json" in content_type else raw.hex()
+    except ValueError:
+        return raw.hex()
+
+
 class TransactionalRoute(APIRoute):
-    """One transaction covers authz, idempotency, business writes, audit and outbox."""
+    """One worker-owned transaction; async request/provider waits keep ASGI responsive."""
 
     def get_route_handler(self):
         handler = super().get_route_handler()
 
-        async def transactional(request: Request):
+        def run_transaction(request: Request):
             with Session(request.app.state.engine, expire_on_commit=False) as db:
                 request.state.db = db
                 request.state.request_id = getattr(request.state, "request_id", str(uuid4()))
@@ -113,46 +148,7 @@ class TransactionalRoute(APIRoute):
                             )
                         route = f"{request.method}:{request.url.path}"
                         lock_scopes(db, f"idem:{actor.user_id}:{route}:{client_key}")
-                        limit = (
-                            request.app.state.settings.max_resume_bytes + 100000
-                            if "multipart/form-data" in request.headers.get("content-type", "")
-                            else 100000
-                        )
-                        buffered = bytearray()
-                        async for chunk in request.stream():
-                            if len(buffered) + len(chunk) > limit:
-                                raise AppError(413, "REQUEST_TOO_LARGE", "Request exceeds the size limit")
-                            buffered.extend(chunk)
-                        raw = bytes(buffered)
-                        request._body = raw
-                        content_type = request.headers.get("content-type", "")
-                        if "multipart/form-data" in content_type:
-                            form = await request.form(max_files=1, max_fields=10, max_part_size=limit)
-                            parts: list[tuple] = []
-                            for name, value in form.multi_items():
-                                if isinstance(value, StarletteUploadFile):
-                                    file_bytes = await value.read(limit + 1)
-                                    await value.seek(0)
-                                    parts.append(
-                                        (
-                                            name,
-                                            value.filename,
-                                            value.content_type,
-                                            hashlib.sha256(file_bytes).hexdigest(),
-                                        )
-                                    )
-                                else:
-                                    parts.append((name, value))
-                            body: Any = sorted(parts, key=lambda value: value[0])
-                        else:
-                            try:
-                                body = (
-                                    json.loads(raw)
-                                    if raw and "application/json" in content_type
-                                    else raw.hex()
-                                )
-                            except ValueError:
-                                body = raw.hex()
+                        body = from_thread.run(_idempotency_body, request)
                         request_hash = pseudonym(digest([body, request.headers.get("if-match")]))
                         record_key = (actor.user_id, route, client_key)
                         old = db.get(IdempotencyRecord, record_key)
@@ -184,7 +180,9 @@ class TransactionalRoute(APIRoute):
                                     412, "VERSION_CONFLICT", "If-Match must agree with the request version"
                                 )
                         _rate_limit(db, actor, request.app.state.settings)
-                    response = await handler(request)
+                    # This worker is suspended while the handler runs: Session
+                    # operations are sequential, never concurrent across threads.
+                    response = from_thread.run(handler, request)
                     if response.status_code >= 400:
                         db.rollback()
                         return response
@@ -226,5 +224,19 @@ class TransactionalRoute(APIRoute):
                 except BaseException:
                     db.rollback()
                     raise
+
+        async def transactional(request: Request):
+            # Holding a transaction must not consume FastAPI's default worker
+            # tokens: its sync dependencies/endpoints need those to finish.
+            limiter = getattr(request.app.state, "transaction_thread_limiter", None)
+            if limiter is None:
+                settings = request.app.state.settings
+                limiter = CapacityLimiter(settings.db_pool_size + settings.db_max_overflow)
+                request.app.state.transaction_thread_limiter = limiter
+            # Keep the worker attached until its commit/rollback and Session
+            # cleanup finish; cancellation must not abandon an active mutation.
+            return await to_thread.run_sync(
+                run_transaction, request, limiter=limiter, abandon_on_cancel=False
+            )
 
         return transactional

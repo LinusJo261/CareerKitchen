@@ -130,3 +130,42 @@ tests**, generated OpenAPI/client consistency, client typing and **six client
 tests** passed locally. PostgreSQL migration round trips, RLS/authorization
 validation, Ruff formatting/lint and mypy also passed. These checks do not exercise
 live Supabase sessions or paid Gemini generation.
+
+## Adaptive Career Chef onboarding
+
+The candidate-onboarding page now uses a consented, editable conversation instead
+of the fixed three-step questions. Gemini can narrow acceptable role and work
+preferences, extract named skill keywords and generate optional practical skill
+questions with a rubric. Server policy selects the next unresolved field; any
+suggested level requires conversational provenance and remains an unverified
+self-report. Explicit review saves the candidate profile and selected skills in
+one versioned, idempotent, audited transaction with outbox events. Existing
+education, experience and unmentioned skills are preserved. New profiles remain
+drafts. See [adaptive onboarding](adaptive-onboarding.md) for contracts, privacy,
+matching inputs and assessment limitations.
+
+An off-policy model question receives at most one repair against a locked draft
+within the original total timeout. Transaction locks run outside the ASGI event
+loop, preventing concurrent account requests from blocking generation or health
+checks. PostgreSQL regressions cover same-actor contention, exact replay,
+provider failure, cancellation cleanup, aliases and atomic confirmation.
+
+On 18 October 2026, the complete backend suite passed **511 tests** against
+PostgreSQL with **87% measured application coverage** in 451.37 seconds. All three
+new concurrency/cancellation regressions passed in that coverage run. The only
+warning was the existing upstream Starlette/httpx TestClient deprecation.
+
+Local verification also passed **73 frontend tests**, strict
+frontend typing, a **40-page production build**, generated OpenAPI/client
+consistency, client typing and **six client tests**. Ruff formatting/lint, mypy
+across **91 source files**, the source secret scan and **164 offline research
+tests** passed. No dataset download or model training was performed.
+
+Actual browser requests using fictional accounts and an isolated PostgreSQL
+schema verified a live Gemini SQL exercise with a rubric, a follow-up answer
+returning an editable review draft, and a separate explicitly confirmed atomic
+save. The saved fixture remained `DRAFT`, with its chosen attention cap and
+self-reported SQL level. A concurrent workspace refresh completed during the
+successful follow-up. These are software-flow checks, not assessment validation
+or real employment outcomes. Hosted Supabase sessions and hosted deployment of
+this feature have not been verified.

@@ -87,7 +87,7 @@ Pydantic before commit; an invalid response rolls back the transaction.
 
 <!-- BEGIN GENERATED ENDPOINT INVENTORY -->
 
-112 operations across 99 paths.
+114 operations across 101 paths.
 
 | Method | Path | Request schema | Success schema |
 |---|---|---|---|
@@ -103,6 +103,7 @@ Pydantic before commit; an invalid response rolls back the transaction.
 | GET | `/v1/candidates/me/decisions` | — | 200: DecisionInbox |
 | GET | `/v1/candidates/me/history` | — | 200: PageEnvelope_PairHistoryOut_ |
 | GET | `/v1/candidates/me/matches` | — | 200: Envelope_list_MatchOut__ |
+| POST | `/v1/candidates/me/onboarding` | OnboardingConfirmationIn | 200: Envelope_OnboardingConfirmationOut_ |
 | GET | `/v1/candidates/me/pact/policies` | — | 200: Envelope_list_PolicyOut__ |
 | POST | `/v1/candidates/me/pause` | VersionInput | 200: Envelope_CandidateOut_ |
 | PUT | `/v1/candidates/me/preferences` | PreferencesInput | 200: Envelope_CandidateOut_ |
@@ -148,6 +149,7 @@ Pydantic before commit; an invalid response rolls back the transaction.
 | POST | `/v1/matches/{match_id}/starts/verify` | StartVerifyInput | 200: Envelope_StartOut_ |
 | POST | `/v1/matches/{match_id}/withdraw` | VersionInput | 200: Envelope_PairStateOut_ |
 | POST | `/v1/navigation/chat` | NavigationChatIn | 200: Envelope_NavigationChatOut_ |
+| POST | `/v1/navigation/onboarding` | OnboardingChatIn | 200: Envelope_OnboardingChatOut_ |
 | GET | `/v1/notifications` | — | 200: PageEnvelope_NotificationOut_ |
 | GET | `/v1/notifications/preferences` | — | 200: Envelope_NotificationPreferencesOut_ |
 | PUT | `/v1/notifications/preferences` | NotificationInput | 200: Envelope_NotificationPreferencesOut_ |
