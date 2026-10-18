@@ -123,6 +123,26 @@ def test_docx_external_relationship_cannot_fetch_url():
     assert extract.extract_document_text(docx_bytes(relationships=relation), extract.DOCX) is None
 
 
+@pytest.mark.parametrize("encoding", ["utf-16", "utf-32"])
+def test_storage_rejects_encoded_relationship_entities_before_parent_xml_parser(monkeypatch, encoding):
+    relationships = (
+        f'<?xml version="1.0" encoding="{encoding.upper()}"?>'
+        '<!DOCTYPE Relationships [<!ENTITY private "EXPANDED PRIVATE ENTITY">]>'
+        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        '<Relationship Id="rId1" Target="&private;"/>'
+        "</Relationships>"
+    ).encode(encoding)
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("unsafe XML must be rejected before parsing or malware scanning")
+
+    monkeypatch.setattr(storage.ET, "fromstring", forbidden)
+    monkeypatch.setattr(storage, "_clamav_scan", forbidden)
+    with pytest.raises(AppError) as raised:
+        storage.validate_resume(docx_bytes(relationships=relationships), extract.DOCX)
+    assert raised.value.status_code == 422 and raised.value.code == "UNSAFE_DOCUMENT"
+
+
 def test_parser_receives_no_application_credentials_or_paths(monkeypatch):
     original = subprocess.Popen
     captured = {}

@@ -470,7 +470,9 @@ def expire_due(db: Session, actor: Actor) -> int:
     ):
         cycle = load(db, PairCycle, item.pair_cycle_id)
         lock_scopes(db, f"candidate:{cycle.candidate_id}", f"vacancy:{cycle.vacancy_id}")
-        close_cycle(db, actor, load(db, PairCycle, cycle.id), "CLOSED_EXPIRED")
+        item, cycle = load(db, WaitingItem, item.id), load(db, PairCycle, cycle.id)
+        if item.state == "WAITING" and item.expires_at <= utcnow() and not cycle.closed_at:
+            close_cycle(db, actor, cycle, "CLOSED_EXPIRED")
     return count
 
 
@@ -486,6 +488,9 @@ def release_waiting(db: Session, actor: Actor) -> int:
         lock_scopes(db, f"candidate:{cycle.candidate_id}", f"vacancy:{cycle.vacancy_id}")
         item, cycle = load(db, WaitingItem, item.id), load(db, PairCycle, cycle.id)
         if item.state != "WAITING" or cycle.closed_at:
+            continue
+        if item.expires_at <= utcnow():
+            close_cycle(db, actor, cycle, "CLOSED_EXPIRED")
             continue
         candidate, vacancy = load(db, Candidate, cycle.candidate_id), load(db, Vacancy, cycle.vacancy_id)
         if vacancy.version != cycle.role_version or not feasible(db, candidate, vacancy)[0]:

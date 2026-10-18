@@ -482,6 +482,16 @@ def expire_pact_dependencies(db: Session, actor: Actor, batch_size: int = 100) -
             if vacancy_id:
                 keys.append(f"vacancy:{vacancy_id}")
             lock_scopes(db, *keys)
+            item = db.scalar(
+                select(model).where(model.id == item.id).execution_options(populate_existing=True)
+            )
+            if (
+                item is None
+                or item.revoked_at is not None
+                or item.expires_at is None
+                or item.expires_at > now
+            ):
+                continue
             if db.scalar(
                 select(OutboxEvent.id).where(
                     OutboxEvent.aggregate_id == item.id, OutboxEvent.kind == event_kind
