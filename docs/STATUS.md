@@ -95,3 +95,38 @@ recorded on the [repository pull requests](https://github.com/LinusJo261/CareerK
 Docker image execution and hosted Supabase/Railway end-to-end checks have not
 been run. Local and CI verification do not establish cloud availability or
 hiring-model reliability.
+
+## Career Chef check repairs
+
+Backend test fixtures create every application table in their own schema and
+exclude migrated `public` tables from the search path. Fixture teardown also runs
+when setup fails. CI coverage selects `apps/api/app` explicitly. OpenAPI error
+descriptions for HTTP 413 and 422 use fixed phrases across Python versions, with
+a regression test that simulates the legacy standard-library phrases.
+
+Local Python 3.12 verification passed **321 backend tests** against PostgreSQL
+with all 44 migrated application tables present in `public`. A disposable database
+also passed the populated migration upgrade, downgrade, clean upgrade and
+authorization checks. Ruff format/lint, OpenAPI consistency, generated-client
+consistency, client TypeScript checking, six client tests and the source secret
+scan passed. The recovered local environment lacks mypy and pytest-cov; those
+checks require the locked CI environment. No live Gemini call was made for this
+repair, and hosted check results must be read from the pull request.
+
+## Career Chef integration merge
+
+The PR #11 merge resolution retains authenticated, persistent workspace actions
+alongside Career Chef's layout, navigation and accessibility improvements. The
+assistant reuses the workspace's HttpOnly session on the server while preserving
+explicit Gemini consent. Public guidance now describes the connected application.
+
+The frontend build excludes the independently installed API client from its root
+TypeScript project; CI checks that package separately. The privacy regression
+suite now exercises connected employer state and rendered cards instead of the
+retired demo allocator, and both navigation/privacy script suites run in CI.
+
+On 18 October 2026, the production build, strict frontend typing, **58 frontend
+tests**, generated OpenAPI/client consistency, client typing and **six client
+tests** passed locally. PostgreSQL migration round trips, RLS/authorization
+validation, Ruff formatting/lint and mypy also passed. These checks do not exercise
+live Supabase sessions or paid Gemini generation.

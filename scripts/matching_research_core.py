@@ -65,19 +65,43 @@ class PreparedCorpus:
         self._seniorities = [normalize_generator_skill(row.get("seniority", "")) for row in self.rows]
 
 
-def feature_matrix(job: dict, corpus: PreparedCorpus) -> np.ndarray:
-    """Return Nx5 normalized features; an absent preference is explicit."""
+def required_coverage(job: dict, corpus: PreparedCorpus) -> np.ndarray:
+    """Compute only required-skill coverage when selecting synthetic pairs."""
+    required = _skills(job.get("must_have_skills", []), "must_have_skills")
+    if not required:
+        return np.ones(len(corpus.ids), dtype=float)
+    return np.asarray(
+        [len(required & skills) / len(required) for skills in corpus.skill_sets],
+        dtype=float,
+    )
+
+
+def feature_matrix(job: dict, corpus: PreparedCorpus, indices: np.ndarray | None = None) -> np.ndarray:
+    """Return normalized features, optionally for selected rows in supplied order.
+
+    Subsets avoid calculating lexical similarity for unsampled training pairs.
+    Repeated integer indices intentionally produce repeated feature rows.
+    """
+    if indices is None:
+        selected = np.arange(len(corpus.ids), dtype=int)
+    else:
+        if not isinstance(indices, np.ndarray) or indices.ndim != 1 or indices.dtype.kind not in "iu":
+            raise ValueError("Subset indices must be a one-dimensional integer NumPy array.")
+        if np.any(indices < 0) or np.any(indices >= len(corpus.ids)):
+            raise ValueError("Subset indices must refer to existing corpus rows.")
+        selected = indices
     required = _skills(job.get("must_have_skills", []), "must_have_skills")
     preferred = _skills(job.get("nice_to_have_skills", []), "nice_to_have_skills")
     seniority = normalize_generator_skill(job.get("seniority", ""))
     text = _tokens(job, ("job_title", "description"), "responsibilities")
-    matrix = np.zeros((len(corpus.ids), len(FEATURE_NAMES)), dtype=float)
-    for index, skills in enumerate(corpus.skill_sets):
+    matrix = np.zeros((len(selected), len(FEATURE_NAMES)), dtype=float)
+    for index, source_index in enumerate(selected):
+        skills = corpus.skill_sets[source_index]
         matrix[index, 0] = len(required & skills) / len(required) if required else 1
         matrix[index, 1] = len(preferred & skills) / len(preferred) if preferred else 0
         matrix[index, 2] = bool(preferred)
-        matrix[index, 3] = bool(seniority) and seniority == corpus._seniorities[index]
-        resume_text = corpus._text_sets[index]
+        matrix[index, 3] = bool(seniority) and seniority == corpus._seniorities[source_index]
+        resume_text = corpus._text_sets[source_index]
         union = text | resume_text
         matrix[index, 4] = len(text & resume_text) / len(union) if union else 0
     return matrix
@@ -129,7 +153,7 @@ def sample_training_indices(
     missing = positives - set(corpus.ids)
     if missing:
         raise ValueError(f"Listed positive resume IDs are absent: {sorted(missing)}")
-    required = feature_matrix(job, corpus)[:, 0]
+    required = required_coverage(job, corpus)
     positive_indices = np.asarray(
         [index for index, resume_id in enumerate(corpus.ids) if resume_id in positives],
         dtype=int,

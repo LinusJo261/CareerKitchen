@@ -1,188 +1,195 @@
-'use client'
-import { useEffect, useState } from 'react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { useSWRConfig } from 'swr'
-import { ArrowLeft, ArrowRight, Building2, UserRound } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Checkbox } from '@/components/ui/checkbox'
+"use client";
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useSWRConfig } from "swr";
+import { ArrowLeft, ArrowRight, Building2, UserRound } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Field,
   FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
-} from '@/components/ui/field'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { Brand } from '@/components/brand'
-import { Progression } from '@/components/workspace/kit'
-import { useWorkspace } from '@/lib/workspace'
-import type { Role } from '@/lib/contracts'
-import { cn } from '@/lib/utils'
+} from "@/components/ui/field";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Brand } from "@/components/brand";
+import { Progression } from "@/components/workspace/kit";
+import { useWorkspace } from "@/lib/workspace";
+import type { Role } from "@/lib/contracts";
+import { cn } from "@/lib/utils";
 
 function EntryFrame({ children }: { children: React.ReactNode }) {
   return (
     <main className="flex min-h-dvh flex-col">
-      <header className="page-width flex h-20 items-center justify-between">
+      <header className="page-width flex min-h-20 flex-wrap items-center justify-between gap-3 py-4">
         <Brand />
         <Badge variant="outline">Career Kitchen</Badge>
       </header>
-      <div className="flex flex-1 items-center justify-center px-6 py-10">
+      <div className="flex flex-1 items-center justify-center px-6 pt-10 pb-28 sm:pb-16">
         {children}
       </div>
     </main>
-  )
+  );
 }
 
 function RolePicker({
   value,
   onChange,
 }: {
-  value: Role
-  onChange: (r: Role) => void
+  value: Role;
+  onChange: (r: Role) => void;
 }) {
   const options = [
     {
-      id: 'candidate' as const,
-      label: 'I’m looking for a role',
+      id: "candidate" as const,
+      label: "I’m looking for a role",
       icon: UserRound,
     },
-    { id: 'employer' as const, label: 'I’m hiring', icon: Building2 },
-  ]
+    { id: "employer" as const, label: "I’m hiring", icon: Building2 },
+  ];
   return (
-    <div
-      role="radiogroup"
-      aria-label="Workspace"
-      className="grid grid-cols-2 gap-3"
-    >
-      {options.map(({ id, label, icon: Icon }) => (
-        <button
-          key={id}
-          type="button"
-          role="radio"
-          aria-checked={value === id}
-          onClick={() => onChange(id)}
-          className={cn(
-            'flex flex-col items-start gap-3 rounded-xl border p-4 text-left text-sm transition-colors hover:bg-muted',
-            value === id && 'border-primary bg-secondary',
-          )}
-        >
-          <Icon
-            className={cn(
-              'size-5',
-              value === id ? 'text-primary' : 'text-muted-foreground',
-            )}
-          />
-          {label}
-        </button>
-      ))}
-    </div>
-  )
+    <fieldset>
+      <legend className="mb-3 text-sm font-medium">
+        Choose your workspace
+      </legend>
+      <div className="grid grid-cols-2 gap-3">
+        {options.map(({ id, label, icon: Icon }) => (
+          <label key={id} className="cursor-pointer">
+            <input
+              type="radio"
+              name="workspace-role"
+              value={id}
+              checked={value === id}
+              onChange={() => onChange(id)}
+              className="peer sr-only"
+            />
+            <span
+              className={cn(
+                "flex h-full flex-col items-start gap-3 rounded-md border p-4 text-left text-sm transition-colors hover:bg-muted peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring",
+                value === id && "border-primary bg-secondary",
+              )}
+            >
+              <Icon
+                aria-hidden="true"
+                className={cn(
+                  "size-5",
+                  value === id ? "text-primary" : "text-muted-foreground",
+                )}
+              />
+              {label}
+            </span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
 }
 
-export function AuthForm({ mode }: { mode: 'sign-in' | 'get-started' }) {
-  const router = useRouter()
-  const { mutate } = useSWRConfig()
-  const [role, setRole] = useState<Role>('candidate')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [account, setAccount] = useState('candidate-01')
+export function AuthForm({ mode }: { mode: "sign-in" | "get-started" }) {
+  const router = useRouter();
+  const { mutate } = useSWRConfig();
+  const [role, setRole] = useState<Role>("candidate");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [account, setAccount] = useState("candidate-01");
   const [authMode, setAuthMode] = useState<
-    'local' | 'supabase' | 'unconfigured' | null
-  >(null)
-  const [submitted, setSubmitted] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-  const [notice, setNotice] = useState('')
-  const signUp = mode === 'get-started'
-  const emailError = !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
-  const passwordError = password.length < 8
+    "local" | "supabase" | "unconfigured" | null
+  >(null);
+  const [submitted, setSubmitted] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const signUp = mode === "get-started";
+  const emailError = !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  const passwordError = password.length < 8;
 
   useEffect(() => {
     const requestedRole = new URLSearchParams(window.location.search).get(
-      'role',
-    )
-    if (requestedRole === 'candidate' || requestedRole === 'employer')
-      setRole(requestedRole)
-    const controller = new AbortController()
-    fetch('/api/auth/config', { signal: controller.signal, cache: 'no-store' })
+      "role",
+    );
+    if (requestedRole === "candidate" || requestedRole === "employer")
+      setRole(requestedRole);
+    const controller = new AbortController();
+    fetch("/api/auth/config", { signal: controller.signal, cache: "no-store" })
       .then(async (response) => {
         if (!response.ok)
-          throw new Error('Unable to load sign-in configuration.')
-        const configuration = await response.json()
-        setAuthMode(configuration.mode)
+          throw new Error("Unable to load sign-in configuration.");
+        const configuration = await response.json();
+        setAuthMode(configuration.mode);
       })
       .catch((cause) => {
         if (!controller.signal.aborted)
           setError(
             cause instanceof Error
               ? cause.message
-              : 'Unable to load sign-in configuration.',
-          )
-      })
-    return () => controller.abort()
-  }, [])
+              : "Unable to load sign-in configuration.",
+          );
+      });
+    return () => controller.abort();
+  }, []);
 
   async function submit(event: React.FormEvent) {
-    event.preventDefault()
-    setSubmitted(true)
-    setError('')
-    setNotice('')
+    event.preventDefault();
+    setSubmitted(true);
+    setError("");
+    setNotice("");
     if (
       !authMode ||
-      authMode === 'unconfigured' ||
+      authMode === "unconfigured" ||
       busy ||
-      (authMode === 'supabase' && (emailError || passwordError))
+      (authMode === "supabase" && (emailError || passwordError))
     )
-      return
-    setBusy(true)
+      return;
+    setBusy(true);
     try {
-      const response = await fetch('/api/auth/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/auth/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
-          authMode === 'local'
-            ? { account: role === 'employer' ? 'employer' : account, role }
+          authMode === "local"
+            ? { account: role === "employer" ? "employer" : account, role }
             : { email: email.trim(), password, mode, role },
         ),
-      })
-      const result = await response.json()
+      });
+      const result = await response.json();
       if (!response.ok)
         throw new Error(
-          typeof result.error === 'string'
+          typeof result.error === "string"
             ? result.error
-            : result.error?.message || 'Unable to sign in. Please try again.',
-        )
+            : result.error?.message || "Unable to sign in. Please try again.",
+        );
       if (result.needsEmailConfirmation) {
         setNotice(
-          'Check your email to confirm your account, then return to sign in.',
-        )
-        setPassword('')
-        return
+          "Check your email to confirm your account, then return to sign in.",
+        );
+        setPassword("");
+        return;
       }
       await mutate(
-        (key) => typeof key === 'string' && key.startsWith('/api/workspace'),
+        (key) => typeof key === "string" && key.startsWith("/api/workspace"),
         undefined,
         { revalidate: false },
-      )
+      );
       router.push(
         result.redirectTo ||
-          (signUp && role === 'candidate'
-            ? '/onboarding/candidate'
+          (signUp && role === "candidate"
+            ? "/onboarding/candidate"
             : `/${role}`),
-      )
-      router.refresh()
+      );
+      router.refresh();
     } catch (cause) {
       setError(
         cause instanceof Error
           ? cause.message
-          : 'Unable to sign in. Please try again.',
-      )
+          : "Unable to sign in. Please try again.",
+      );
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
   }
 
@@ -190,21 +197,25 @@ export function AuthForm({ mode }: { mode: 'sign-in' | 'get-started' }) {
     <EntryFrame>
       <form
         onSubmit={submit}
-        className="rise flex w-full max-w-md flex-col gap-8"
+        className="rise flex w-full max-w-md flex-col gap-7"
+        aria-busy={busy}
         noValidate
       >
         <div>
-          <h1 className="text-3xl font-medium text-balance">
-            {signUp ? 'Begin with what matters to you' : 'Welcome back'}
-          </h1>
-          <p className="mt-2 text-muted-foreground">
+          <p className="eyebrow mb-3">Your place at the table</p>
+          <h1 className="text-4xl font-normal text-balance">
             {signUp
-              ? 'A few thoughtful introductions, at your pace.'
-              : 'Sign in to continue where you left off.'}
+              ? "Begin with what matters to you."
+              : "Welcome back to the kitchen."}
+          </h1>
+          <p className="mt-3 text-muted-foreground">
+            {signUp
+              ? "A more thoughtful way to find your next role or teammate."
+              : "Sign in to continue where you left off."}
           </p>
         </div>
         <RolePicker value={role} onChange={setRole} />
-        {authMode === 'local' ? (
+        {authMode === "local" ? (
           <>
             <Alert>
               <AlertDescription>
@@ -212,7 +223,7 @@ export function AuthForm({ mode }: { mode: 'sign-in' | 'get-started' }) {
                 to the backend database.
               </AlertDescription>
             </Alert>
-            {role === 'candidate' && (
+            {role === "candidate" && (
               <Field>
                 <FieldLabel htmlFor="account">Test candidate</FieldLabel>
                 <select
@@ -222,18 +233,18 @@ export function AuthForm({ mode }: { mode: 'sign-in' | 'get-started' }) {
                   onChange={(event) => setAccount(event.target.value)}
                 >
                   {Array.from({ length: 30 }, (_, index) => {
-                    const id = `candidate-${String(index + 1).padStart(2, '0')}`
+                    const id = `candidate-${String(index + 1).padStart(2, "0")}`;
                     return (
                       <option key={id} value={id}>
                         {id}
                       </option>
-                    )
+                    );
                   })}
                 </select>
               </Field>
             )}
           </>
-        ) : authMode === 'supabase' ? (
+        ) : authMode === "supabase" ? (
           <FieldGroup>
             <Field data-invalid={submitted && emailError}>
               <FieldLabel htmlFor="email">Email</FieldLabel>
@@ -254,7 +265,7 @@ export function AuthForm({ mode }: { mode: 'sign-in' | 'get-started' }) {
               <Input
                 id="password"
                 type="password"
-                autoComplete={signUp ? 'new-password' : 'current-password'}
+                autoComplete={signUp ? "new-password" : "current-password"}
                 value={password}
                 aria-invalid={submitted && passwordError}
                 onChange={(event) => setPassword(event.target.value)}
@@ -272,8 +283,8 @@ export function AuthForm({ mode }: { mode: 'sign-in' | 'get-started' }) {
           <Alert>
             <AlertDescription>
               {authMode === null
-                ? 'Loading sign-in configuration…'
-                : 'Authentication is not configured. Configure Supabase or enable local development authentication on the server.'}
+                ? "Loading sign-in configuration…"
+                : "Authentication is not configured. Configure Supabase or enable local development authentication on the server."}
             </AlertDescription>
           </Alert>
         )}
@@ -290,98 +301,110 @@ export function AuthForm({ mode }: { mode: 'sign-in' | 'get-started' }) {
         <Button
           type="submit"
           size="lg"
-          disabled={busy || !authMode || authMode === 'unconfigured'}
+          disabled={busy || !authMode || authMode === "unconfigured"}
         >
           {busy
-            ? 'Signing in…'
-            : authMode === 'local'
-              ? 'Open test workspace'
+            ? "Signing in…"
+            : authMode === "local"
+              ? "Open test workspace"
               : signUp
-                ? 'Create account'
-                : 'Sign in'}
-          <ArrowRight data-icon="inline-end" />
+                ? "Create account"
+                : "Sign in"}
+          <ArrowRight aria-hidden="true" data-icon="inline-end" />
         </Button>
         <p className="text-center text-sm text-muted-foreground">
-          {signUp ? 'Already have an account? ' : 'New to Career Kitchen? '}
+          {signUp ? "Already have an account? " : "New to Career Kitchen? "}
           <Link
             className="text-primary underline-offset-4 hover:underline"
-            href={signUp ? '/sign-in' : '/get-started'}
+            href={`${signUp ? "/sign-in" : "/get-started"}?role=${role}`}
           >
-            {signUp ? 'Sign in' : 'Get started'}
+            {signUp ? "Sign in" : "Get started"}
           </Link>
         </p>
       </form>
     </EntryFrame>
-  )
+  );
 }
 
-const STEPS = ['Role', 'Must-haves', 'Capacity & consent'] as const
+const STEPS = ["Role", "Must-haves", "Capacity & consent"] as const;
 
 export function CandidateOnboarding() {
-  const router = useRouter()
-  const { data, execute, isLoading, error } = useWorkspace()
-  const [step, setStep] = useState(0)
-  const [title, setTitle] = useState<string | null>(null)
-  const [region, setRegion] = useState<string | null>(null)
-  const [roleFamily, setRoleFamily] = useState<string | null>(null)
-  const [remote, setRemote] = useState<string | null>(null)
-  const [draftCompensation, setCompensation] = useState<string | null>(null)
-  const [draftCurrency, setCurrency] = useState<string | null>(null)
-  const [draftEmploymentType, setEmploymentType] = useState<string | null>(null)
-  const [draftPayPeriod, setPayPeriod] = useState<string | null>(null)
-  const [capacity, setCapacity] = useState<string | null>(null)
-  const [termsAccepted, setTermsAccepted] = useState(false)
-  const [privacyAccepted, setPrivacyAccepted] = useState(false)
-  const [profileConfirmed, setProfileConfirmed] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const headline = title ?? data.profile.title
-  const location = region ?? data.profile.location
-  const family = roleFamily ?? data.profile.roles?.[0] ?? ''
-  const storedWorkModes = data.backend.candidate?.work_modes
+  const router = useRouter();
+  const { data, execute, isLoading, error } = useWorkspace();
+  const [step, setStep] = useState(0);
+  const [title, setTitle] = useState<string | null>(null);
+  const [region, setRegion] = useState<string | null>(null);
+  const [roleFamily, setRoleFamily] = useState<string | null>(null);
+  const [remote, setRemote] = useState<string | null>(null);
+  const [draftCompensation, setCompensation] = useState<string | null>(null);
+  const [draftCurrency, setCurrency] = useState<string | null>(null);
+  const [draftEmploymentType, setEmploymentType] = useState<string | null>(
+    null,
+  );
+  const [draftPayPeriod, setPayPeriod] = useState<string | null>(null);
+  const [capacity, setCapacity] = useState<string | null>(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const [profileConfirmed, setProfileConfirmed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const previousStep = useRef(step);
+
+  useEffect(() => {
+    if (step !== previousStep.current) headingRef.current?.focus();
+    previousStep.current = step;
+  }, [step]);
+  const headline = title ?? data.profile.title;
+  const location = region ?? data.profile.location;
+  const family = roleFamily ?? data.profile.roles?.[0] ?? "";
+  const storedWorkModes = data.backend.candidate?.work_modes;
   const arrangement =
     remote ??
     (storedWorkModes?.length === 2 &&
-    storedWorkModes.includes('REMOTE') &&
-    storedWorkModes.includes('HYBRID')
-      ? 'Remote or hybrid'
-      : storedWorkModes?.length === 1 && storedWorkModes[0] === 'ONSITE'
-        ? 'On-site'
-        : data.profile.remote)
-  const cap = capacity ?? String(data.profile.capacity)
+    storedWorkModes.includes("REMOTE") &&
+    storedWorkModes.includes("HYBRID")
+      ? "Remote or hybrid"
+      : storedWorkModes?.length === 1 && storedWorkModes[0] === "ONSITE"
+        ? "On-site"
+        : data.profile.remote);
+  const cap = capacity ?? String(data.profile.capacity);
   const compensation =
-    draftCompensation ?? data.backend.candidate?.compensation_floor ?? ''
-  const currency = draftCurrency ?? data.backend.candidate?.currency ?? 'USD'
+    draftCompensation ?? data.backend.candidate?.compensation_floor ?? "";
+  const currency = draftCurrency ?? data.backend.candidate?.currency ?? "USD";
   const employmentType =
     draftEmploymentType ??
     data.backend.candidate?.employment_types[0] ??
-    'FULL_TIME'
+    "FULL_TIME";
   const payPeriod =
-    draftPayPeriod ?? data.backend.candidate?.compensation_period ?? 'ANNUAL'
+    draftPayPeriod ?? data.backend.candidate?.compensation_period ?? "ANNUAL";
   const titleError =
     headline.trim().length < 3 ||
     headline.length > 180 ||
     location.trim().length < 2 ||
-    family.trim().length < 2
+    family.trim().length < 2;
   const compensationError =
-    compensation !== '' &&
+    compensation !== "" &&
     (!Number.isFinite(Number(compensation)) ||
       Number(compensation) < 0 ||
-      !/^\d+(\.\d{1,2})?$/.test(compensation))
-  const currencyError = !/^[A-Z]{3}$/.test(currency)
-  const consentError = !termsAccepted || !privacyAccepted || !profileConfirmed
+      !/^\d+(\.\d{1,2})?$/.test(compensation));
+  const currencyError = !/^[A-Z]{3}$/.test(currency);
+  const consentError = !termsAccepted || !privacyAccepted || !profileConfirmed;
 
-  async function next() {
+  async function next(event: React.FormEvent) {
+    event.preventDefault();
     if (
       busy ||
+      isLoading ||
+      error ||
       (step === 0 && titleError) ||
       (step === 1 && (compensationError || currencyError))
     )
-      return
-    if (step < STEPS.length - 1) return setStep(step + 1)
-    if (consentError) return
-    setBusy(true)
+      return;
+    if (step < STEPS.length - 1) return setStep(step + 1);
+    if (consentError) return;
+    setBusy(true);
     const saved = await execute(
-      'candidate.save',
+      "candidate.save",
       {
         expected_version: data.profile.version ?? 0,
         headline: headline.trim(),
@@ -398,18 +421,18 @@ export function CandidateOnboarding() {
         work_modes:
           remote === null && data.backend.candidate
             ? data.backend.candidate.work_modes
-            : arrangement === 'Remote or hybrid'
-              ? ['REMOTE', 'HYBRID']
-              : arrangement === 'On-site'
-                ? ['ONSITE']
-                : arrangement === 'Hybrid'
-                  ? ['HYBRID']
-                  : ['REMOTE'],
+            : arrangement === "Remote or hybrid"
+              ? ["REMOTE", "HYBRID"]
+              : arrangement === "On-site"
+                ? ["ONSITE"]
+                : arrangement === "Hybrid"
+                  ? ["HYBRID"]
+                  : ["REMOTE"],
         locations:
           region === null && data.backend.candidate
             ? data.backend.candidate.locations
             : [location.trim()],
-        compensation_floor: compensation === '' ? null : compensation,
+        compensation_floor: compensation === "" ? null : compensation,
         currency,
         compensation_period: payPeriod,
         cap: Number(cap),
@@ -421,28 +444,40 @@ export function CandidateOnboarding() {
         privacy_accepted: privacyAccepted,
         profile_confirmed: profileConfirmed,
       },
-      'Your profile and preferences are saved.',
-    )
-    setBusy(false)
-    if (saved) router.push('/candidate/profile')
+      "Your profile and preferences are saved.",
+    );
+    setBusy(false);
+    if (saved) router.push("/candidate/profile");
   }
 
   return (
     <EntryFrame>
-      <div className="rise flex w-full max-w-lg flex-col gap-8">
+      <form
+        onSubmit={next}
+        className="rise flex w-full max-w-lg flex-col gap-7"
+        aria-busy={busy}
+        noValidate
+      >
         <Progression steps={STEPS} current={step} />
+        <p className="eyebrow" aria-live="polite">
+          Step {step + 1} of {STEPS.length} · {STEPS[step]}
+        </p>
         {error && (
           <Alert variant="destructive">
             <AlertDescription role="alert">
               {error instanceof Error
                 ? error.message
-                : 'Unable to load your profile.'}
+                : "Unable to load your profile."}
             </AlertDescription>
           </Alert>
         )}
         {step === 0 && (
           <section className="flex flex-col gap-6">
-            <h1 className="text-3xl font-medium text-balance">
+            <h1
+              ref={headingRef}
+              tabIndex={-1}
+              className="text-3xl font-normal text-balance"
+            >
               What would you like to do next?
             </h1>
             <FieldGroup>
@@ -485,7 +520,11 @@ export function CandidateOnboarding() {
         )}
         {step === 1 && (
           <section className="flex flex-col gap-6">
-            <h1 className="text-3xl font-medium text-balance">
+            <h1
+              ref={headingRef}
+              tabIndex={-1}
+              className="text-3xl font-normal text-balance"
+            >
               Your non-negotiables
             </h1>
             <p className="-mt-3 text-muted-foreground">
@@ -497,11 +536,12 @@ export function CandidateOnboarding() {
                 <ToggleGroup
                   type="single"
                   variant="outline"
+                  className="flex-wrap"
                   value={arrangement}
                   onValueChange={(value) => value && setRemote(value)}
                   aria-label="Work arrangement"
                 >
-                  {['Remote', 'Remote or hybrid', 'Hybrid', 'On-site'].map(
+                  {["Remote", "Remote or hybrid", "Hybrid", "On-site"].map(
                     (value) => (
                       <ToggleGroupItem key={value} value={value}>
                         {value}
@@ -521,11 +561,11 @@ export function CandidateOnboarding() {
                   onChange={(event) => setEmploymentType(event.target.value)}
                 >
                   {[
-                    ['FULL_TIME', 'Full time'],
-                    ['PART_TIME', 'Part time'],
-                    ['CONTRACT', 'Contract'],
-                    ['INTERNSHIP', 'Internship'],
-                    ['TEMPORARY', 'Temporary'],
+                    ["FULL_TIME", "Full time"],
+                    ["PART_TIME", "Part time"],
+                    ["CONTRACT", "Contract"],
+                    ["INTERNSHIP", "Internship"],
+                    ["TEMPORARY", "Temporary"],
                   ].map(([value, label]) => (
                     <option key={value} value={value}>
                       {label}
@@ -565,9 +605,9 @@ export function CandidateOnboarding() {
                   onChange={(event) => setPayPeriod(event.target.value)}
                 >
                   {[
-                    ['ANNUAL', 'Annual'],
-                    ['MONTHLY', 'Monthly'],
-                    ['HOURLY', 'Hourly'],
+                    ["ANNUAL", "Annual"],
+                    ["MONTHLY", "Monthly"],
+                    ["HOURLY", "Hourly"],
                   ].map(([value, label]) => (
                     <option key={value} value={value}>
                       {label}
@@ -596,7 +636,11 @@ export function CandidateOnboarding() {
         )}
         {step === 2 && (
           <section className="flex flex-col gap-6">
-            <h1 className="text-3xl font-medium text-balance">
+            <h1
+              ref={headingRef}
+              tabIndex={-1}
+              className="text-3xl font-normal text-balance"
+            >
               Your pace, your choice
             </h1>
             <p className="-mt-3 text-muted-foreground">
@@ -613,12 +657,21 @@ export function CandidateOnboarding() {
             >
               {Array.from({ length: 10 }, (_, index) => String(index + 1)).map(
                 (number) => (
-                  <ToggleGroupItem key={number} value={number} className="w-10">
+                  <ToggleGroupItem
+                    key={number}
+                    value={number}
+                    aria-label={`${number} active ${number === "1" ? "opportunity" : "opportunities"}`}
+                    className="w-10"
+                  >
                     {number}
                   </ToggleGroupItem>
                 ),
               )}
             </ToggleGroup>
+            <p className="text-sm font-medium text-primary">
+              Your limit: {cap} active{" "}
+              {cap === "1" ? "opportunity" : "opportunities"}
+            </p>
             <label className="flex items-start gap-3 text-sm">
               <Checkbox
                 checked={termsAccepted}
@@ -652,17 +705,18 @@ export function CandidateOnboarding() {
             </label>
           </section>
         )}
-        <div className="flex justify-between">
+        <div className="flex justify-between gap-3">
           <Button
+            type="button"
             variant="ghost"
             disabled={step === 0 || busy}
             onClick={() => setStep(step - 1)}
           >
-            <ArrowLeft data-icon="inline-start" />
+            <ArrowLeft aria-hidden="true" data-icon="inline-start" />
             Back
           </Button>
           <Button
-            onClick={next}
+            type="submit"
             disabled={
               busy ||
               isLoading ||
@@ -673,14 +727,14 @@ export function CandidateOnboarding() {
             }
           >
             {busy
-              ? 'Saving…'
+              ? "Saving…"
               : step === STEPS.length - 1
-                ? 'Save profile'
-                : 'Continue'}
-            <ArrowRight data-icon="inline-end" />
+                ? "Save profile"
+                : "Continue"}
+            <ArrowRight aria-hidden="true" data-icon="inline-end" />
           </Button>
         </div>
-      </div>
+      </form>
     </EntryFrame>
-  )
+  );
 }

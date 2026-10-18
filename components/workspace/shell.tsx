@@ -9,6 +9,7 @@ import {
   Moon,
   Sun,
   ArrowLeftRight,
+  Ellipsis,
   LoaderCircle,
 } from 'lucide-react'
 import { Brand } from '@/components/brand'
@@ -17,6 +18,7 @@ import {
   Sheet,
   SheetClose,
   SheetContent,
+  SheetDescription,
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet'
@@ -43,10 +45,10 @@ interface Station {
 const stations: Record<Role, Station[]> = {
   candidate: [
     {
-      path: '',
+      path: 'opportunities',
       name: 'Today’s Menu',
       action: 'Review opportunities',
-      also: ['opportunities'],
+      also: [''],
     },
     { path: 'matches', name: 'The Table', action: 'Your introductions' },
     { path: 'evidence', name: 'Taste Tests', action: 'Questions & evidence' },
@@ -96,7 +98,7 @@ export function Shell({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
-  const { theme, setTheme } = useTheme()
+  const { resolvedTheme, setTheme } = useTheme()
   const { data, error, isLoading, refresh } = useWorkspace()
   const employer = role === 'employer'
   const isActive = (s: Station) =>
@@ -108,9 +110,12 @@ export function Shell({
         ).length,
       }
     : {
-        '': data.opportunities.filter(
-          (o) => o.status === 'Active' && !data.decisions[o.id],
-        ).length,
+        opportunities: Math.min(
+          data.profile.capacity,
+          data.opportunities.filter(
+            (o) => o.status === 'Active' && !data.decisions[o.id],
+          ).length,
+        ),
       }
   const unread = data.notifications.some((n) => !n.read && n.side === role)
 
@@ -206,6 +211,12 @@ export function Shell({
 
   return (
     <div className="flex min-h-screen flex-col">
+      <a
+        href="#workspace-main"
+        className="sr-only z-[70] rounded-md bg-primary px-4 py-3 text-sm text-primary-foreground focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
+      >
+        Skip to main content
+      </a>
       <header
         className={cn(
           'sticky top-0 z-40 border-b',
@@ -222,7 +233,7 @@ export function Shell({
                   variant="ghost"
                   size="icon"
                   className={cn(
-                    'lg:hidden',
+                    'size-10 xl:hidden',
                     employer && 'text-flour hover:bg-flour/10 hover:text-flour',
                   )}
                   aria-label="Open kitchen navigation"
@@ -230,8 +241,14 @@ export function Shell({
                   <Menu />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-80 overflow-y-auto p-0">
+              <SheetContent
+                side="left"
+                className="w-80 max-w-[calc(100vw-2rem)] gap-0 overflow-y-auto p-0"
+              >
                 <SheetTitle className="sr-only">Kitchen navigation</SheetTitle>
+                <SheetDescription className="sr-only">
+                  Choose a station or manage your workspace.
+                </SheetDescription>
                 <div className="border-b px-6 py-5">
                   <Brand />
                 </div>
@@ -247,7 +264,14 @@ export function Shell({
                     <SheetClose key={p} asChild>
                       <Link
                         href={href(role, p)}
-                        className="rounded-sm px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+                        aria-current={
+                          pathname === href(role, p) ? 'page' : undefined
+                        }
+                        className={cn(
+                          'rounded-sm px-3 py-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground',
+                          pathname === href(role, p) &&
+                            'bg-muted text-foreground',
+                        )}
                       >
                         {l}
                       </Link>
@@ -261,11 +285,12 @@ export function Shell({
                 employer && '[&_.ticket]:bg-butter [&_.ticket]:text-charcoal',
               )}
             >
-              <Brand />
+              <Brand className="hidden sm:flex" />
+              <Brand compact className="sm:hidden" />
             </span>
             <span
               className={cn(
-                'hidden border-l pl-3 font-mono text-[10px] tracking-[0.14em] uppercase md:block',
+                'hidden max-w-36 truncate border-l pl-3 font-mono text-[10px] tracking-[0.14em] uppercase 2xl:block',
                 employer
                   ? 'border-flour/20 text-flour/70'
                   : 'text-muted-foreground',
@@ -281,7 +306,7 @@ export function Shell({
                 <>
                   Dining
                   <br />
-                  {data.session.email}
+                  {data.profile.name || data.session.email}
                 </>
               )}
             </span>
@@ -289,7 +314,7 @@ export function Shell({
 
           <nav
             aria-label="Stations"
-            className="ml-4 hidden flex-1 items-stretch lg:flex"
+            className="ml-4 hidden flex-1 items-stretch xl:flex"
           >
             {stationLinks(false)}
           </nav>
@@ -300,12 +325,18 @@ export function Shell({
                 <Button
                   variant="ghost"
                   size="sm"
+                  aria-label="Open workspace menu"
                   className={cn(
-                    'font-mono text-[11px] tracking-[0.12em] uppercase',
+                    'h-10 font-mono text-[11px] tracking-[0.12em] uppercase',
                     employer && 'text-flour hover:bg-flour/10 hover:text-flour',
                   )}
                 >
-                  Back office <ChevronDown data-icon="inline-end" />
+                  <span className="hidden sm:inline">Back office</span>
+                  <ChevronDown
+                    className="hidden sm:block"
+                    data-icon="inline-end"
+                  />
+                  <Ellipsis className="sm:hidden" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-60">
@@ -315,7 +346,14 @@ export function Shell({
                 <DropdownMenuGroup>
                   {backOffice[role].map(([p, l]) => (
                     <DropdownMenuItem key={p} asChild>
-                      <Link href={href(role, p)}>{l}</Link>
+                      <Link
+                        href={href(role, p)}
+                        aria-current={
+                          pathname === href(role, p) ? 'page' : undefined
+                        }
+                      >
+                        {l}
+                      </Link>
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuGroup>
@@ -329,11 +367,11 @@ export function Shell({
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onSelect={() =>
-                      setTheme(theme === 'dark' ? 'light' : 'dark')
+                      setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')
                     }
                   >
-                    {theme === 'dark' ? <Sun /> : <Moon />}
-                    {theme === 'dark' ? 'Day service' : 'Night service'}
+                    {resolvedTheme === 'dark' ? <Sun /> : <Moon />}
+                    {resolvedTheme === 'dark' ? 'Day service' : 'Night service'}
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
               </DropdownMenuContent>
@@ -343,7 +381,7 @@ export function Shell({
               size="icon"
               asChild
               className={cn(
-                'relative',
+                'relative size-10',
                 employer && 'text-flour hover:bg-flour/10 hover:text-flour',
               )}
             >
@@ -379,8 +417,10 @@ export function Shell({
         </div>
       )}
       <main
+        id="workspace-main"
+        tabIndex={-1}
         className={cn(
-          'mx-auto w-full flex-1 p-5 md:p-8',
+          'mx-auto w-full min-w-0 flex-1 scroll-mt-24 p-5 md:p-8',
           employer ? 'max-w-[1500px]' : 'max-w-[1240px] md:py-12',
         )}
       >

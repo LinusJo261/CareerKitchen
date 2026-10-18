@@ -1,4 +1,6 @@
 .venv/
+.next/
+*.tsbuildinfo
 .venv-research/
 __pycache__/
 *.py[cod]

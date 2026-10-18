@@ -35,6 +35,15 @@ FEATURES = {
     "hours_worked_last_week": "WM_HPQ1",
     "hours_expected_by_manager": "WM_HPQ2R",
 }
+# Supplied 36158-Codebook.pdf sections 8, 9, and 15: these are
+# listwise questionnaire means, with -8 indicating a partially missing scale.
+# Higher climate scores mean less pressure to sacrifice personal/family life;
+# higher conflict and burnout scores mean more conflict and burnout.
+EXPANDED_FEATURES = {
+    "work_to_family_conflict": "SCWM_WTFC",
+    "emotional_burnout": "SCWM_BURN",
+    "work_family_climate": "SCWM_OCLI",
+}
 LABEL = "SCWM_JSAT"
 LABEL_ITEMS = ("WM_JSAT1R", "WM_JSAT2R", "WM_JSAT3R")
 ALPHAS = (0.0, 0.001, 0.01, 0.1, 1.0)
@@ -71,7 +80,7 @@ def _number(raw: str, field: str) -> float | None:
     missing = {-4.0, -7.0} if hours or field in LABEL_ITEMS else {-8.0}
     if number in missing:
         return None
-    low, high = (0, 168) if hours else (1, 5)
+    low, high = (0, 168) if hours else (1, 7) if field == "SCWM_BURN" else (1, 5)
     if not low <= number <= high:
         raise ValueError(f"Out-of-range value in {field}; review the source codebook")
     if field in LABEL_ITEMS and number != int(number):
@@ -91,9 +100,22 @@ def _satisfaction(row: dict) -> float | None:
     return scale
 
 
-def prepare_dataset(raw_dir: Path, dataset: str) -> tuple[list[dict], dict]:
+def prepare_dataset(
+    raw_dir: Path,
+    dataset: str,
+    *,
+    development_only: bool = False,
+    expanded_features: bool = False,
+) -> tuple[list[dict], dict]:
     if dataset not in DATASETS:
         raise ValueError("Choose tomo or leef")
+    if development_only and dataset != "tomo":
+        raise ValueError("The development comparison is restricted to Tomo")
+    if expanded_features and (dataset != "tomo" or not development_only):
+        raise ValueError("Expanded features require development-only Tomo data")
+    feature_sources = dict(FEATURES)
+    if expanded_features:
+        feature_sources.update(EXPANDED_FEATURES)
     relative, cluster_column = DATASETS[dataset]
     source = raw_dir / relative
     required = {
@@ -105,7 +127,7 @@ def prepare_dataset(raw_dir: Path, dataset: str) -> tuple[list[dict], dict]:
         cluster_column,
         LABEL,
         *LABEL_ITEMS,
-        *FEATURES.values(),
+        *feature_sources.values(),
     }
     if dataset == "tomo":
         required.add("EXCLUDE")
@@ -156,6 +178,14 @@ def prepare_dataset(raw_dir: Path, dataset: str) -> tuple[list[dict], dict]:
             if excluded:
                 exclusions["tomo_not_invited" if excluded == "1" else "tomo_not_randomized"] += 1
                 continue
+        # Freeze the original Model B test allocation. In comparison mode, never
+        # parse these employees' outcome values, even to validate their scale.
+        cluster = baseline[cluster_column]
+        if not cluster or not cluster.isdigit() or int(cluster) <= 0:
+            raise ValueError("A positive documented baseline work group/facility is required")
+        if development_only and cluster_partition(f"{dataset}:{cluster}", 42) == "test":
+            exclusions["reserved_original_test_baseline_employee"] += 1
+            continue
         if followup is None:
             exclusions["missing_12_month_observation"] += 1
             continue
@@ -169,17 +199,20 @@ def prepare_dataset(raw_dir: Path, dataset: str) -> tuple[list[dict], dict]:
         if baseline_satisfaction is None:
             exclusions["missing_baseline_satisfaction_for_persistence_comparison"] += 1
             continue
-        cluster = baseline[cluster_column]
-        if not cluster or not cluster.isdigit() or int(cluster) <= 0:
-            raise ValueError("A positive documented baseline work group/facility is required")
         if baseline["CONDITION"] not in {"1", "2"}:
             raise ValueError("Unknown study condition")
         group_changes += followup[cluster_column] != cluster
         flags[baseline.get("EXCLUDE", "") or "unflagged"] += 1
         values = {name: _number(baseline[column], column) for name, column in FEATURES.items()}
+        # Preserve the original paired cohort when comparing added information:
+        # extra fields cannot rescue an employee excluded by the six-feature import.
         if all(value is None for value in values.values()):
             exclusions["all_baseline_features_missing"] += 1
             continue
+        if expanded_features:
+            values.update(
+                {name: _number(baseline[column], column) for name, column in EXPANDED_FEATURES.items()}
+            )
         missing_features.update(name for name, value in values.items() if value is None)
         records.append(
             {
@@ -211,19 +244,45 @@ def prepare_dataset(raw_dir: Path, dataset: str) -> tuple[list[dict], dict]:
         "baseline_feature_missing_counts": dict(missing_features),
         "changed_cluster_at_followup": group_changes,
         "baseline_exclude_flag_counts": dict(flags),
-        "feature_sources": FEATURES,
+        "feature_sources": feature_sources,
+        "expanded_features": expanded_features,
+        "feature_domains": {
+            name: [0, 168]
+            if column in {"WM_HPQ1", "WM_HPQ2R"}
+            else [1, 7]
+            if column == "SCWM_BURN"
+            else [1, 5]
+            for name, column in feature_sources.items()
+        },
+        "feature_missing_codes": {
+            name: ["", -4, -7] if column in {"WM_HPQ1", "WM_HPQ2R"} else ["", -8]
+            for name, column in feature_sources.items()
+        },
+        "expanded_feature_directions": {
+            "work_to_family_conflict": "higher_means_greater_work_to_family_conflict",
+            "emotional_burnout": "higher_means_greater_burnout",
+            "work_family_climate": "higher_means_less_pressure_to_sacrifice_family_or_personal_life",
+        }
+        if expanded_features
+        else {},
         "target_column": LABEL,
         "target_definition": "12-month employee-reported mean of WM_JSAT1R, WM_JSAT2R, WM_JSAT3R",
         "target_bounds": [1, 5],
         "target_higher_is_better": True,
         "target_scale": "fractional_three_item_questionnaire_mean_not_five_integer_classes",
-        "baseline_satisfaction_usage": "persistence_baseline_only_not_a_model_feature",
+        "baseline_satisfaction_usage": (
+            "separate_baseline_field_for_persistence_and_explicitly_named_forecast_variants"
+            if expanded_features
+            else "persistence_baseline_only_not_a_model_feature"
+        ),
         "baseline_wave": 1,
         "outcome_wave": 3,
         "nominal_followup_months": 12,
         "cluster_column": cluster_column,
         "live_execution": False,
         "fictional_data": False,
+        "data_partition": "original_train_validation_only" if development_only else "all_eligible_pairs",
+        "original_split_seed": 42,
         "tomo_exclusion_policy": "omit EXCLUDE=1 (not invited) or 2 (not randomized) at baseline",
         "expected_hours_source": "baseline WM_HPQ2R incorporates the documented data-entry correction",
         "limitations": LIMITATIONS,
