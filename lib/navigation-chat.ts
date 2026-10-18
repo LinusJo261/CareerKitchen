@@ -7,7 +7,7 @@ export type NavigationReply = { reply: string; links: NavigationLink[]; version:
 export const MAX_MESSAGE_LENGTH = 2000
 
 const destinations = new Set([
-  '/get-started', '/candidate/profile', '/candidate/opportunities', '/candidate/matches',
+  '/get-started', '/onboarding/candidate', '/candidate/profile', '/candidate/opportunities', '/candidate/matches',
   '/candidate/messages', '/candidate/offers', '/candidate/privacy', '/candidate/evidence',
   '/candidate/interviews', '/employer/vacancies', '/employer/team', '/employer/messages',
   '/employer/offers',

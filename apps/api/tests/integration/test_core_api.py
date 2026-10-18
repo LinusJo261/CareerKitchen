@@ -1,7 +1,20 @@
+from dataclasses import replace
 from datetime import timedelta
 from uuid import uuid4
 
-from app.db.models import DecisionCard, Exposure, MutualMatch, OutboxEvent, PairCycle
+import pytest
+from app.core.errors import AppError
+from app.db.models import (
+    Candidate,
+    CandidateSkill,
+    DecisionCard,
+    Exposure,
+    MutualMatch,
+    OutboxEvent,
+    PairCycle,
+)
+from app.matching.attention import MarketPrices
+from app.matching.reciprocal import ReciprocalFeatures, score_reciprocal
 from app.services import clearing
 from app.services.common import utcnow
 from sqlalchemy import func, select
@@ -179,6 +192,90 @@ def test_reconcile_actual_persistent_heuristic_no_probabilities(market):
     with Session(market.engine) as db:
         cycle = db.scalar(select(PairCycle))
         assert cycle.score_trace["estimate_kind"] == "NONPROBABILISTIC"
+        assert cycle.model_version == "reciprocal-compatibility-v1"
+        assert cycle.score_trace["features"]["candidate_version"] == market.candidate.version
+        exposure = db.scalar(select(Exposure))
+        assert exposure.score_trace == cycle.score_trace
+        assert "experience_alignment" in cycle.score_trace["unknown_features"]
+        assert cycle.score_trace["candidate_fit"] == 1
+
+
+@pytest.mark.parametrize("mutation", ["add", "delete"])
+def test_skill_changes_invalidate_scoring_snapshot_once_and_allow_fresh_issuance(market, mutation):
+    skill_id = None
+    if mutation == "delete":
+        created = market.call(0, "POST", "/candidates/me/skills", {"name": "Python", "level": 3})
+        assert created.status_code == 200, created.text
+        skill_id = created.json()["data"]["id"]
+    before = market.call(0, "GET", "/candidates/me").json()["data"]["version"]
+    features = ReciprocalFeatures(
+        market.candidate.id,
+        market.vacancy.id,
+        before,
+        market.vacancy.version,
+        utcnow().isoformat(),
+        float(mutation == "delete"),
+        1,
+        1,
+        1,
+        True,
+    )
+    trace = score_reciprocal(features, MarketPrices())
+    method, path, body, event = (
+        ("POST", "/candidates/me/skills", {"name": "Python", "level": 3}, "candidate.skill_added")
+        if mutation == "add"
+        else (
+            "DELETE",
+            f"/candidates/me/skills/{skill_id}",
+            {"expected_version": 1},
+            "candidate.skill_removed",
+        )
+    )
+    first = market.call(0, method, path, body, key="skill-version-regression")
+    replay = market.call(0, method, path, body, key="skill-version-regression")
+    assert first.status_code == replay.status_code == 200, (first.text, replay.text)
+    assert first.json() == replay.json()
+    assert replay.headers["Idempotency-Replayed"] == "true"
+    duplicate = market.call(0, method, path, body)
+    assert duplicate.status_code == (409 if mutation == "add" else 404), duplicate.text
+
+    with Session(market.engine) as db:
+        candidate = db.get(Candidate, market.candidate.id)
+        assert candidate.version == before + 1
+        if mutation == "add":
+            assert db.scalar(
+                select(CandidateSkill).where(CandidateSkill.candidate_id == candidate.id)
+            ).confirmed
+        events = list(db.scalars(select(OutboxEvent).where(OutboxEvent.kind == event)))
+        assert len(events) == 1
+        assert events[0].payload["candidate_version"] == candidate.version
+        with pytest.raises(AppError) as error:
+            clearing.issue_first(
+                db,
+                market.actor(2),
+                candidate.id,
+                market.vacancy.id,
+                market.vacancy.version,
+                trace["first_mover"],
+                trace,
+            )
+        assert error.value.code == "VERSION_CONFLICT"
+        assert db.scalar(select(func.count()).select_from(DecisionCard)) == 0
+        assert db.scalar(select(func.count()).select_from(Exposure)) == 0
+        fresh = score_reciprocal(
+            replace(features, candidate_version=candidate.version, employer_skills=float(mutation == "add")),
+            MarketPrices(),
+        )
+        card = clearing.issue_first(
+            db,
+            market.actor(2),
+            candidate.id,
+            market.vacancy.id,
+            market.vacancy.version,
+            fresh["first_mover"],
+            fresh,
+        )
+        assert card.id
 
 
 def test_offer_accepted_is_not_started(market):

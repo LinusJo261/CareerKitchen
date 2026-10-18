@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "target": "joint_reported_satisfaction",
+  "source": {
+    "kind": "paired_direct_ratings",
+    "dataset": "REPLACE_WITH_ACTUAL_PAIRED_RATINGS_DATASET",
+    "release": "REPLACE_WITH_ACTUAL_COLLECTION_RELEASE",
+    "codebook_url": "REPLACE_WITH_DIRECT_RATING_INSTRUMENT_REFERENCE"
+  },
+  "columns": {
+    "person_id": "person_id",
+    "employer_id": "employer_id",
+    "job_started_at": "job_started_at",
+    "feature_as_of": "feature_as_of",
+    "rating_reference_at": "rating_reference_at",
+    "rating_observed_at": "rating_observed_at",
+    "satisfaction": "joint_rating"
+  },
+  "label_order_worst_to_best": ["joint_0", "joint_1", "joint_2", "joint_3", "joint_4"],
+  "label_codes": {
+    "0": "joint_0", "1": "joint_1", "2": "joint_2", "3": "joint_3", "4": "joint_4"
+  },
+  "missing_codes": ["", "-1", "-2", "-3", "-4", "-5"],
+  "features": {
+    "numeric": {
+      "required_skill_coverage": "required_skill_coverage",
+      "preferred_skill_coverage": "preferred_skill_coverage",
+      "relevant_experience_years": "relevant_experience_years",
+      "experience_requirement_coverage": "experience_requirement_coverage",
+      "employer_role_preference_alignment": "employer_role_preference_alignment",
+      "candidate_role_preference_alignment": "candidate_role_preference_alignment",
+      "candidate_work_mode_preference_alignment": "candidate_work_mode_preference_alignment",
+      "candidate_employment_type_preference_alignment": "candidate_employment_type_preference_alignment",
+      "candidate_compensation_preference_alignment": "candidate_compensation_preference_alignment",
+      "candidate_schedule_preference_alignment": "candidate_schedule_preference_alignment"
+    },
+    "categorical": {}
+  },
+  "feature_timing": {
+    "required_skill_coverage": "prehire_or_job_start",
+    "preferred_skill_coverage": "prehire_or_job_start",
+    "relevant_experience_years": "prehire_or_job_start",
+    "experience_requirement_coverage": "prehire_or_job_start",
+    "employer_role_preference_alignment": "prehire_or_job_start",
+    "candidate_role_preference_alignment": "prehire_or_job_start",
+    "candidate_work_mode_preference_alignment": "prehire_or_job_start",
+    "candidate_employment_type_preference_alignment": "prehire_or_job_start",
+    "candidate_compensation_preference_alignment": "prehire_or_job_start",
+    "candidate_schedule_preference_alignment": "prehire_or_job_start"
+  },
+  "followup_months": {"min": 3, "max": 24},
+  "joint_label": {
+    "version": "direct-paired-minimum-v1",
+    "aggregation": "minimum",
+    "employee_rating_column": "employee_rating",
+    "manager_rating_column": "manager_rating"
+  },
+  "rating_collection": {
+    "employee_codes_worst_to_best": ["1", "2", "3", "4", "5"],
+    "manager_codes_worst_to_best": ["1", "2", "3", "4", "5"],
+    "reference_period": "same_month"
+  }
+}

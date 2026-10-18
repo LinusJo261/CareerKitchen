@@ -192,6 +192,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/candidates/me/onboarding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm a reviewed onboarding profile and self-reported skills
+         * @description Explicit user confirmation saves profile preferences and selected skill levels atomically. AI exercises are informal guidance, not independent verification. Existing skills not in the request are preserved. New profiles remain drafts until explicitly activated.
+         */
+        post: operations["confirm_onboarding_v1_candidates_me_onboarding_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/candidates/me/pact/policies": {
         parameters: {
             query?: never;
@@ -858,6 +878,23 @@ export interface paths {
          * @description Returns a Gemini-generated plain-text answer and approved navigation links. Use Authorize with a valid session, supply a unique Idempotency-Key, and explicitly consent to sending the message and optional history to Google Gemini. The answer is in data.reply. No application actions are performed.
          */
         post: operations["navigation_chat_v1_navigation_chat_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/navigation/onboarding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Onboarding Chat */
+        post: operations["onboarding_chat_v1_navigation_onboarding_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2058,6 +2095,13 @@ export interface components {
             /** Version */
             version: number;
         };
+        /** ConfirmedOnboardingSkill */
+        ConfirmedOnboardingSkill: {
+            /** Level */
+            level: number;
+            /** Name */
+            name: string;
+        };
         /** ConsentEvidence */
         ConsentEvidence: {
             /**
@@ -2278,6 +2322,23 @@ export interface components {
             data: components["schemas"]["DecisionCardOut"][];
             meta?: components["schemas"]["Meta"];
         };
+        /** DraftSkill */
+        DraftSkill: {
+            /**
+             * Assessment Note
+             * @default
+             */
+            assessment_note: string;
+            /**
+             * Evidence
+             * @default
+             */
+            evidence: string;
+            /** Level */
+            level?: number | null;
+            /** Name */
+            name: string;
+        };
         /** EducationInput */
         EducationInput: {
             /**
@@ -2485,6 +2546,16 @@ export interface components {
         /** Envelope[OfferOut] */
         Envelope_OfferOut_: {
             data: components["schemas"]["OfferOut"];
+            meta?: components["schemas"]["Meta"];
+        };
+        /** Envelope[OnboardingChatOut] */
+        Envelope_OnboardingChatOut_: {
+            data: components["schemas"]["OnboardingChatOut"];
+            meta?: components["schemas"]["Meta"];
+        };
+        /** Envelope[OnboardingConfirmationOut] */
+        Envelope_OnboardingConfirmationOut_: {
+            data: components["schemas"]["OnboardingConfirmationOut"];
             meta?: components["schemas"]["Meta"];
         };
         /** Envelope[OperationOut] */
@@ -3193,6 +3264,108 @@ export interface components {
             terms: string;
             /** Version */
             version?: number | null;
+        };
+        /** OnboardingChatIn */
+        OnboardingChatIn: {
+            /**
+             * Consent To Gemini
+             * @constant
+             */
+            consent_to_gemini: true;
+            draft?: components["schemas"]["OnboardingDraft"];
+            /** History */
+            history?: components["schemas"]["NavigationTurn"][];
+            /** Message */
+            message: string;
+        };
+        /** OnboardingChatOut */
+        OnboardingChatOut: {
+            draft: components["schemas"]["OnboardingDraft"];
+            /** Missing Fields */
+            missing_fields: ("headline" | "region" | "role_families" | "employment_types" | "work_modes" | "locations" | "compensation_floor" | "currency" | "compensation_period" | "skills" | "summary" | "available_from" | "available_until" | "compensation" | "availability" | "review")[];
+            question: components["schemas"]["OnboardingQuestion"];
+            /** Ready For Review */
+            ready_for_review: boolean;
+            /** Reply */
+            reply: string;
+            /**
+             * Version
+             * @default 1
+             * @constant
+             */
+            version: 1;
+        };
+        /** OnboardingConfirmationIn */
+        OnboardingConfirmationIn: {
+            profile: components["schemas"]["CandidateInput"];
+            /** Skills */
+            skills: components["schemas"]["ConfirmedOnboardingSkill"][];
+            /**
+             * Skills Confirmed
+             * @constant
+             */
+            skills_confirmed: true;
+        };
+        /** OnboardingConfirmationOut */
+        OnboardingConfirmationOut: {
+            candidate: components["schemas"]["CandidateOut"];
+            /** Skills */
+            skills: components["schemas"]["SkillOut"][];
+            /** Version */
+            version: number;
+        };
+        /** OnboardingDraft */
+        OnboardingDraft: {
+            /** Available From */
+            available_from?: string | null;
+            /** Available Until */
+            available_until?: string | null;
+            /** Compensation Floor */
+            compensation_floor?: string | null;
+            /** Compensation Period */
+            compensation_period?: ("ANNUAL" | "MONTHLY" | "HOURLY") | null;
+            /** Currency */
+            currency?: string | null;
+            /** Employment Types */
+            employment_types?: ("FULL_TIME" | "PART_TIME" | "CONTRACT" | "INTERNSHIP" | "TEMPORARY")[];
+            /** Headline */
+            headline?: string | null;
+            /** Locations */
+            locations?: string[];
+            /** Region */
+            region?: string | null;
+            /** Role Families */
+            role_families?: string[];
+            /** Skills */
+            skills?: components["schemas"]["DraftSkill"][];
+            /** Skipped Fields */
+            skipped_fields?: string[];
+            /**
+             * Summary
+             * @default
+             */
+            summary: string;
+            /** Work Modes */
+            work_modes?: ("REMOTE" | "HYBRID" | "ONSITE")[];
+        };
+        /** OnboardingQuestion */
+        OnboardingQuestion: {
+            /** Choices */
+            choices?: string[];
+            /**
+             * Field
+             * @enum {string}
+             */
+            field: "headline" | "region" | "role_families" | "employment_types" | "work_modes" | "locations" | "compensation_floor" | "currency" | "compensation_period" | "skills" | "summary" | "available_from" | "available_until" | "compensation" | "availability" | "review";
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "preference" | "skill_probe" | "clarification" | "review";
+            /** Prompt */
+            prompt: string;
+            /** Skill */
+            skill?: string | null;
         };
         /** OperationOut */
         OperationOut: {
@@ -5625,6 +5798,132 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_list_MatchOut__"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Content Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unsupported Media Type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    confirm_onboarding_v1_candidates_me_onboarding_post: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Persisted for seven days; same actor/route/key with a different request returns 409 */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OnboardingConfirmationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_OnboardingConfirmationOut_"];
                 };
             };
             /** @description Unauthorized */
@@ -11141,6 +11440,132 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_NavigationChatOut_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Content Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unsupported Media Type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    onboarding_chat_v1_navigation_onboarding_post: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Persisted for seven days; same actor/route/key with a different request returns 409 */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OnboardingChatIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_OnboardingChatOut_"];
                 };
             };
             /** @description Unauthorized */

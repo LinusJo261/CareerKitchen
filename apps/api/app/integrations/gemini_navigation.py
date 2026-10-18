@@ -13,6 +13,11 @@ from pydantic import BaseModel, ConfigDict, Field
 
 # Grounding is public. These destinations exist in the supplied website.
 TOPICS = {
+    "onboarding": (
+        "Find your fit with Career Chef",
+        "/onboarding/candidate",
+        "An optional conversational interview narrows job preferences and offers skill-specific practice questions. Review and confirm the editable profile and self-reported skill levels before saving.",
+    ),
     "profile": (
         "Candidate profile",
         "/candidate/profile",
@@ -57,6 +62,7 @@ TOPICS = {
 }
 
 Topic = Literal[
+    "onboarding",
     "profile",
     "opportunities",
     "matches",

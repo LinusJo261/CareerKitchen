@@ -240,11 +240,20 @@ def delete_skill(skill_id: UUID, data: s.VersionInput, db: Session = DB, actor: 
 
     candidate = require_candidate(db, actor)
     lock_scopes(db, f"candidate:{candidate.id}")
+    candidate = load(db, Candidate, candidate.id)
     row = load(db, CandidateSkill, str(skill_id))
     if row.candidate_id != candidate.id:
         raise AppError(403, "FORBIDDEN", "Skill belongs to another candidate")
     require_version(row, data.expected_version)
-    emit(db, actor, "candidate.skill_removed", row)
+    if row.confirmed:
+        candidate.version += 1
+    emit(
+        db,
+        actor,
+        "candidate.skill_removed",
+        row,
+        payload={"candidate_id": candidate.id, "candidate_version": candidate.version},
+    )
     db.delete(row)
     return {"data": {"status": "REMOVED"}}
 

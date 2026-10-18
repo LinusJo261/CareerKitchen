@@ -80,6 +80,8 @@ export async function workspaceCommand(
   const change = async (path: string, body?: unknown, method = 'POST') =>
     (await api.request(path, { method, body, key })).data
   switch (action) {
+    case 'candidate.onboarding.confirm':
+      return change('/v1/candidates/me/onboarding', p)
     case 'candidate.save': {
       if (p.patch && typeof p.patch === 'object') {
         if (!p.profile || typeof p.profile !== 'object')

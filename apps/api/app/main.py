@@ -26,6 +26,8 @@ OPENAPI_STATUS_DESCRIPTIONS = {413: "Content Too Large", 422: "Unprocessable Con
 def create_app(settings=None, engine=None) -> FastAPI:
     from app.api.core import router
     from app.api.navigation import router as navigation_router
+    from app.api.onboarding import router as onboarding_router
+    from app.api.onboarding_confirmation import router as onboarding_confirmation_router
     from app.api.pact import router as pact_router
     from app.api.research import router as research_router
 
@@ -156,6 +158,8 @@ def create_app(settings=None, engine=None) -> FastAPI:
     app.include_router(pact_router, prefix="/v1")
     app.include_router(research_router, prefix="/v1")
     app.include_router(navigation_router, prefix="/v1")
+    app.include_router(onboarding_router, prefix="/v1")
+    app.include_router(onboarding_confirmation_router, prefix="/v1")
     # OpenAPI represents every authenticated route and write idempotency requirement.
     original_openapi = app.openapi
 

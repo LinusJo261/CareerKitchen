@@ -88,6 +88,7 @@ export function useWorkspace() {
     action: string,
     payload: Record<string, unknown> = {},
     message?: string,
+    onError?: (cause: Error) => void,
   ) {
     if (busy.current) return false;
     busy.current = true;
@@ -134,6 +135,11 @@ export function useWorkspace() {
       if (message) toast.success(message);
       return true;
     } catch (error) {
+      // Optional inline feedback must not interfere with the existing toast or
+      // turn a handled server failure into an unhandled event-handler rejection.
+      try {
+        onError?.(error instanceof Error ? error : new Error("The change could not be saved."));
+      } catch {}
       toast.error(
         error instanceof Error
           ? error.message

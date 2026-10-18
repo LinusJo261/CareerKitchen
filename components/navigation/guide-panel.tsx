@@ -64,6 +64,7 @@ export function GuidePanel({ onNavigate, onAskAI }: { onNavigate?: () => void; o
         )}
       </div>
       <footer className="shrink-0 border-t bg-background px-5 py-4">
+        <Link href="/onboarding/candidate" onClick={onNavigate} className="mb-3 flex min-h-10 items-center justify-between rounded-md border px-3 text-sm font-medium">Build my profile with Career Chef<ArrowRight aria-hidden="true" className="size-4" /></Link>
         <Button type="button" variant="secondary" className="h-10 w-full" onClick={onAskAI}><Sparkles aria-hidden="true" className="size-4" />Ask Chef with AI<ArrowRight aria-hidden="true" className="ml-auto size-4" /></Button>
         <p className="mt-2 text-center text-[10px] leading-relaxed text-muted-foreground">Quick guides are written guidance. No AI request is sent.</p>
       </footer>
