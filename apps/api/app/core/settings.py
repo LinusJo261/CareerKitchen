@@ -39,7 +39,12 @@ class Settings(BaseSettings):
         "http://127.0.0.1:8000",
     ]
     trusted_hosts: Annotated[list[str], NoDecode] = ["localhost", "127.0.0.1", "testserver"]
-    feature_mode: Literal["BASELINE", "SHADOW"] = "SHADOW"
+    feature_mode: Literal["LIVE", "BASELINE", "SHADOW"] = "LIVE"
+    sample_demo_enabled: bool = False
+    sample_api_url: str = Field(
+        default="http://127.0.0.1:8001", validation_alias="CAREER_KITCHEN_SAMPLE_API_URL"
+    )
+    matching_model_max_age_days: int = Field(default=90, ge=1, le=3650)
     storage_backend: Literal["local", "supabase"] = "local"
     storage_bucket: str = "career-kitchen-private"
     local_storage_dir: Path = Path(".local/storage")
@@ -86,6 +91,10 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def check_security(self) -> "Settings":
+        if self.sample_demo_enabled and (
+            self.environment not in {"development", "test"} or self.auth_mode != "local"
+        ):
+            raise ValueError("Sample demo mode requires explicit local development authentication")
         if "*" in self.cors_origins or "*" in self.trusted_hosts:
             raise ValueError("Explicit CORS origins and trusted hosts are required")
         if self.auth_mode == "local":

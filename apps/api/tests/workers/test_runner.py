@@ -180,7 +180,10 @@ def test_reminders_bounded_to_two_and_do_not_repeat_same_window(worker_market):
         assert len(list(db.scalars(select(OutboxEvent).where(OutboxEvent.kind == "decision.expiring")))) == 2
 
 
-def test_expired_card_releases_existing_waiting_interest_without_revoking_commitments(worker_market):
+@pytest.mark.parametrize("missing_consent", [None, "terms_accepted", "privacy_accepted", "confirmed_at"])
+def test_expired_card_releases_existing_waiting_interest_without_revoking_commitments(
+    worker_market, missing_consent
+):
     m = worker_market
     card_id = issue(m, "EMPLOYER")
     with m.factory.begin() as db:
@@ -196,6 +199,9 @@ def test_expired_card_releases_existing_waiting_interest_without_revoking_commit
             role_families=["ENGINEERING"],
             employment_types=["FULL_TIME"],
             work_modes=["REMOTE"],
+            terms_accepted=True,
+            privacy_accepted=True,
+            confirmed_at=utcnow(),
         )
         db.add(candidate)
         db.flush()
@@ -211,11 +217,20 @@ def test_expired_card_releases_existing_waiting_interest_without_revoking_commit
         db.flush()
         db.add(WaitingItem(pair_cycle_id=pair.id, side="EMPLOYER", expires_at=utcnow() + timedelta(days=1)))
         pair_id = pair.id
-    assert runner.maintenance(m.factory)[:2] == (1, 1)
+        if missing_consent:
+            # Consent may be withdrawn after the first decision, before release.
+            setattr(candidate, missing_consent, None if missing_consent == "confirmed_at" else False)
+    expected_releases = 0 if missing_consent else 1
+    assert runner.maintenance(m.factory)[:2] == (1, expected_releases)
     with m.factory() as db:
-        assert db.get(PairCycle, pair_id).state == "EMPLOYER_DECISION_REQUIRED"
-        assert clearing.active_count(db, vacancy_id=m.vacancy_id) == 1
-        assert db.scalar(select(WaitingItem)).state == "RELEASED"
+        pair = db.get(PairCycle, pair_id)
+        assert pair.state == ("CLOSED_EXPIRED" if missing_consent else "EMPLOYER_DECISION_REQUIRED")
+        assert pair.candidate_interested_at is not None
+        assert clearing.active_count(db, vacancy_id=m.vacancy_id) == expected_releases
+        assert db.scalar(select(WaitingItem)).state == ("CLOSED" if missing_consent else "RELEASED")
+        assert count(db, DecisionCard) == 1 + expected_releases
+        assert count(db, Exposure) == 1 + expected_releases
+    assert runner.maintenance(m.factory) == (0, 0, 0)
 
 
 def test_shadow_after_commit_persists_diagnostics_without_changing_live_state(worker_market):
@@ -237,6 +252,12 @@ def test_shadow_after_commit_persists_diagnostics_without_changing_live_state(wo
         assert run.side_effect_count == 0
         assert run.diagnostics["certification_state"] == "CANNOT_CERTIFY"
         assert run.diagnostics["model_coverage"] == 0
+        assert run.diagnostics["planner_version"] == "sparse-portfolio-v2"
+        assert run.diagnostics["solver"] == "SPARSE_RESIDUAL_ASSIGNMENT"
+        assert run.diagnostics["search_complete"] is True
+        assert run.diagnostics["objective"] == 1
+        assert run.diagnostics["operation_count"] > 0
+        assert run.diagnostics["snapshot_scope"] == {"vacancy_limit": 20, "candidate_limit": 100}
 
 
 def test_shadow_failure_never_reverts_baseline_commit(worker_market, monkeypatch):

@@ -336,7 +336,7 @@ export function CandidateCard({ candidate }: { candidate: CandidateProfile }) {
         decision_token: card.decision_token,
       },
       interested
-        ? 'Interest shared. A mutual response is still required.'
+        ? 'Interest shared. Mutual introductions appear in your pipeline.'
         : 'Candidate passed for this role.',
     )
     if (saved) setOpen(false)

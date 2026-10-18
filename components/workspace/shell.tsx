@@ -13,6 +13,7 @@ import {
   LoaderCircle,
 } from 'lucide-react'
 import { Brand } from '@/components/brand'
+import { DemoModeBar } from '@/components/demo-mode'
 import { Button } from '@/components/ui/button'
 import {
   Sheet,
@@ -365,12 +366,16 @@ export function Shell({
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
-                  <DropdownMenuItem asChild>
-                    <Link href={employer ? '/candidate' : '/employer/pass'}>
-                      <ArrowLeftRight />
-                      {employer ? 'Candidate workspace' : 'Employer workspace'}
-                    </Link>
-                  </DropdownMenuItem>
+                  {data.context.mode !== 'sample' && (
+                    <DropdownMenuItem asChild>
+                      <Link href={employer ? '/candidate' : '/employer/pass'}>
+                        <ArrowLeftRight />
+                        {employer
+                          ? 'Candidate workspace'
+                          : 'Employer workspace'}
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem
                     onSelect={() =>
                       setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')
@@ -407,11 +412,15 @@ export function Shell({
           </div>
         </div>
       </header>
-      <p className="flex items-center justify-center gap-2 border-b bg-accent px-4 py-1.5 text-center font-mono text-[10px] tracking-[0.12em] text-accent-foreground uppercase">
-        {data.context.mode === 'local'
-          ? 'Local development service · Account data is stored by the backend'
-          : 'Connected workspace · Changes are saved to your account'}
-      </p>
+      {data.context.mode === 'sample' ? (
+        <DemoModeBar role={role} />
+      ) : (
+        <p className="flex items-center justify-center gap-2 border-b bg-accent px-4 py-1.5 text-center font-mono text-[10px] tracking-[0.12em] text-accent-foreground uppercase">
+          {data.context.mode === 'local'
+            ? 'Local development service · Account data is stored by the backend'
+            : 'Connected workspace · Changes are saved to your account'}
+        </p>
+      )}
       {data.warnings.length > 0 && (
         <div
           className="border-b bg-muted px-5 py-3 text-sm text-muted-foreground"

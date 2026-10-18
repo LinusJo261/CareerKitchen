@@ -232,6 +232,7 @@ def add_skill(db: Session, actor: Actor, data) -> dict:
     candidate = require_candidate(db, actor)
     name = data.name.casefold()
     lock_scopes(db, f"candidate:{candidate.id}", f"skill:{name}")
+    candidate = load(db, Candidate, candidate.id)
     skill = db.scalar(select(Skill).where(Skill.name == name))
     if not skill:
         skill = Skill(name=name)
@@ -243,9 +244,16 @@ def add_skill(db: Session, actor: Actor, data) -> dict:
         )
     ):
         raise AppError(409, "SKILL_EXISTS", "This skill is already on the profile")
-    assertion = CandidateSkill(candidate_id=candidate.id, skill_id=skill.id, level=data.level)
+    assertion = CandidateSkill(candidate_id=candidate.id, skill_id=skill.id, level=data.level, confirmed=True)
     db.add(assertion)
-    emit(db, actor, "candidate.skill_added", assertion)
+    candidate.version += 1
+    emit(
+        db,
+        actor,
+        "candidate.skill_added",
+        assertion,
+        payload={"candidate_id": candidate.id, "candidate_version": candidate.version},
+    )
     return {
         "id": assertion.id,
         "skill_id": skill.id,

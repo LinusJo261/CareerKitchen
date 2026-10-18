@@ -25,6 +25,9 @@ OPENAPI_STATUS_DESCRIPTIONS = {413: "Content Too Large", 422: "Unprocessable Con
 
 def create_app(settings=None, engine=None) -> FastAPI:
     from app.api.core import router
+    from app.api.demo import router as demo_router
+    from app.api.demo_catalog import router as demo_catalog_router
+    from app.api.learning import router as learning_router
     from app.api.navigation import router as navigation_router
     from app.api.pact import router as pact_router
     from app.api.research import router as research_router
@@ -33,7 +36,7 @@ def create_app(settings=None, engine=None) -> FastAPI:
     app = FastAPI(
         title="Career Kitchen API",
         version="0.1.0",
-        description="Persistent reciprocal hiring API. Readiness, mutual interest, accepted offers and verified starts are separate. Experimental plans are read-only and cannot certify reliability.",
+        description="Persistent reciprocal hiring API with live attention optimization and validated, consented outcome learning. Readiness, mutual interest, accepted offers and verified starts are separate. Scenario research remains read-only and cannot certify reliability.",
     )
     app.state.settings = settings
     app.state.engine = engine or create_engine(
@@ -155,6 +158,9 @@ def create_app(settings=None, engine=None) -> FastAPI:
             raise AppError(503, "NOT_READY", "Database schema or persistent queue is unavailable") from exc
 
     app.include_router(router, prefix="/v1")
+    app.include_router(demo_router, prefix="/v1")
+    app.include_router(demo_catalog_router, prefix="/v1")
+    app.include_router(learning_router, prefix="/v1")
     app.include_router(pact_router, prefix="/v1")
     app.include_router(research_router, prefix="/v1")
     app.include_router(navigation_router, prefix="/v1")
@@ -171,7 +177,7 @@ def create_app(settings=None, engine=None) -> FastAPI:
             "bearerFormat": "JWT",
         }
         for path, operations in schema["paths"].items():
-            if path in {"/v1/health", "/v1/ready"}:
+            if path in {"/v1/health", "/v1/ready", "/v1/demo/status"}:
                 continue
             for method, operation in operations.items():
                 if method not in {"get", "post", "put", "patch", "delete"}:

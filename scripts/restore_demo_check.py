@@ -96,7 +96,9 @@ def run(pg_bin: str | None = None) -> None:
                 for table in ["users", "candidate_profiles", "organizations", "vacancies"]
             )
             assert actual == expected
-            assert conn.scalar(text("SELECT version_num FROM alembic_version")) == "0005_congestion_prices"
+            assert (
+                conn.scalar(text("SELECT version_num FROM alembic_version")) == "0007_merge_demo_onboarding"
+            )
             assert (
                 conn.scalar(text("SELECT count(*) FROM pg_trigger WHERE tgname='reject_event_mutation'")) == 3
             )

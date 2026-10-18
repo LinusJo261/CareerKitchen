@@ -73,6 +73,8 @@ function fixture({
   };
   const session = {
     authMode: () => "supabase",
+    sampleDemoAvailable: () => false,
+    clearFictionalSession: async () => {},
     supabaseServer: async () => supabase,
   };
   const fetch = async (url, options) => {
@@ -249,6 +251,7 @@ test(
       .GET(new Request(`${SITE}/api/auth/config`));
     assert.deepEqual(await response.json(), {
       mode: "supabase",
+      sampleDemo: false,
       linkedin: "unavailable",
     });
     assert.equal(f.oauthCalls.length, 0);

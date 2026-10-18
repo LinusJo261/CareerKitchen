@@ -35,7 +35,7 @@ const views: { value: View; label: string }[] = [
 ]
 
 const ticketNo = (id: string) =>
-  `#${(id.replace(/\D/g, '') || '0').padStart(3, '0')}`
+  `#${(id.replace(/\D/g, '') || '0').slice(-6).padStart(3, '0')}`
 
 export function TodaysMenu() {
   const { data, execute, isLoading } = useWorkspace()

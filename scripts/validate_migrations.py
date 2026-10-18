@@ -124,7 +124,7 @@ def main() -> None:
             assert connection.scalar(text("SELECT count(*) FROM users")) == 1
             assert (
                 connection.scalar(text("SELECT version_num FROM alembic_version"))
-                == "0006_candidate_onboarding"
+                == "0007_merge_demo_onboarding"
             )
             assert (
                 connection.execute(

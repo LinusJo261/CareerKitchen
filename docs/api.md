@@ -87,7 +87,7 @@ Pydantic before commit; an invalid response rolls back the transaction.
 
 <!-- BEGIN GENERATED ENDPOINT INVENTORY -->
 
-112 operations across 99 paths.
+122 operations across 106 paths.
 
 | Method | Path | Request schema | Success schema |
 |---|---|---|---|
@@ -102,6 +102,8 @@ Pydantic before commit; an invalid response rolls back the transaction.
 | DELETE | `/v1/candidates/me/blocks/{org_id}` | — | 200: Envelope_StatusOut_ |
 | GET | `/v1/candidates/me/decisions` | — | 200: DecisionInbox |
 | GET | `/v1/candidates/me/history` | — | 200: PageEnvelope_PairHistoryOut_ |
+| GET | `/v1/candidates/me/learning-consent` | — | 200: Envelope_LearningConsentOut_ |
+| PUT | `/v1/candidates/me/learning-consent` | LearningConsentInput | 200: Envelope_LearningConsentOut_ |
 | GET | `/v1/candidates/me/matches` | — | 200: Envelope_list_MatchOut__ |
 | GET | `/v1/candidates/me/pact/policies` | — | 200: Envelope_list_PolicyOut__ |
 | POST | `/v1/candidates/me/pause` | VersionInput | 200: Envelope_CandidateOut_ |
@@ -120,6 +122,9 @@ Pydantic before commit; an invalid response rolls back the transaction.
 | GET | `/v1/decisions/{decision_id}` | — | 200: Envelope_DecisionCardOut_ |
 | POST | `/v1/decisions/{decision_id}/interested` | DecisionAnswerInput | 200: Envelope_DecisionAnswerOut_ |
 | POST | `/v1/decisions/{decision_id}/pass` | DecisionAnswerInput | 200: Envelope_DecisionAnswerOut_ |
+| GET | `/v1/demo/catalog` | — | 200: Envelope_SampleCatalog_ |
+| POST | `/v1/demo/reconcile` | ReconcileInput | 200: Envelope_DemoAllocation_ |
+| GET | `/v1/demo/status` | — | 200: Envelope_DemoStatus_ |
 | POST | `/v1/evidence/claims` | CreateClaim | 201: Envelope_ClaimOut_ |
 | GET | `/v1/evidence/claims/me` | — | 200: Envelope_list_ClaimOut__ |
 | GET | `/v1/evidence/claims/{claim_id}` | — | 200: Envelope_ClaimOut_ |
@@ -129,6 +134,9 @@ Pydantic before commit; an invalid response rolls back the transaction.
 | POST | `/v1/evidence/claims/{claim_id}/verify` | VerifyClaim | 200: Envelope_ClaimOut_ |
 | GET | `/v1/health` | — | 200: Envelope_HealthOut_ |
 | POST | `/v1/internal/decisions/issue` | IssueCardInput | 200: Envelope_IssuedDecisionOut_ |
+| GET | `/v1/internal/matching/model` | — | 200: Envelope_MatchingModelOut_ |
+| POST | `/v1/internal/matching/model` | MatchingModelInput | 200: Envelope_MatchingModelOut_ |
+| POST | `/v1/internal/matching/model/retire` | MatchingModelRetireInput | 200: Envelope_MatchingModelOut_ |
 | POST | `/v1/internal/reconcile` | — | 200: Envelope_ReconcileOut_ |
 | POST | `/v1/internal/shadow/replay` | ReplayInput | 200: Envelope_ReplayOutput_ |
 | GET | `/v1/internal/shadow/runs` | — | 200: Envelope_list_ShadowRunOut__ |
@@ -161,6 +169,8 @@ Pydantic before commit; an invalid response rolls back the transaction.
 | GET | `/v1/organizations/{org_id}` | — | 200: Envelope_OrganizationOut_ |
 | PATCH | `/v1/organizations/{org_id}` | OrganizationEditInput | 200: Envelope_OrganizationOut_ |
 | GET | `/v1/organizations/{org_id}/billing` | — | 200: Envelope_BillingOut_ |
+| GET | `/v1/organizations/{org_id}/learning-consent` | — | 200: Envelope_LearningConsentOut_ |
+| PUT | `/v1/organizations/{org_id}/learning-consent` | LearningConsentInput | 200: Envelope_LearningConsentOut_ |
 | GET | `/v1/organizations/{org_id}/members` | — | 200: Envelope_list_MemberOut__ |
 | POST | `/v1/organizations/{org_id}/members/approve` | MemberGrantInput | 200: Envelope_MemberOut_ |
 | POST | `/v1/organizations/{org_id}/members/invite` | InviteInput | 200: Envelope_InvitationOut_ |

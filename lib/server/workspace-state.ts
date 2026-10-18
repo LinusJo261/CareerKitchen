@@ -55,6 +55,7 @@ const decodeText = (value: string) =>
 function vacancyView(
   row: ApiSchema['VacancyOut'],
   organizations: ApiSchema['OrganizationOut'][],
+  sample = false,
 ): Vacancy {
   const org = organizations.find((x) => x.id === row.org_id)
   return {
@@ -64,15 +65,18 @@ function vacancyView(
     termsHash: row.terms_hash,
     title: row.title,
     company: row.organization_name || org?.display_name || 'Employer',
-    salary: money(
-      row.pay_min,
-      row.pay_max,
-      row.currency,
-      row.compensation_period,
-    ),
+    salary:
+      sample && Number(row.pay_min) === 0 && Number(row.pay_max) === 0
+        ? 'Compensation not specified'
+        : money(
+            row.pay_min,
+            row.pay_max,
+            row.currency,
+            row.compensation_period,
+          ),
     location: row.location_region || 'Remote',
     arrangement: human(row.work_mode),
-    skills: row.requirements.map((x) => x.description),
+    skills: row.requirements.map((x) => (sample ? x.key : x.description)),
     summary: row.description,
     deadline: date(row.deadline_at),
     verified: org?.verification_state === 'VERIFIED',
@@ -89,7 +93,7 @@ function vacancyView(
       .map((x) => x.description),
     preferred: row.requirements
       .filter((x) => x.kind === 'PREFERENCE')
-      .map((x) => x.description),
+      .map((x) => (sample ? x.key : x.description)),
     startWindow: `${date(row.start_from)} – ${date(row.start_until)}`,
   }
 }
@@ -105,7 +109,13 @@ export async function workspaceState(
   let candidateWaiting: ApiSchema['WaitingOut'][] = []
   state.session = await api.get<ApiSchema['IdentityOut']>('/v1/sessions/me')
   state.context.mode = mode
-  const [candidate, orgs, notificationPrefs, notifications, privacyExport] =
+  if (mode === 'sample') {
+    state.context.sampleDemo =
+      await api.get<NonNullable<WorkspaceState['context']['sampleDemo']>>(
+        '/v1/demo/status',
+      )
+  }
+  const [candidate, allOrgs, notificationPrefs, notifications, privacyExport] =
     await Promise.all([
       api.optional<ApiSchema['CandidateOut'] | null>(
         '/v1/candidates/me',
@@ -123,6 +133,14 @@ export async function workspaceState(
         [404],
       ),
     ])
+  // The full sample catalogue is paginated separately. Keep the interactive
+  // employer workspace focused on the vacancies used by the live demonstration.
+  const orgs =
+    mode === 'sample'
+      ? allOrgs.filter(
+          (org) => org.id === state.context.sampleDemo?.organization_id,
+        )
+      : allOrgs
   b.candidate = candidate
   b.organizations = orgs
   b.notificationPreferences = notificationPrefs
@@ -140,7 +158,13 @@ export async function workspaceState(
         ),
       ),
     )
-    b.vacancies = vacancies.flat()
+    b.vacancies = vacancies
+      .flat()
+      .filter(
+        (vacancy) =>
+          mode !== 'sample' ||
+          state.context.sampleDemo?.vacancy_ids.includes(vacancy.id),
+      )
     const policies = await Promise.all(
       orgs.map((org) =>
         api.optional<ApiSchema['PolicyOut'][]>(
@@ -160,7 +184,10 @@ export async function workspaceState(
             )
             .catch((error) => {
               if (error.status === 403)
-                return { data: [], capacity: { used: 0, maximum: vacancy.cap } }
+                return {
+                  data: [],
+                  capacity: { used: 0, maximum: vacancy.cap },
+                }
               throw error
             }),
           api.optional<ApiSchema['MatchOut'][]>(
@@ -257,13 +284,15 @@ export async function workspaceState(
     })
     b.vacancies = [...known.values()]
   }
-  state.vacancies = b.vacancies.map((x) => vacancyView(x, orgs))
+  state.vacancies = b.vacancies.map((x) =>
+    vacancyView(x, orgs, mode === 'sample'),
+  )
   if (candidate)
     state.profile = {
       id: candidate.id,
       version: candidate.version,
       state: candidate.state,
-      name: candidate.display_name || state.session.email,
+      name: mode === 'sample' ? 'Sample applicant' : candidate.display_name || state.session.email,
       title: candidate.headline,
       summary: candidate.summary,
       location: candidate.region,
@@ -296,7 +325,7 @@ export async function workspaceState(
       domain: org.domain,
     }
   state.opportunities = b.candidateDecisions.map((card) => ({
-    ...vacancyView(card.vacancy, orgs),
+    ...vacancyView(card.vacancy, orgs, mode === 'sample'),
     decisionId: card.id,
     cycleVersion: card.cycle_version,
     decisionToken: card.decision_token,
@@ -311,7 +340,7 @@ export async function workspaceState(
     const vacancy = b.vacancies.find((x) => x.id === waiting.vacancy_id)
     if (vacancy && !currentRoles.has(vacancy.id)) {
       state.opportunities.push({
-        ...vacancyView(vacancy, orgs),
+        ...vacancyView(vacancy, orgs, mode === 'sample'),
         reason:
           'Your interest is recorded. Awaiting the employer’s separate decision.',
       })
@@ -327,7 +356,7 @@ export async function workspaceState(
       !currentRoles.has(vacancy.id)
     ) {
       state.opportunities.push({
-        ...vacancyView(vacancy, orgs),
+        ...vacancyView(vacancy, orgs, mode === 'sample'),
         reason: 'This introduction was passed. Your response is recorded.',
       })
       state.decisions[vacancy.id] = 'passed'

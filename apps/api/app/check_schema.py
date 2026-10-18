@@ -3,7 +3,7 @@
 from sqlalchemy import Engine, text
 from sqlalchemy.exc import SQLAlchemyError
 
-EXPECTED_REVISION = "0006_candidate_onboarding"
+EXPECTED_REVISION = "0007_merge_demo_onboarding"
 
 
 def check_schema(engine: Engine) -> None:

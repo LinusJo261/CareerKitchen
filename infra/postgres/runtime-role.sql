@@ -70,6 +70,9 @@ BEGIN
         'interview_events',
         'interview_proposals',
         'market_prices',
+        'matching_learning_state',
+        'matching_models',
+        'matching_observations',
         'match_attachments',
         'match_messages',
         'mutual_matches',
@@ -110,7 +113,7 @@ BEGIN
         EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', table_name);
         EXECUTE format('REVOKE ALL ON TABLE public.%I FROM career_kitchen_backend', table_name);
         EXECUTE format('REVOKE ALL ON TABLE public.%I FROM PUBLIC', table_name);
-        IF table_name IN ('audit_events', 'exposure_events', 'process_stage_events') THEN
+        IF table_name IN ('audit_events', 'exposure_events', 'process_stage_events', 'matching_observations') THEN
             EXECUTE format('GRANT SELECT, INSERT ON TABLE public.%I TO career_kitchen_backend', table_name);
         ELSE
             EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.%I TO career_kitchen_backend', table_name);

@@ -28,7 +28,7 @@ def test_error_response_descriptions_are_stable_with_legacy_http_status_phrases(
     application = create_app()
     try:
         for path, methods in application.openapi()["paths"].items():
-            if path in {"/v1/health", "/v1/ready"}:
+            if path in {"/v1/health", "/v1/ready", "/v1/demo/status"}:
                 continue
             for method, operation in methods.items():
                 if method not in METHODS:
@@ -46,7 +46,7 @@ def test_all_business_operations_document_bearer_and_mutation_idempotency():
     application = create_app()
     try:
         for path, methods in application.openapi()["paths"].items():
-            if path in {"/v1/health", "/v1/ready"}:
+            if path in {"/v1/health", "/v1/ready", "/v1/demo/status"}:
                 continue
             for method, operation in methods.items():
                 if method not in METHODS:
@@ -81,5 +81,17 @@ def test_every_success_response_has_a_concrete_schema_and_downloads_are_binary()
                         code.startswith("2")
                         for code in application.openapi()["paths"][route.path]["post"]["responses"]
                     )
+    finally:
+        application.state.engine.dispose()
+
+
+def test_demo_status_is_public_but_demo_market_requires_authentication():
+    application = create_app()
+    try:
+        paths = application.openapi()["paths"]
+        assert not paths["/v1/demo/status"]["get"].get("security")
+        for path in ("/v1/demo/catalog", "/v1/demo/reconcile"):
+            for operation in paths[path].values():
+                assert operation["security"] == [{"SupabaseBearer": []}]
     finally:
         application.state.engine.dispose()

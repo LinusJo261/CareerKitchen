@@ -22,7 +22,7 @@ function sessionModule(auth, options = {}) {
     }).outputText;
     const resolve = (name) => {
       if (name === "next/headers")
-        return { cookies: async () => ({ getAll: () => [], set: () => {} }) };
+        return { cookies: async () => ({ get: () => undefined, getAll: () => [], set: () => {} }) };
       if (name === "@supabase/ssr")
         return {
           createServerClient: (...args) => {

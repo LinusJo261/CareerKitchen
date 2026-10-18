@@ -1,0 +1,6 @@
+# Optional CPU text-embedding experiment only; never API/worker dependencies.
+# Use a separate supported Python environment (for example Python 3.12), because
+# the main research environment's Python 3.15 may not have compatible torch wheels.
+numpy>=2,<3
+sentence-transformers>=5,<6
+safetensors>=0.6,<1

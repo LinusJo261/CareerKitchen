@@ -8,12 +8,14 @@ import {
 import {
   authMode,
   clearFictionalSession,
+  hasSampleSession,
   supabaseServer,
 } from '@/lib/server/session'
 import { backendFor } from '@/lib/server/backend'
 export async function POST(request: Request) {
   try {
     assertSameOrigin(request)
+    const sample = await hasSampleSession()
     try {
       const backend = await backendFor(request)
       await backend.request('/v1/sessions/logout', {
@@ -24,11 +26,11 @@ export async function POST(request: Request) {
       // Expired, revoked and inactive sessions still need their cookies cleared.
       if (
         !(error instanceof GatewayError) ||
-        ![401, 403].includes(error.status)
+        (!sample && ![401, 403].includes(error.status))
       )
         throw error
     }
-    if (authMode(requestHostname(request)) === 'supabase') {
+    if (!sample && authMode(requestHostname(request)) === 'supabase') {
       const result = await (await supabaseServer()).auth.signOut()
       if (result.error)
         throw new GatewayError(

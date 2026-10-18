@@ -7,6 +7,7 @@ from datetime import timedelta
 from typing import Any
 from uuid import uuid4
 
+from anyio import CancelScope, CapacityLimiter, to_thread
 from fastapi import Request, Response
 from fastapi.routing import APIRoute
 from sqlalchemy import select
@@ -88,106 +89,138 @@ def _rate_limit(db: Session, actor: Actor, settings) -> None:
     bucket.count += 1
 
 
+async def _buffer_request_body(request: Request) -> Any:
+    limit = (
+        request.app.state.settings.max_resume_bytes + 100000
+        if "multipart/form-data" in request.headers.get("content-type", "")
+        else 100000
+    )
+    buffered = bytearray()
+    async for chunk in request.stream():
+        if len(buffered) + len(chunk) > limit:
+            raise AppError(413, "REQUEST_TOO_LARGE", "Request exceeds the size limit")
+        buffered.extend(chunk)
+    raw = bytes(buffered)
+    request._body = raw
+    content_type = request.headers.get("content-type", "")
+    if "multipart/form-data" in content_type:
+        form = await request.form(max_files=1, max_fields=10, max_part_size=limit)
+        parts: list[tuple] = []
+        for name, value in form.multi_items():
+            if isinstance(value, StarletteUploadFile):
+                file_bytes = await value.read(limit + 1)
+                await value.seek(0)
+                parts.append(
+                    (name, value.filename, value.content_type, hashlib.sha256(file_bytes).hexdigest())
+                )
+            else:
+                parts.append((name, value))
+        return sorted(parts, key=lambda value: value[0])
+    try:
+        return json.loads(raw) if raw and "application/json" in content_type else raw.hex()
+    except ValueError:
+        return raw.hex()
+
+
+def _uses_actor(dependant) -> bool:
+    return dependant.call is actor_dep or any(_uses_actor(item) for item in dependant.dependencies)
+
+
+def _database_limiters(request: Request) -> tuple[CapacityLimiter, CapacityLimiter]:
+    limiters = getattr(request.app.state, "transactional_database_limiters", None)
+    if limiters is None:
+        # Auth lock waiters must not consume FastAPI's endpoint worker capacity.
+        # Finalization has separate capacity so lock holders can always commit or
+        # roll back even while new requests wait for their authentication locks.
+        limiters = (CapacityLimiter(32), CapacityLimiter(8))
+        request.app.state.transactional_database_limiters = limiters
+    return limiters
+
+
 class TransactionalRoute(APIRoute):
-    """One transaction covers authz, idempotency, business writes, audit and outbox."""
+    """One transaction covers authz, idempotency, business writes, audit and outbox.
+
+    A Session moves between sequential worker calls; it is never used concurrently.
+    Database I/O and lock waits run outside the event loop, including cleanup.
+    """
 
     def get_route_handler(self):
         handler = super().get_route_handler()
+        protected = _uses_actor(self.dependant)
 
         async def transactional(request: Request):
-            with Session(request.app.state.engine, expire_on_commit=False) as db:
-                request.state.db = db
-                request.state.request_id = getattr(request.state, "request_id", str(uuid4()))
-                try:
-                    write = request.method not in {"GET", "HEAD", "OPTIONS"}
-                    record_key = None
-                    request_hash = None
-                    if write:
-                        actor = actor_dep(request)
-                        client_key = request.headers.get("idempotency-key", "")
-                        if not re.fullmatch(r"[A-Za-z0-9_.:-]{8,128}", client_key):
-                            raise AppError(
-                                422,
-                                "IDEMPOTENCY_KEY_REQUIRED",
-                                "Supply an Idempotency-Key of 8–128 safe characters",
-                            )
-                        route = f"{request.method}:{request.url.path}"
-                        lock_scopes(db, f"idem:{actor.user_id}:{route}:{client_key}")
-                        limit = (
-                            request.app.state.settings.max_resume_bytes + 100000
-                            if "multipart/form-data" in request.headers.get("content-type", "")
-                            else 100000
-                        )
-                        buffered = bytearray()
-                        async for chunk in request.stream():
-                            if len(buffered) + len(chunk) > limit:
-                                raise AppError(413, "REQUEST_TOO_LARGE", "Request exceeds the size limit")
-                            buffered.extend(chunk)
-                        raw = bytes(buffered)
-                        request._body = raw
-                        content_type = request.headers.get("content-type", "")
-                        if "multipart/form-data" in content_type:
-                            form = await request.form(max_files=1, max_fields=10, max_part_size=limit)
-                            parts: list[tuple] = []
-                            for name, value in form.multi_items():
-                                if isinstance(value, StarletteUploadFile):
-                                    file_bytes = await value.read(limit + 1)
-                                    await value.seek(0)
-                                    parts.append(
-                                        (
-                                            name,
-                                            value.filename,
-                                            value.content_type,
-                                            hashlib.sha256(file_bytes).hexdigest(),
-                                        )
-                                    )
-                                else:
-                                    parts.append((name, value))
-                            body: Any = sorted(parts, key=lambda value: value[0])
-                        else:
-                            try:
-                                body = (
-                                    json.loads(raw)
-                                    if raw and "application/json" in content_type
-                                    else raw.hex()
-                                )
-                            except ValueError:
-                                body = raw.hex()
-                        request_hash = pseudonym(digest([body, request.headers.get("if-match")]))
-                        record_key = (actor.user_id, route, client_key)
-                        old = db.get(IdempotencyRecord, record_key)
-                        if old and old.expires_at <= utcnow():
-                            db.delete(old)
-                            db.flush()
-                            old = None
-                        if old:
-                            if old.request_hash != request_hash:
-                                raise AppError(
-                                    409,
-                                    "IDEMPOTENCY_CONFLICT",
-                                    "This key was already used with a different request",
-                                )
-                            from app.api.replay_acl import authorize_replay
+            db = Session(request.app.state.engine, expire_on_commit=False)
+            request.state.db = db
+            request.state.request_id = getattr(request.state, "request_id", str(uuid4()))
+            prelude_limiter, finalizer_limiter = _database_limiters(request)
+            record_key = None
+            request_hash = None
+            write = request.method not in {"GET", "HEAD", "OPTIONS"}
+            try:
+                # Buffer bounded async input before taking transaction locks. No
+                # connection is acquired while waiting for a client upload.
+                body = await _buffer_request_body(request) if write else None
 
-                            authorize_replay(db, actor, request.url.path, body)
-                            db.commit()
-                            return Response(
-                                content=decrypt(old.response_json),
-                                status_code=old.status_code,
-                                media_type="application/json",
-                                headers={"Idempotency-Replayed": "true"},
+                def prepare():
+                    nonlocal record_key, request_hash
+                    if not (write or protected):
+                        return None
+                    actor = actor_dep(request)
+                    if not write:
+                        return None
+                    client_key = request.headers.get("idempotency-key", "")
+                    if not re.fullmatch(r"[A-Za-z0-9_.:-]{8,128}", client_key):
+                        raise AppError(
+                            422,
+                            "IDEMPOTENCY_KEY_REQUIRED",
+                            "Supply an Idempotency-Key of 8–128 safe characters",
+                        )
+                    route = f"{request.method}:{request.url.path}"
+                    lock_scopes(db, f"idem:{actor.user_id}:{route}:{client_key}")
+                    request_hash = pseudonym(digest([body, request.headers.get("if-match")]))
+                    record_key = (actor.user_id, route, client_key)
+                    old = db.get(IdempotencyRecord, record_key)
+                    if old and old.expires_at <= utcnow():
+                        db.delete(old)
+                        db.flush()
+                        old = None
+                    if old:
+                        if old.request_hash != request_hash:
+                            raise AppError(
+                                409,
+                                "IDEMPOTENCY_CONFLICT",
+                                "This key was already used with a different request",
                             )
-                        if request.headers.get("if-match") and isinstance(body, dict):
-                            version = body.get("expected_version", body.get("expected_cycle_version"))
-                            if version is not None and request.headers["if-match"].strip('"') != str(version):
-                                raise AppError(
-                                    412, "VERSION_CONFLICT", "If-Match must agree with the request version"
-                                )
-                        _rate_limit(db, actor, request.app.state.settings)
-                    response = await handler(request)
+                        from app.api.replay_acl import authorize_replay
+
+                        authorize_replay(db, actor, request.url.path, body, request=request)
+                        db.commit()
+                        return Response(
+                            content=decrypt(old.response_json),
+                            status_code=old.status_code,
+                            media_type="application/json",
+                            headers={"Idempotency-Replayed": "true"},
+                        )
+                    if request.headers.get("if-match") and isinstance(body, dict):
+                        version = body.get("expected_version", body.get("expected_cycle_version"))
+                        if version is not None and request.headers["if-match"].strip('"') != str(version):
+                            raise AppError(
+                                412, "VERSION_CONFLICT", "If-Match must agree with the request version"
+                            )
+                    _rate_limit(db, actor, request.app.state.settings)
+                    return None
+
+                replay = (
+                    await to_thread.run_sync(prepare, limiter=prelude_limiter) if write or protected else None
+                )
+                if replay is not None:
+                    return replay
+                response = await handler(request)
+
+                def finish():
                     if response.status_code >= 400:
                         db.rollback()
-                        return response
+                        return
                     if "application/json" in response.headers.get("content-type", ""):
                         content = json.loads(response.body)
                         if isinstance(content, dict):
@@ -217,14 +250,21 @@ class TransactionalRoute(APIRoute):
                             )
                         )
                     db.commit()
-                    return response
-                except (IntegrityError, OperationalError) as exc:
-                    db.rollback()
-                    raise AppError(
-                        409, "TRANSACTION_CONFLICT", "Conflicting update; refresh and retry with the same key"
-                    ) from exc
-                except BaseException:
-                    db.rollback()
-                    raise
+
+                await to_thread.run_sync(finish, limiter=finalizer_limiter)
+                return response
+            except (IntegrityError, OperationalError) as exc:
+                with CancelScope(shield=True):
+                    await to_thread.run_sync(db.rollback, limiter=finalizer_limiter)
+                raise AppError(
+                    409, "TRANSACTION_CONFLICT", "Conflicting update; refresh and retry with the same key"
+                ) from exc
+            except BaseException:
+                with CancelScope(shield=True):
+                    await to_thread.run_sync(db.rollback, limiter=finalizer_limiter)
+                raise
+            finally:
+                with CancelScope(shield=True):
+                    await to_thread.run_sync(db.close, limiter=finalizer_limiter)
 
         return transactional

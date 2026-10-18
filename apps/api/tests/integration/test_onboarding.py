@@ -405,7 +405,9 @@ def test_member_needs_exact_vacancy_acl_and_privileged_grant(market):
 
 
 def test_skills_crud_ownership_versions_and_availability(market):
+    candidate_version = ok(market.call(0, "GET", "/candidates/me"))["version"]
     skill = ok(market.call(0, "POST", "/candidates/me/skills", {"name": "Python", "level": 3}))
+    assert ok(market.call(0, "GET", "/candidates/me"))["version"] == candidate_version + 1
     skills = ok(market.call(0, "GET", "/candidates/me/skills"))
     assert skills[0]["name"] == "python" and skills[0]["verification_status"] == "SELF_REPORTED"
     assert market.call(0, "POST", "/candidates/me/skills", {"name": "PYTHON", "level": 3}).status_code == 409
@@ -426,20 +428,26 @@ def test_skills_crud_ownership_versions_and_availability(market):
     )
     ok(market.call(0, "DELETE", f"/candidates/me/skills/{skill['id']}", {"expected_version": 2}))
     assert ok(market.call(0, "GET", "/candidates/me/skills")) == []
+    after_skills = ok(market.call(0, "GET", "/candidates/me"))["version"]
+    assert after_skills == candidate_version + 2
     window = {
-        "expected_version": 1,
+        "expected_version": after_skills,
         "available_from": (utcnow() + timedelta(days=1)).isoformat(),
         "available_until": (utcnow() + timedelta(days=30)).isoformat(),
     }
     updated = ok(market.call(0, "PUT", "/candidates/me/availability", window))
-    assert updated["version"] == 2 and updated["available_from"]
+    assert updated["version"] == after_skills + 1 and updated["available_from"]
     assert market.call(0, "PUT", "/candidates/me/availability", window).status_code == 412
     assert (
         market.call(
             0,
             "PUT",
             "/candidates/me/availability",
-            {**window, "expected_version": 2, "available_until": (utcnow() - timedelta(days=1)).isoformat()},
+            {
+                **window,
+                "expected_version": updated["version"],
+                "available_until": (utcnow() - timedelta(days=1)).isoformat(),
+            },
         ).status_code
         == 422
     )

@@ -1,11 +1,12 @@
-import { authMode } from "@/lib/server/session";
-import { requestHostname } from "@/lib/server/http-utils";
+import { authMode, sampleDemoAvailable } from '@/lib/server/session'
+import { requestHostname } from '@/lib/server/http-utils'
 import { linkedInAvailability } from "@/lib/server/auth-navigation";
 export async function GET(request: Request) {
   const mode = authMode(requestHostname(request));
   return Response.json(
     {
       mode,
+      sampleDemo: sampleDemoAvailable(request),
       ...(mode === "supabase"
         ? { linkedin: await linkedInAvailability() }
         : {}),

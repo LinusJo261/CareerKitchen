@@ -42,6 +42,7 @@ from app.db.models import (
     StageEvent,
     User,
     Vacancy,
+    WaitingItem,
 )
 from app.db.pact_models import (
     Clarification,
@@ -52,11 +53,12 @@ from app.db.pact_models import (
     TermConsent,
 )
 from app.matching.attention import DualPrice, MarketPrices, update_price
-from app.matching.baseline import AllocationProposal, HeuristicPairScorer
+from app.matching.baseline import AllocationProposal
 from app.matching.portfolio import Commitment, MarketSnapshot, ResearchEdge, VacancyResearch
+from app.matching.reciprocal import score_reciprocal
 from app.matching.score import DirectionScore, PairScore
 from app.matching.shadow_adapter import run_shadow
-from app.matching.types import EstimateKind, SanitizedPairFeatures, Side, stable_hash
+from app.matching.types import EstimateKind, Side, stable_hash
 from app.services import clearing
 from app.services.common import Actor, digest, emit, lock_scopes, require_vacancy, utcnow
 
@@ -66,6 +68,7 @@ WORKER_ISSUER = "urn:career-kitchen:internal-worker"
 WORKER_SUBJECT = "outbox-runner"
 MAX_ATTEMPTS = 5
 RESEARCH_EVENTS = frozenset({"shortlist.replan_requested"})
+ALLOCATION_EVENT = "matching.allocation_requested"
 RECONCILE_EVENTS = frozenset(
     {
         "candidate.activated",
@@ -93,6 +96,7 @@ RECONCILE_EVENTS = frozenset(
         "pact.policy_revoked",
         "employment_start.verified",
         "market.price_updated",
+        "matching.model_activated",
     }
 )
 
@@ -350,6 +354,12 @@ def handle_event(db: Session, actor: Actor, event: OutboxEvent) -> list[dict[str
 
         process_privacy_request(db, actor, event.aggregate_id)
         return []
+    if event.kind == ALLOCATION_EVENT:
+        source = db.get(OutboxEvent, event.aggregate_id)
+        if source is None or source.kind not in RECONCILE_EVENTS:
+            raise ValueError("Allocation requires an authoritative source event")
+        scopes = affected_vacancies(db, source)
+        return clearing.reconcile(db, actor, vacancy_ids=scopes, pool_limit=50) if scopes else []
     enqueue_notifications(db, event)
     if event.kind not in RECONCILE_EVENTS:
         return []  # decision.issued must not recursively issue more cards.
@@ -357,7 +367,11 @@ def handle_event(db: Session, actor: Actor, event: OutboxEvent) -> list[dict[str
     clearing.release_waiting(db, actor)
     scopes = affected_vacancies(db, event)
     invalidate_pending(db, actor, scopes)
-    return clearing.reconcile(db, actor, vacancy_ids=scopes, pool_limit=50) if scopes else []
+    # Maintenance retains participant locks until commit. Queue allocation in a
+    # separate transaction so its sorted lock set cannot invert those locks.
+    if scopes:
+        emit(db, actor, ALLOCATION_EVENT, event)
+    return []
 
 
 def invalidate_pending(db: Session, actor: Actor, vacancy_ids: list[str], limit: int = 200) -> int:
@@ -508,72 +522,150 @@ def expire_pact_dependencies(db: Session, actor: Actor, batch_size: int = 100) -
 
 
 def _shadow_snapshot(db: Session, state_version: str) -> MarketSnapshot:
-    """Authorized builder only. No database handle is passed into the pure planner."""
+    """Build bounded, consented inputs using exactly the live compatibility contract.
+
+    Limits apply after role and consent filtering. Commitments are never truncated:
+    even a commitment outside the sampled vacancies makes that candidate unavailable
+    for another contingent assignment. No repository reaches the pure planner.
+    """
+    as_of = utcnow()
     jobs = list(db.scalars(select(Vacancy).where(Vacancy.state == "ACTIVE").order_by(Vacancy.id).limit(20)))
     job_ids = [job.id for job in jobs]
+    if not jobs:
+        return MarketSnapshot(digest([state_version, "empty-market"]), (), ())
+    families = sorted({job.role_family for job in jobs})
     candidates = list(
-        db.scalars(select(Candidate).where(Candidate.state == "ACTIVE").order_by(Candidate.id).limit(100))
-    )
-    reservations = list(
         db.scalars(
-            select(ExclusiveReservation)
+            select(Candidate)
             .where(
-                ExclusiveReservation.status == "ACTIVE",
-                ExclusiveReservation.expires_at > utcnow(),
-                ExclusiveReservation.candidate_id.in_([candidate.id for candidate in candidates]),
+                Candidate.state == "ACTIVE",
+                Candidate.terms_accepted.is_(True),
+                Candidate.privacy_accepted.is_(True),
+                Candidate.confirmed_at.is_not(None),
+                or_(*(cast(Candidate.role_families, JSONB).contains([family]) for family in families)),
             )
+            .order_by(Candidate.id)
             .limit(100)
         )
     )
+    candidate_ids = [candidate.id for candidate in candidates]
+    reservations = list(
+        db.scalars(
+            select(ExclusiveReservation).where(
+                ExclusiveReservation.status == "ACTIVE",
+                ExclusiveReservation.expires_at > as_of,
+                or_(
+                    ExclusiveReservation.candidate_id.in_(candidate_ids),
+                    ExclusiveReservation.vacancy_id.in_(job_ids),
+                ),
+            )
+        )
+    )
     reserved_for = {reserve.candidate_id: reserve.vacancy_id for reserve in reservations}
+    open_pairs = list(
+        db.scalars(
+            select(PairCycle).where(
+                PairCycle.closed_at.is_(None),
+                or_(PairCycle.vacancy_id.in_(job_ids), PairCycle.candidate_id.in_(candidate_ids)),
+            )
+        )
+    )
+    committed_elsewhere = {pair.candidate_id for pair in open_pairs if pair.vacancy_id not in job_ids}
+    recent_pairs = set(
+        db.execute(
+            select(PairCycle.candidate_id, PairCycle.vacancy_id).where(
+                PairCycle.candidate_id.in_(candidate_ids),
+                PairCycle.vacancy_id.in_(job_ids),
+                PairCycle.closed_at > as_of - timedelta(days=30),
+            )
+        )
+    )
     definitions = tuple(VacancyResearch(job.id, job.version, min(10, job.cap)) for job in jobs)
     attention = {
-        row.cell: row
-        for row in db.scalars(
-            select(MarketPrice).where(MarketPrice.cell.in_([job.role_family for job in jobs]))
-        )
+        row.cell: row for row in db.scalars(select(MarketPrice).where(MarketPrice.cell.in_(families)))
     }
     congestion = {
         (row.scope_id, row.side): row
         for row in db.scalars(
-            select(CongestionPrice).where(
-                CongestionPrice.scope_id.in_(job_ids + [candidate.id for candidate in candidates])
-            )
+            select(CongestionPrice).where(CongestionPrice.scope_id.in_(job_ids + candidate_ids))
         )
     }
+    skills: dict[str, list[tuple[str, tuple[str, ...]]]] = {}
+    for candidate_id, name, aliases in db.execute(
+        select(CandidateSkill.candidate_id, Skill.name, Skill.aliases)
+        .join(Skill, CandidateSkill.skill_id == Skill.id)
+        .where(CandidateSkill.candidate_id.in_(candidate_ids), CandidateSkill.confirmed.is_(True))
+        .order_by(CandidateSkill.candidate_id, Skill.id)
+    ):
+        skills.setdefault(candidate_id, []).append((name, tuple(aliases)))
+    preferred: dict[str, list[str]] = {}
+    for vacancy_id, key in db.execute(
+        select(Requirement.vacancy_id, Requirement.key)
+        .where(Requirement.vacancy_id.in_(job_ids), Requirement.kind == "PREFERENCE")
+        .order_by(Requirement.vacancy_id, Requirement.id)
+    ):
+        preferred.setdefault(vacancy_id, []).append(key)
+    candidate_active = {
+        scope: count
+        for scope, count in db.execute(
+            select(DecisionCard.candidate_id, func.count())
+            .where(
+                DecisionCard.status == "ACTIVE",
+                DecisionCard.side == "CANDIDATE",
+                DecisionCard.candidate_id.in_(candidate_ids),
+            )
+            .group_by(DecisionCard.candidate_id)
+        )
+    }
+    job_active = {
+        scope: count
+        for scope, count in db.execute(
+            select(DecisionCard.vacancy_id, func.count())
+            .where(
+                DecisionCard.status == "ACTIVE",
+                DecisionCard.side == "EMPLOYER",
+                DecisionCard.vacancy_id.in_(job_ids),
+            )
+            .group_by(DecisionCard.vacancy_id)
+        )
+    }
+    waiting = list(
+        db.execute(
+            select(WaitingItem.side, PairCycle.candidate_id, PairCycle.vacancy_id)
+            .join(PairCycle, PairCycle.id == WaitingItem.pair_cycle_id)
+            .where(
+                WaitingItem.state == "WAITING",
+                or_(PairCycle.candidate_id.in_(candidate_ids), PairCycle.vacancy_id.in_(job_ids)),
+            )
+        )
+    )
+    candidate_waiting: dict[str, int] = {}
+    job_waiting: dict[str, int] = {}
+    for side, candidate_id, vacancy_id in waiting:
+        counts = candidate_waiting if side == "CANDIDATE" else job_waiting
+        key = candidate_id if side == "CANDIDATE" else vacancy_id
+        counts[key] = counts.get(key, 0) + 1
     edges = []
     versions: list[Any] = [(job.id, job.version) for job in jobs]
     versions.extend((row.id, row.version) for row in attention.values())
     versions.extend((row.id, row.version) for row in congestion.values())
     for candidate in candidates:
         versions.append((candidate.id, candidate.version))
-        skills = set(
-            db.scalars(
-                select(Skill.name)
-                .join(CandidateSkill, CandidateSkill.skill_id == Skill.id)
-                .where(CandidateSkill.candidate_id == candidate.id)
-            )
-        )
+        if candidate.id in committed_elsewhere:
+            continue
         for job in jobs:
             if candidate.id in reserved_for and reserved_for[candidate.id] != job.id:
                 continue
+            if (candidate.id, job.id) in recent_pairs:
+                continue
             if job.role_family not in candidate.role_families or not clearing.feasible(db, candidate, job)[0]:
                 continue
-            preferred = set(
-                db.scalars(
-                    select(Requirement.key).where(
-                        Requirement.vacancy_id == job.id, Requirement.kind == "PREFERENCE"
-                    )
-                )
-            )
-            feature = SanitizedPairFeatures(
-                candidate.id,
-                job.id,
-                job.role_family,
-                "structured-v1",
-                utcnow(),
-                skill_alignment=len(skills & preferred) / len(preferred) if preferred else 0,
-                work_mode_alignment=1,
+            feature = clearing.compatibility_features(
+                candidate,
+                job,
+                tuple(skills.get(candidate.id, ())),
+                tuple(preferred.get(job.id, ())),
+                as_of,
             )
             market = attention.get(job.role_family)
             candidate_congestion = congestion.get((candidate.id, "CANDIDATE"))
@@ -581,16 +673,32 @@ def _shadow_snapshot(db: Session, state_version: str) -> MarketSnapshot:
             prices = MarketPrices(
                 mu_candidate=market.candidate_price if market else 0,
                 mu_employer=market.employer_price if market else 0,
-                candidate_congestion=candidate_congestion.price if candidate_congestion else 0,
-                job_congestion=job_congestion.price if job_congestion else 0,
+                candidate_congestion=min(
+                    get_settings().congestion_price_max,
+                    candidate_congestion.price if candidate_congestion else 0,
+                ),
+                job_congestion=min(
+                    get_settings().congestion_price_max, job_congestion.price if job_congestion else 0
+                ),
             )
-            score = HeuristicPairScorer().score(feature, prices)
-            edges.append(ResearchEdge(candidate.id, job.id, max(0, score.best.net_surplus)))
+            trace = score_reciprocal(feature, prices)
+            candidate_first = trace["first_mover"] == "CANDIDATE"
+            if candidate_first and (
+                candidate_active.get(candidate.id, 0) >= min(10, candidate.cap)
+                or job_waiting.get(job.id, 0) >= 10
+            ):
+                continue
+            if not candidate_first and (
+                job_active.get(job.id, 0) >= min(10, job.cap) or candidate_waiting.get(candidate.id, 0) >= 10
+            ):
+                continue
+            if trace["net_surplus"] > 0:
+                edges.append(ResearchEdge(candidate.id, job.id, trace["net_surplus"]))
     commitments: dict[tuple[str, str], Commitment] = {}
-    for pair in db.scalars(
-        select(PairCycle).where(PairCycle.vacancy_id.in_(job_ids), PairCycle.closed_at.is_(None)).limit(2000)
-    ):
+    for pair in open_pairs:
         versions.append((pair.id, pair.version))
+        if pair.vacancy_id not in job_ids:
+            continue
         commitments[(pair.candidate_id, pair.vacancy_id)] = Commitment(
             pair.candidate_id,
             pair.vacancy_id,
@@ -604,7 +712,7 @@ def _shadow_snapshot(db: Session, state_version: str) -> MarketSnapshot:
             reserve.candidate_id, reserve.vacancy_id, "CONSENTED_EXCLUSIVE"
         )
     return MarketSnapshot(
-        digest([state_version, versions]), definitions, tuple(edges), tuple(commitments.values())
+        digest([state_version, as_of, versions]), definitions, tuple(edges), tuple(commitments.values())
     )
 
 
@@ -671,6 +779,19 @@ def record_shadow(factory: sessionmaker[Session], event_id: str, issued: list[di
                         "model_coverage": result.advanced_plan.population_coverage
                         if result.advanced_plan
                         else 0,
+                        "planner_version": result.advanced_plan.planner_version
+                        if result.advanced_plan
+                        else None,
+                        "solver": result.advanced_plan.solver if result.advanced_plan else None,
+                        "objective": result.advanced_plan.objective if result.advanced_plan else None,
+                        "search_complete": result.advanced_plan.search_complete
+                        if result.advanced_plan
+                        else False,
+                        "operation_count": result.advanced_plan.operation_count
+                        if result.advanced_plan
+                        else None,
+                        "compatibility_model_version": "reciprocal-compatibility-v1",
+                        "snapshot_scope": {"vacancy_limit": 20, "candidate_limit": 100},
                     },
                     side_effect_count=result.side_effect_count,
                 )
@@ -701,7 +822,7 @@ def process_one(factory: sessionmaker[Session], *, shadow: bool | None = None) -
         if event is None:
             return False, False
         event_id = event.id
-        research_requested = event.kind in RECONCILE_EVENTS or event.kind in RESEARCH_EVENTS
+        research_requested = event.kind == ALLOCATION_EVENT or event.kind in RESEARCH_EVENTS
         if db.get(InboxConsumption, (CONSUMER, event.id)):
             event.dispatched_at = utcnow()
             return True, True

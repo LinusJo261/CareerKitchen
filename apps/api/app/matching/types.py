@@ -101,10 +101,13 @@ class Capacity:
 
     def __post_init__(self) -> None:
         cap(self.selected_maximum)
+        if any(
+            type(value) is not int or value < 0
+            for value in (self.active_count, self.waiting_count, self.waiting_maximum)
+        ):
+            raise ValueError("capacity counts must be nonnegative integers")
         if not 0 <= self.active_count <= self.selected_maximum:
             raise ValueError("active count exceeds selected cap")
-        if self.waiting_count < 0 or self.waiting_maximum < 0:
-            raise ValueError("waiting counts must be nonnegative")
 
     @property
     def free(self) -> int:
