@@ -3281,11 +3281,26 @@
       },
       "NavigationChatIn": {
         "additionalProperties": false,
+        "examples": [
+          {
+            "consent_to_gemini": true,
+            "history": [],
+            "message": "How do I start finding jobs?"
+          }
+        ],
         "properties": {
           "consent_to_gemini": {
             "const": true,
             "title": "Consent To Gemini",
             "type": "boolean"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/NavigationTurn"
+            },
+            "maxItems": 10,
+            "title": "History",
+            "type": "array"
           },
           "message": {
             "maxLength": 2000,
@@ -3307,10 +3322,13 @@
             "items": {
               "$ref": "#/components/schemas/NavigationLink"
             },
+            "maxItems": 3,
             "title": "Links",
             "type": "array"
           },
           "reply": {
+            "maxLength": 4000,
+            "minLength": 1,
             "title": "Reply",
             "type": "string"
           },
@@ -3344,6 +3362,31 @@
           "path"
         ],
         "title": "NavigationLink",
+        "type": "object"
+      },
+      "NavigationTurn": {
+        "additionalProperties": false,
+        "properties": {
+          "content": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Content",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "user",
+              "assistant"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "content"
+        ],
+        "title": "NavigationTurn",
         "type": "object"
       },
       "NotificationInput": {
@@ -14708,6 +14751,7 @@
     },
     "/v1/navigation/chat": {
       "post": {
+        "description": "Returns a Gemini-generated plain-text answer and approved navigation links. Use Authorize with a valid session, supply a unique Idempotency-Key, and explicitly consent to sending the message and optional history to Google Gemini. The answer is in data.reply. No application actions are performed.",
         "operationId": "navigation_chat_v1_navigation_chat_post",
         "parameters": [
           {
@@ -14859,7 +14903,7 @@
             "SupabaseBearer": []
           }
         ],
-        "summary": "Navigation Chat",
+        "summary": "Ask Career Chef for application guidance",
         "tags": [
           "navigation"
         ]

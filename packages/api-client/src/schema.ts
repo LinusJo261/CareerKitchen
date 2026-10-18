@@ -836,7 +836,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Navigation Chat */
+        /**
+         * Ask Career Chef for application guidance
+         * @description Returns a Gemini-generated plain-text answer and approved navigation links. Use Authorize with a valid session, supply a unique Idempotency-Key, and explicitly consent to sending the message and optional history to Google Gemini. The answer is in data.reply. No application actions are performed.
+         */
         post: operations["navigation_chat_v1_navigation_chat_post"];
         delete?: never;
         options?: never;
@@ -2947,13 +2950,22 @@ export interface components {
              */
             status: "TRIAGED" | "INVESTIGATING" | "ACTIONED" | "NO_ACTION" | "CLOSED";
         };
-        /** NavigationChatIn */
+        /**
+         * NavigationChatIn
+         * @example {
+         *       "consent_to_gemini": true,
+         *       "history": [],
+         *       "message": "How do I start finding jobs?"
+         *     }
+         */
         NavigationChatIn: {
             /**
              * Consent To Gemini
              * @constant
              */
             consent_to_gemini: true;
+            /** History */
+            history?: components["schemas"]["NavigationTurn"][];
             /** Message */
             message: string;
         };
@@ -2976,6 +2988,16 @@ export interface components {
             label: string;
             /** Path */
             path: string;
+        };
+        /** NavigationTurn */
+        NavigationTurn: {
+            /** Content */
+            content: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "user" | "assistant";
         };
         /** NotificationInput */
         NotificationInput: {

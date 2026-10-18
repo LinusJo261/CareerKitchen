@@ -18,6 +18,7 @@ def main() -> int:
         re.compile(rb"\b(?:ghp|gho|ghu|ghs)_[A-Za-z0-9]{30,}\b"),
         re.compile(rb"\bAKIA[0-9A-Z]{16}\b"),
         re.compile(rb"\bsb_secret_[A-Za-z0-9_-]{20,}\b"),
+        re.compile(rb"(?<![A-Za-z0-9_-])AIza[A-Za-z0-9_-]{35}(?![A-Za-z0-9_-])"),
     ]
     for raw in result.stdout.split(b"\0"):
         if not raw:
