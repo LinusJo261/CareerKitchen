@@ -27,14 +27,16 @@ def engine():
     with admin.connect() as connection:
         connection.execute(text(f'CREATE SCHEMA "{schema}"'))
     value = create_engine(
-        url, connect_args={"options": f"-c search_path={schema},public"}, pool_size=20, max_overflow=40
+        url, connect_args={"options": f"-c search_path={schema}"}, pool_size=20, max_overflow=40
     )
-    Base.metadata.create_all(value)
-    yield value
-    value.dispose()
-    with admin.connect() as connection:
-        connection.execute(text(f'DROP SCHEMA "{schema}" CASCADE'))
-    admin.dispose()
+    try:
+        Base.metadata.create_all(value)
+        yield value
+    finally:
+        value.dispose()
+        with admin.connect() as connection:
+            connection.execute(text(f'DROP SCHEMA "{schema}" CASCADE'))
+        admin.dispose()
 
 
 @dataclass

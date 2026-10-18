@@ -75,7 +75,25 @@ consent revocation.
   event ID. The separate running worker consumed it and recorded a `ShadowRun`
   with zero planner side effects.
 
-Docker image execution, GitHub-hosted CI execution and hosted Supabase/Railway
-end-to-end checks have not been run. The deployment configuration and workflows
-are provided for those environments; local verification does not establish cloud
-availability or hiring-model reliability.
+GitHub-hosted CI has been exercised; current check outcomes and CI fixes are
+recorded on the [repository pull requests](https://github.com/LinusJo261/CareerKitchen/pulls).
+Docker image execution and hosted Supabase/Railway end-to-end checks have not
+been run. Local and CI verification do not establish cloud availability or
+hiring-model reliability.
+
+## Career Chef check repairs
+
+Backend test fixtures create every application table in their own schema and
+exclude migrated `public` tables from the search path. Fixture teardown also runs
+when setup fails. CI coverage selects `apps/api/app` explicitly. OpenAPI error
+descriptions for HTTP 413 and 422 use fixed phrases across Python versions, with
+a regression test that simulates the legacy standard-library phrases.
+
+Local Python 3.12 verification passed **321 backend tests** against PostgreSQL
+with all 44 migrated application tables present in `public`. A disposable database
+also passed the populated migration upgrade, downgrade, clean upgrade and
+authorization checks. Ruff format/lint, OpenAPI consistency, generated-client
+consistency, client TypeScript checking, six client tests and the source secret
+scan passed. The recovered local environment lacks mypy and pytest-cov; those
+checks require the locked CI environment. No live Gemini call was made for this
+repair, and hosted check results must be read from the pull request.
