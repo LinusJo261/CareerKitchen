@@ -80,6 +80,15 @@ export async function workspaceCommand(
   const change = async (path: string, body?: unknown, method = 'POST') =>
     (await api.request(path, { method, body, key })).data
   switch (action) {
+    case 'demo.reconcile': {
+      if (api.mode !== 'sample')
+        throw new GatewayError(
+          403,
+          'DEMO_ONLY',
+          'Enter demo mode to run sample matching.',
+        )
+      return change('/v1/demo/reconcile', {})
+    }
     case 'candidate.save': {
       if (p.patch && typeof p.patch === 'object') {
         if (!p.profile || typeof p.profile !== 'object')

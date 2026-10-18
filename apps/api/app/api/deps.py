@@ -193,7 +193,7 @@ class TransactionalRoute(APIRoute):
                             )
                         from app.api.replay_acl import authorize_replay
 
-                        authorize_replay(db, actor, request.url.path, body)
+                        authorize_replay(db, actor, request.url.path, body, request=request)
                         db.commit()
                         return Response(
                             content=decrypt(old.response_json),

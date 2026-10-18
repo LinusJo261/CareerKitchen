@@ -99,6 +99,16 @@ summary; it never resets the database. See [integration details](docs/v0-integra
 
 ## Fictional development market
 
+For 20,000 synthetic applicant profiles and 20,000 draft jobs from a pinned MIT
+dataset, see [large sample market](docs/sample-data.md). That importer uses its
+own local PostgreSQL database and preserves the small demo below.
+
+The homepage **Demo mode** button opens the same UI against that large market.
+Run `python -m scripts.prepare_sample_demo` once, then `python -m scripts.serve_samples`
+alongside the frontend with `FRONTEND_LOCAL_DEMO=true`. The demo banner supports
+candidate/employer switching, real matching runs, catalogue search and exit.
+All activity stays in the separate synthetic database; see the guide above.
+
 ```powershell
 .\.venv\Scripts\python.exe -m scripts.seed_demo
 # Subsequent resets target only the recognized local fictional demo database:

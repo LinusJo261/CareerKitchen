@@ -26,7 +26,16 @@ export interface WorkspaceBackend {
 export interface WorkspaceState extends DemoState {
   session: ApiSchema["IdentityOut"] | null;
   context: {
-    mode: "local" | "supabase" | "unconfigured";
+    mode: "local" | "supabase" | "unconfigured" | "sample";
+    sampleDemo?: {
+      ready: boolean;
+      candidates: number;
+      vacancies: number;
+      organizations: number;
+      organization_id: string;
+      vacancy_ids: string[];
+      algorithm?: string;
+    };
     role: Role;
     organizationId: string | null;
   };

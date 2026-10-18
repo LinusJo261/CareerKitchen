@@ -25,11 +25,18 @@ from app.services.common import (
 )
 
 
-def authorize_replay(db, actor: Actor, path: str, body) -> None:
+def authorize_replay(db, actor: Actor, path: str, body, *, request=None) -> None:
     parts = path.removeprefix("/v1/").split("/")
     data = body if isinstance(body, dict) else {}
     root = parts[0]
-    if root == "internal":
+    if root == "demo":
+        from app.api.demo import authorize_demo_actor, require_sample_demo
+
+        if request is None:
+            raise AppError(403, "DEMO_DISABLED", "Demo authorization must be checked for this request")
+        require_sample_demo(request, db)
+        authorize_demo_actor(db, actor)
+    elif root == "internal":
         roles = (
             {"RESEARCH_ADMIN"}
             if parts[1] == "shadow"

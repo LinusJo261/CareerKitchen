@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Brand } from "./brand";
+import { DemoModeButton } from "./demo-mode";
 import { ProvenanceGlyph, ProvenanceLegend } from "./pass/provenance";
 import { cn } from "@/lib/utils";
 
@@ -150,6 +151,7 @@ export function Landing() {
           </a>
         </nav>
         <div className="flex items-center gap-2">
+          <DemoModeButton />
           <Button variant="ghost" className="hidden sm:inline-flex" asChild>
             <Link href="/sign-in">Sign in</Link>
           </Button>

@@ -1,6 +1,6 @@
 import { backendFor } from '@/lib/server/backend'
-import { authMode } from '@/lib/server/session'
-import { errorResponse, requestHostname } from '@/lib/server/http-utils'
+import { currentSessionMode } from '@/lib/server/session'
+import { errorResponse } from '@/lib/server/http-utils'
 import { workspaceState } from '@/lib/server/workspace-state'
 export async function GET(request: Request) {
   try {
@@ -10,7 +10,7 @@ export async function GET(request: Request) {
     const state = await workspaceState(
       await backendFor(request),
       role,
-      authMode(requestHostname(request)),
+      await currentSessionMode(request),
     )
     return Response.json(state, { headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {

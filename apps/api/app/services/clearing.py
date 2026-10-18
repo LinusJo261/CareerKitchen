@@ -599,7 +599,11 @@ def release_waiting(db: Session, actor: Actor) -> int:
 
 
 def reconcile(
-    db: Session, actor: Actor, vacancy_ids: list[str] | None = None, pool_limit: int = 200
+    db: Session,
+    actor: Actor,
+    vacancy_ids: list[str] | None = None,
+    pool_limit: int = 200,
+    candidate_ids: list[str] | None = None,
 ) -> list[dict]:
     """Retrieve bounded eligible pairs, optimize attention, execute under locks."""
     proposals = []
@@ -732,6 +736,8 @@ def reconcile(
                 ),
             ),
         ]
+        if candidate_ids is not None:
+            prefilters.append(Candidate.id.in_(candidate_ids))
         if vacancy.start_until:
             prefilters.append(
                 or_(Candidate.available_from.is_(None), Candidate.available_from <= vacancy.start_until)

@@ -6,8 +6,12 @@ import {
 } from '@/lib/server/http-utils'
 import {
   authMode,
+  clearFictionalSession,
   fictionalToken,
+  sampleDemoAvailable,
+  sampleToken,
   setFictionalSession,
+  setSampleSession,
   supabaseServer,
 } from '@/lib/server/session'
 import { Backend } from '@/lib/server/backend'
@@ -46,6 +50,39 @@ export async function POST(request: Request) {
       )
     const mode = authMode(requestHostname(request))
     const role = input.role === 'employer' ? 'employer' : 'candidate'
+    if (input.mode === 'sample') {
+      if (!sampleDemoAvailable(request))
+        throw new GatewayError(
+          403,
+          'DEMO_DISABLED',
+          'Sample demo mode is available only in local development.',
+        )
+      const account = String(input.account || 'candidate-000001')
+      if (!['employer', 'candidate-000001'].includes(account))
+        throw new GatewayError(
+          422,
+          'INVALID_FIXTURE',
+          'Choose the demonstration candidate or employer account.',
+        )
+      const token = sampleToken(account)
+      const sample = new Backend(token, 'sample')
+      const status = await sample.get<{ ready: boolean }>('/v1/demo/status')
+      if (status?.ready !== true)
+        throw new GatewayError(
+          503,
+          'DEMO_NOT_READY',
+          'Prepare the sample market before entering demo mode.',
+        )
+      await sample.get('/v1/sessions/me')
+      await setSampleSession(token)
+      return Response.json(
+        {
+          redirectTo: account === 'employer' ? '/employer' : '/candidate',
+          mode: 'sample',
+        },
+        { headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
     if (mode === 'local') {
       const account = String(input.account || '')
       const token = fictionalToken(account)
@@ -96,6 +133,7 @@ export async function POST(request: Request) {
           ? 'Account creation failed. Check your details or try signing in.'
           : 'Sign-in failed. Check your credentials and email confirmation.',
       )
+    await clearFictionalSession()
     return Response.json(
       {
         needsEmailConfirmation: !result.data.session,

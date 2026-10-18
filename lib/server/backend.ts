@@ -1,6 +1,6 @@
 import 'server-only'
 import { apiBase, GatewayError } from './http-utils'
-import { accessToken } from './session'
+import { sampleApiBase, sessionConnection } from './session'
 
 export type ApiEnvelope<T> = {
   data: T
@@ -8,17 +8,23 @@ export type ApiEnvelope<T> = {
   page?: { has_more: boolean; next_cursor: string | null }
 }
 export class Backend {
-  constructor(private token: string) {}
+  constructor(
+    private token: string,
+    public readonly mode: 'sample' | 'standard' = 'standard',
+  ) {}
   async request<T>(
     path: string,
     options: { method?: string; body?: unknown; key?: string } = {},
   ): Promise<ApiEnvelope<T>> {
     if (!path.startsWith('/v1/') || path.includes('://') || path.includes('..'))
       throw new GatewayError(422, 'INVALID_PATH', 'Invalid API route.')
-    const base = apiBase(
-      process.env.CAREER_KITCHEN_API_URL,
-      process.env.NODE_ENV !== 'production',
-    )
+    const base =
+      this.mode === 'sample'
+        ? sampleApiBase()
+        : apiBase(
+            process.env.CAREER_KITCHEN_API_URL,
+            process.env.NODE_ENV !== 'production',
+          )
     const method = options.method || 'GET'
     let response: Response
     try {
@@ -36,7 +42,11 @@ export class Backend {
           : {}),
         cache: 'no-store',
         redirect: 'error',
-        signal: AbortSignal.timeout(15000),
+        signal: AbortSignal.timeout(
+          this.mode === 'sample' && path === '/v1/demo/reconcile'
+            ? 45000
+            : 15000,
+        ),
       })
     } catch {
       throw new GatewayError(
@@ -93,5 +103,6 @@ export class Backend {
   }
 }
 export async function backendFor(request: Request) {
-  return new Backend(await accessToken(request))
+  const connection = await sessionConnection(request)
+  return new Backend(connection.token, connection.mode)
 }

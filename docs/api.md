@@ -87,7 +87,7 @@ Pydantic before commit; an invalid response rolls back the transaction.
 
 <!-- BEGIN GENERATED ENDPOINT INVENTORY -->
 
-119 operations across 103 paths.
+122 operations across 106 paths.
 
 | Method | Path | Request schema | Success schema |
 |---|---|---|---|
@@ -122,6 +122,9 @@ Pydantic before commit; an invalid response rolls back the transaction.
 | GET | `/v1/decisions/{decision_id}` | — | 200: Envelope_DecisionCardOut_ |
 | POST | `/v1/decisions/{decision_id}/interested` | DecisionAnswerInput | 200: Envelope_DecisionAnswerOut_ |
 | POST | `/v1/decisions/{decision_id}/pass` | DecisionAnswerInput | 200: Envelope_DecisionAnswerOut_ |
+| GET | `/v1/demo/catalog` | — | 200: Envelope_SampleCatalog_ |
+| POST | `/v1/demo/reconcile` | ReconcileInput | 200: Envelope_DemoAllocation_ |
+| GET | `/v1/demo/status` | — | 200: Envelope_DemoStatus_ |
 | POST | `/v1/evidence/claims` | CreateClaim | 201: Envelope_ClaimOut_ |
 | GET | `/v1/evidence/claims/me` | — | 200: Envelope_list_ClaimOut__ |
 | GET | `/v1/evidence/claims/{claim_id}` | — | 200: Envelope_ClaimOut_ |
