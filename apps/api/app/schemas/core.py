@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 from typing import Annotated, Any, Generic, Literal, TypeVar
+from urllib.parse import urlsplit
 from uuid import UUID
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -48,8 +49,38 @@ class EducationInput(Input):
     details: str = Field(default="", max_length=2000)
 
 
+class ProfessionalLinks(Input):
+    linkedin: str | None = Field(default=None, max_length=2048)
+    portfolio: str | None = Field(default=None, max_length=2048)
+
+    @field_validator("linkedin", "portfolio")
+    @classmethod
+    def https_link(cls, value, info):
+        if not value:
+            return None
+        try:
+            address = urlsplit(value)
+            valid = (
+                address.scheme == "https"
+                and bool(address.hostname)
+                and (address.port is None or address.port > 0)
+                and address.username is None
+                and address.password is None
+                and not any(character.isspace() or ord(character) < 32 for character in value)
+            )
+            if info.field_name == "linkedin":
+                valid = valid and address.hostname in {"linkedin.com", "www.linkedin.com"}
+            if not valid:
+                raise ValueError("Use a public HTTPS professional profile URL without credentials")
+        except ValueError:
+            raise ValueError("Use a public HTTPS professional profile URL without credentials") from None
+        return value
+
+
 class CandidateInput(Input):
     expected_version: int = Field(ge=0)
+    display_name: str = Field(default="", max_length=120)
+    professional_links: ProfessionalLinks = Field(default_factory=ProfessionalLinks)
     headline: str = Field(min_length=3, max_length=180)
     summary: str = Field(default="", max_length=10000)
     region: str = Field(min_length=2, max_length=160)
@@ -311,6 +342,8 @@ class ModerationInput(VersionInput):
 class CandidateOut(BaseModel):
     id: UUID
     version: int
+    display_name: str = ""
+    professional_links: ProfessionalLinks = Field(default_factory=ProfessionalLinks)
     headline: str
     summary: str
     region: str

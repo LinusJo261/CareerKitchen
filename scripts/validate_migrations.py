@@ -67,11 +67,11 @@ def main() -> None:
             )
             migrated = connection.execute(
                 text(
-                    "SELECT compensation_period, experiences, education FROM candidate_profiles WHERE id=:id"
+                    "SELECT compensation_period, experiences, education, display_name, professional_links FROM candidate_profiles WHERE id=:id"
                 ),
                 {"id": candidate_id},
             ).one()
-            assert tuple(migrated) == ("ANNUAL", [], [])
+            assert tuple(migrated) == ("ANNUAL", [], [], "", {})
         audit_id = str(uuid4())
         with target.begin() as connection:
             connection.execute(
@@ -95,6 +95,7 @@ def main() -> None:
                 raise AssertionError("Database permitted immutable audit mutation")
         # Exercise the exact deployed SQL, not an in-memory imitation of its policy.
         with target.begin() as connection:
+            connection.execute(text("ALTER TABLE public.alembic_version ENABLE ROW LEVEL SECURITY"))
             driver = connection.connection.driver_connection
             assert driver is not None
             driver.execute(
@@ -114,6 +115,7 @@ def main() -> None:
             connection.execute(text(f'GRANT USAGE ON SCHEMA public TO "{browser_role}"'))
             # Even an accidental browser SELECT grant remains blocked by default-deny RLS.
             connection.execute(text(f'GRANT SELECT ON TABLE public.users TO "{browser_role}"'))
+            connection.execute(text(f'GRANT SELECT ON TABLE public.alembic_version TO "{browser_role}"'))
             connection.execute(text("CREATE SCHEMA compliance_private"))
             connection.execute(text("CREATE TABLE compliance_private.secrets (value text)"))
         runtime_audit_id = str(uuid4())
@@ -121,7 +123,8 @@ def main() -> None:
             connection.execute(text("SET LOCAL ROLE career_kitchen_backend"))
             assert connection.scalar(text("SELECT count(*) FROM users")) == 1
             assert (
-                connection.scalar(text("SELECT version_num FROM alembic_version")) == "0005_congestion_prices"
+                connection.scalar(text("SELECT version_num FROM alembic_version"))
+                == "0006_candidate_onboarding"
             )
             assert (
                 connection.execute(
@@ -160,6 +163,7 @@ def main() -> None:
         with target.begin() as connection:
             connection.execute(text(f'SET LOCAL ROLE "{browser_role}"'))
             assert connection.scalar(text("SELECT count(*) FROM users")) == 0
+            assert connection.scalar(text("SELECT count(*) FROM public.alembic_version")) == 0
         from app.check_schema import check_schema
 
         runtime_engine = create_engine(

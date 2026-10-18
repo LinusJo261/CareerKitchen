@@ -1,4 +1,4 @@
-import { CandidateOnboarding } from '@/components/entry'
+import { CandidateOnboarding } from '@/components/onboarding/candidate-onboarding'
 
 export const metadata = { title: 'Welcome' }
 

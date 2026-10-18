@@ -56,14 +56,31 @@ export async function sendWorkspaceCommand<T = unknown>(
       "Connection lost. The change has not been confirmed. Retry the same action to check its result.",
     );
   }
-  if (response.ok || (response.status >= 400 && response.status < 500))
+  if (response.status >= 400 && response.status < 500)
     pendingKeys.delete(fingerprint);
-  return (await readResponse<{ data: T }>(response)).data;
+  const result = await readResponse<{ data: T }>(response);
+  if (
+    !result ||
+    typeof result !== "object" ||
+    !Object.hasOwn(result, "data") ||
+    result.data === undefined
+  )
+    throw new WorkspaceError(
+      503,
+      "UNCONFIRMED_RESPONSE",
+      "The server response could not be confirmed. Retry the same action to check its result.",
+    );
+  pendingKeys.delete(fingerprint);
+  return result.data;
 }
 
 export function useWorkspace() {
   const pathname = usePathname();
-  const role = pathname.startsWith("/employer") ? "employer" : "candidate";
+  const role =
+    pathname.startsWith("/employer") ||
+    pathname.startsWith("/onboarding/employer")
+      ? "employer"
+      : "candidate";
   const { mutate: mutateAll } = useSWRConfig();
   const { data, error, mutate, isLoading } = useSWR<WorkspaceState>(
     `/api/workspace?role=${role}`,

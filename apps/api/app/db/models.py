@@ -64,6 +64,10 @@ class Candidate(Entity, Base):
         CheckConstraint("state IN ('DRAFT','ACTIVE','PAUSED','DEACTIVATED')"),
     )
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), unique=True)
+    display_name: Mapped[str] = mapped_column(String(120), default="", server_default="")
+    professional_links: Mapped[dict[str, str]] = mapped_column(
+        JSON, default=dict, server_default=text("'{}'")
+    )
     headline: Mapped[str] = mapped_column(String(180))
     summary: Mapped[str] = mapped_column(Text, default="")
     region: Mapped[str] = mapped_column(String(160), default="")
