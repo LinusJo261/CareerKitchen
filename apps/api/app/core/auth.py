@@ -57,6 +57,8 @@ def _supabase_user(token: str, settings: Settings, subject: UUID) -> dict[str, A
         if response.status_code != 200:
             raise AppError(503, "AUTH_UNAVAILABLE", "Authentication provider is temporarily unavailable")
         user = response.json()
+        if not isinstance(user, dict) or not isinstance(user.get("id"), str):
+            raise ValueError("Malformed authentication provider identity")
         if UUID(user["id"]) != subject:
             raise AppError(401, "INVALID_TOKEN", "The session is not valid")
         return user
@@ -96,6 +98,8 @@ def verify_access_token(token: str, settings: Settings | None = None) -> Verifie
             options={"require": ["exp", "iat", "iss", "aud", "sub", "session_id"]},
         )
         subject = UUID(claims["sub"])
+        if not isinstance(claims["session_id"], str):
+            raise AppError(401, "INVALID_TOKEN", "The session is not valid")
         session_id = UUID(claims["session_id"])
         issued_at = datetime.fromtimestamp(claims["iat"], UTC)
         if claims["exp"] - claims["iat"] > settings.jwt_max_lifetime_seconds:

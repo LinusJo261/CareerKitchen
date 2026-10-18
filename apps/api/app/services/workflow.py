@@ -17,6 +17,7 @@ from app.db.models import (
     Message,
     MutualMatch,
     Offer,
+    Organization,
     PairCycle,
     StageEvent,
     Vacancy,
@@ -53,6 +54,7 @@ def participant(
 
 def match_out(db: Session, actor: Actor, match_id: str) -> dict:
     match, cycle, candidate, vacancy, _ = participant(db, actor, match_id, active=False)
+    start = db.scalar(select(EmploymentStart).where(EmploymentStart.pair_cycle_id == cycle.id))
     return {
         "id": match.id,
         "version": match.version,
@@ -61,7 +63,12 @@ def match_out(db: Session, actor: Actor, match_id: str) -> dict:
         "state": cycle.state,
         "status": match.status,
         "candidate": {"id": candidate.id, "headline": candidate.headline},
-        "vacancy": {"id": vacancy.id, "title": vacancy.title, "org_id": vacancy.org_id},
+        "vacancy": {
+            "id": vacancy.id,
+            "title": vacancy.title,
+            "org_id": vacancy.org_id,
+            "organization_name": load(db, Organization, vacancy.org_id).display_name,
+        },
         "timeline": [
             {"id": event.id, "stage": event.stage, "occurred_at": event.created_at}
             for event in db.scalars(
@@ -85,6 +92,14 @@ def match_out(db: Session, actor: Actor, match_id: str) -> dict:
             {"id": row.id, "start_at": row.start_at, "end_at": row.end_at}
             for row in db.scalars(select(Interview).where(Interview.match_id == match.id))
         ],
+        "start_report": {
+            "id": start.id,
+            "version": start.version,
+            "verification_state": start.verification_state,
+            "started_at": start.started_at,
+        }
+        if start
+        else None,
     }
 
 
@@ -120,7 +135,8 @@ def send_message(db: Session, actor: Actor, match_id: str, data) -> dict:
 def propose_interview(db: Session, actor: Actor, match_id: str, data) -> dict:
     match, _, candidate, vacancy, _ = participant(db, actor, match_id)
     lock_scopes(db, f"candidate:{candidate.id}", f"vacancy:{vacancy.id}")
-    require_version(load(db, MutualMatch, match.id), data.expected_version)
+    match, _, _, vacancy, _ = participant(db, actor, match_id)
+    require_version(match, data.expected_version)
     if any(slot.start_at <= utcnow() for slot in data.slots):
         raise AppError(422, "PAST_INTERVIEW", "Interview options must be in the future")
     proposal = InterviewProposal(
@@ -173,8 +189,8 @@ def confirm_interview(db: Session, actor: Actor, match_id: str, proposal_id: str
     conflict = db.scalar(
         select(Interview.id).where(
             (
-                (Interview.candidate_user_id == candidate.user_id)
-                | (Interview.employer_user_id == vacancy.owner_user_id)
+                Interview.candidate_user_id.in_([candidate.user_id, vacancy.owner_user_id])
+                | Interview.employer_user_id.in_([candidate.user_id, vacancy.owner_user_id])
             ),
             Interview.start_at < end,
             Interview.end_at > start,
@@ -356,6 +372,7 @@ def verify_start(db: Session, actor: Actor, match_id: str, data) -> dict:
         record.version + 1,
     )
     vacancy.openings_remaining -= 1
+    vacancy.version += 1
     cycle.state, cycle.version = "START_CONFIRMED", cycle.version + 1
     db.add(
         StageEvent(
@@ -365,12 +382,16 @@ def verify_start(db: Session, actor: Actor, match_id: str, data) -> dict:
             source_hash=digest(data.corroboration_source),
         )
     )
-    if vacancy.openings_remaining == 0:
-        from app.services.clearing import cancel_vacancy_pending
-        from app.services.common import invalidate
+    from app.services.clearing import cancel_vacancy_pending
+    from app.services.common import invalidate
+    from app.services.profiles import refresh_terms
 
+    if vacancy.openings_remaining == 0:
         vacancy.state = "FILLED"
-        cancel_vacancy_pending(db, actor, vacancy.id, "FILLED")
-        invalidate(db, vacancy_id=vacancy.id, reason="FILLED")
+    reason = "FILLED" if vacancy.state == "FILLED" else "CAPACITY_CHANGED"
+    cancel_vacancy_pending(db, actor, vacancy.id, reason)
+    refresh_terms(db, vacancy)
+    invalidate(db, actor=actor, vacancy_id=vacancy.id, reason=reason)
+    emit(db, actor, "vacancy.capacity_changed", vacancy, org_id=vacancy.org_id)
     emit(db, actor, "employment_start.verified", record, org_id=vacancy.org_id)
     return {"id": record.id, "verification_state": record.verification_state, "pair_state": cycle.state}

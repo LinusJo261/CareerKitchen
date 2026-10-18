@@ -116,6 +116,7 @@ class VacancyOut(BaseModel):
     id: UUID
     version: int
     org_id: UUID
+    organization_name: str | None = None
     owner_user_id: UUID
     title: str
     description: str
@@ -199,6 +200,7 @@ class VacancyName(BaseModel):
     id: UUID
     title: str
     org_id: UUID
+    organization_name: str | None = None
 
 
 class StageEventOut(BaseModel):
@@ -224,6 +226,13 @@ class InterviewOut(BaseModel):
     status: str | None = None
 
 
+class StartReportOut(BaseModel):
+    id: UUID
+    version: int
+    verification_state: str
+    started_at: datetime
+
+
 class MatchOut(BaseModel):
     id: UUID
     version: int
@@ -236,6 +245,7 @@ class MatchOut(BaseModel):
     timeline: list[StageEventOut]
     offers: list[OfferOut]
     interviews: list[InterviewOut]
+    start_report: StartReportOut | None = None
 
 
 class MetricsOut(BaseModel):
@@ -300,6 +310,7 @@ class InterviewProposalOut(BaseModel):
     timezone_label: str
     status: str
     initiator_id: UUID | None = None
+    can_confirm: bool | None = None
 
 
 class PairStateOut(BaseModel):

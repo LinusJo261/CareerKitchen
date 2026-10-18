@@ -110,7 +110,10 @@ def validate_resume(content: bytes, mime: str) -> str | None:
                         raise AppError(422, "UNSAFE_DOCUMENT", "Active Word content is not accepted")
                     if item.filename.endswith(".rels"):
                         relationships = document.read(item)
-                        if re.search(rb"<!DOCTYPE|<!ENTITY", relationships, re.I):
+                        # Match the isolated extractor's XML guard. UTF-16/32
+                        # insert NULs into declarations and would otherwise
+                        # bypass the byte pattern before the API parses XML.
+                        if b"\0" in relationships or re.search(rb"<!DOCTYPE|<!ENTITY", relationships, re.I):
                             raise AppError(
                                 422, "UNSAFE_DOCUMENT", "Document XML declarations are not accepted"
                             )

@@ -87,7 +87,7 @@ Pydantic before commit; an invalid response rolls back the transaction.
 
 <!-- BEGIN GENERATED ENDPOINT INVENTORY -->
 
-109 operations across 96 paths.
+112 operations across 99 paths.
 
 | Method | Path | Request schema | Success schema |
 |---|---|---|---|
@@ -103,6 +103,7 @@ Pydantic before commit; an invalid response rolls back the transaction.
 | GET | `/v1/candidates/me/decisions` | — | 200: DecisionInbox |
 | GET | `/v1/candidates/me/history` | — | 200: PageEnvelope_PairHistoryOut_ |
 | GET | `/v1/candidates/me/matches` | — | 200: Envelope_list_MatchOut__ |
+| GET | `/v1/candidates/me/pact/policies` | — | 200: Envelope_list_PolicyOut__ |
 | POST | `/v1/candidates/me/pause` | VersionInput | 200: Envelope_CandidateOut_ |
 | PUT | `/v1/candidates/me/preferences` | PreferencesInput | 200: Envelope_CandidateOut_ |
 | GET | `/v1/candidates/me/resume` | — | 200: binary attachment |
@@ -165,6 +166,7 @@ Pydantic before commit; an invalid response rolls back the transaction.
 | POST | `/v1/organizations/{org_id}/members/invite` | InviteInput | 200: Envelope_InvitationOut_ |
 | DELETE | `/v1/organizations/{org_id}/members/{member_id}` | VersionInput | 200: Envelope_StatusOut_ |
 | PATCH | `/v1/organizations/{org_id}/members/{member_id}` | MemberUpdateInput | 200: Envelope_MemberOut_ |
+| GET | `/v1/organizations/{org_id}/pact/policies` | — | 200: Envelope_list_PolicyOut__ |
 | GET | `/v1/organizations/{org_id}/vacancies` | — | 200: Envelope_list_VacancyOut__ |
 | POST | `/v1/organizations/{org_id}/verify` | VerificationInput | 200: Envelope_OrganizationOut_ |
 | POST | `/v1/pact/clarifications` | CreateClarification | 201: Envelope_ClarificationOut_ |
@@ -193,6 +195,7 @@ Pydantic before commit; an invalid response rolls back the transaction.
 | POST | `/v1/vacancies/{vacancy_id}/close` | VersionInput | 200: Envelope_VacancyOut_ |
 | GET | `/v1/vacancies/{vacancy_id}/decisions` | — | 200: DecisionInbox |
 | GET | `/v1/vacancies/{vacancy_id}/metrics` | — | 200: Envelope_MetricsOut_ |
+| GET | `/v1/vacancies/{vacancy_id}/pact/clarifications` | — | 200: Envelope_list_ClarificationOut__ |
 | POST | `/v1/vacancies/{vacancy_id}/pause` | VersionInput | 200: Envelope_VacancyOut_ |
 | GET | `/v1/vacancies/{vacancy_id}/pipeline` | — | 200: Envelope_list_MatchOut__ |
 | POST | `/v1/vacancies/{vacancy_id}/requirements` | RequirementInput | 200: Envelope_ScopedVersionOut_ |

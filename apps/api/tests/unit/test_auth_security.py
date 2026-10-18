@@ -87,6 +87,16 @@ def test_missing_security_claim_rejected(missing):
         auth.verify_access_token(sign_local(claims, settings), settings)
 
 
+@pytest.mark.parametrize("session_id", [123, True, [], {}, None])
+def test_session_identity_must_be_a_uuid_string(session_id):
+    settings = local_settings()
+    claims = token_claims(settings) | {"session_id": session_id}
+    with pytest.raises(AppError) as failure:
+        auth.verify_access_token(sign_local(claims, settings), settings)
+    assert failure.value.status == 401
+    assert failure.value.code == "INVALID_TOKEN"
+
+
 def test_unverified_email_rejected():
     settings = local_settings()
     claims = token_claims(settings) | {"email_verified": False}
@@ -183,6 +193,35 @@ def test_provider_error_fails_closed(monkeypatch):
     with pytest.raises(AppError) as failure:
         auth._supabase_user("unused", settings, uuid4())
     assert failure.value.status == 503
+
+
+@pytest.mark.parametrize("user", [{"id": 123}, {"id": None}, {"id": {}}, [], None])
+def test_malformed_provider_identity_fails_closed(monkeypatch, user):
+    settings = Settings(
+        _env_file=None,
+        auth_mode="supabase",
+        supabase_url="https://project.supabase.co",
+        supabase_publishable_key="test-publishable",
+    )
+
+    class Client:
+        def __init__(self, **kwargs):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            pass
+
+        def get(self, *args, **kwargs):
+            return SimpleNamespace(status_code=200, json=lambda: user)
+
+    monkeypatch.setattr(auth.httpx, "Client", Client)
+    with pytest.raises(AppError) as failure:
+        auth._supabase_user("unused", settings, uuid4())
+    assert failure.value.status == 503
+    assert failure.value.code == "AUTH_UNAVAILABLE"
 
 
 def test_production_settings_reject_insecure_configuration():

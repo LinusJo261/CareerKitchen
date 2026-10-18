@@ -63,7 +63,9 @@ def authorize_replay(db, actor: Actor, path: str, body) -> None:
         if parts[-1] == "verify":
             pact.require_verifier(db, actor)
         else:
-            workflow.participant(db, actor, parts[1], active=False)
+            _, _, _, vacancy, _ = workflow.participant(db, actor, parts[1], active=False)
+            if parts[-1] == "offers":
+                pact.signatory(db, actor, vacancy.id)
     elif root == "offers":
         offer = load(db, Offer, parts[1])
         from app.db.models import PairCycle
@@ -79,7 +81,7 @@ def authorize_replay(db, actor: Actor, path: str, body) -> None:
                 else list(load(db, PactPolicy, parts[2]).scope)
             )
             for vacancy_id in ids:
-                pact.signatory(db, actor, vacancy_id)
+                pact.signatory(db, actor, vacancy_id, recent=parts[-1] != "revoke")
         elif parts[1] == "clarifications":
             vacancy_id = (
                 str(data["vacancy_id"]) if len(parts) == 2 else load(db, Clarification, parts[2]).vacancy_id
