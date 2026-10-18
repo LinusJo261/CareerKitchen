@@ -58,9 +58,13 @@ def bootstrap() -> None:
                     command.upgrade(config, "head")
             finally:
                 connection.execute(text("SELECT pg_advisory_unlock(2077110934)"))
+        print("Hosted sample setup: importing synthetic market", flush=True)
         with Session(target) as db, db.begin():
             import_samples(db, tables, provenance)
+        print("Hosted sample setup: preparing fictional eligibility", flush=True)
+        with Session(target) as db, db.begin():
             activate_samples(db, settings)
+        print("Hosted sample setup: binding confirmed fixture accounts", flush=True)
         provider_headers = {
             "apikey": settings.supabase_service_role_key.get_secret_value(),
             "Authorization": "Bearer " + settings.supabase_service_role_key.get_secret_value(),
@@ -115,6 +119,7 @@ def bootstrap() -> None:
                             fixture,
                             payload={"synthetic": True, "fixture": account},
                         )
+        print("Hosted sample setup: configuring restricted runtime role", flush=True)
         runtime_password = os.environ["SAMPLE_RUNTIME_PASSWORD"]
         if len(runtime_password) < 32:
             raise ValueError("A random runtime database password is required")
@@ -148,6 +153,11 @@ if __name__ == "__main__":
     try:
         bootstrap()
     except Exception as error:
+        original = getattr(error, "orig", None)
+        state = getattr(original, "sqlstate", None)
+        # SQLSTATE and a fixed stage identify operational failures without URLs,
+        # credentials, SQL parameters, provider response bodies or profile data.
+        print("Hosted sample failure SQLSTATE=" + str(state), flush=True)
         raise SystemExit(
             "Hosted sample setup failed ("
             + type(error).__name__
