@@ -182,6 +182,8 @@ def refresh(
             report_path=str(report_path),
             reason_codes=report["evidence"]["reasons"],
         )
+        if "feature_readiness" in report:
+            status["feature_readiness"] = report["feature_readiness"]
         if not promote:
             return _write_status(output, status)
         if (
@@ -198,12 +200,20 @@ def refresh(
         status.update(status="PROMOTED", promoted=True, active_model_id=promoted["model_id"])
         return _write_status(output, status)
     except Exception as error:
+        from app.core.errors import AppError
+
         if status["promoted"]:
             # Promotion has committed. A local status-file error cannot undo it
             # or be reported as a rejected/rolled-back registry transaction.
             raise RuntimeError("Registry promotion completed but refresh status publication failed") from None
+        ambiguous = stage == "promote" and not isinstance(error, AppError)
         status.update(
-            status="PROMOTION_REJECTED" if stage == "promote" else "FAILED",
+            status="PROMOTION_STATE_UNKNOWN"
+            if ambiguous
+            else "PROMOTION_REJECTED"
+            if stage == "promote"
+            else "FAILED",
+            promoted=None if ambiguous else False,
             failed_stage=stage,
             reason_codes=[_error_code(error)],
         )
@@ -248,7 +258,7 @@ def main() -> None:
             2, "Matching refresh could not complete; inspect registry and output status before retrying.\n"
         )
     print(json.dumps(result, indent=2, allow_nan=False))
-    if result["status"] in {"FAILED", "PROMOTION_REJECTED"}:
+    if result["status"] in {"FAILED", "PROMOTION_REJECTED", "PROMOTION_STATE_UNKNOWN"}:
         raise SystemExit(1)
 
 

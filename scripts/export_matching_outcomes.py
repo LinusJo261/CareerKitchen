@@ -15,7 +15,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from scripts.mutual_matching_features import validate_features
+from scripts.mutual_matching_features import (
+    EXPANDED_FEATURE_NAMES,
+    FEATURE_NAMES,
+    validate_feature_provenance,
+    validate_features,
+)
 
 if TYPE_CHECKING:
     from sqlalchemy.engine import Engine
@@ -24,7 +29,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "apps" / "api"))
 
 TARGET = "mutual_opt_in_within_horizon"
-FEATURE_VERSION = "mutual-pair-features-v1"
+FEATURE_VERSION = "mutual-pair-features-v2"
 DATASET = "career-kitchen-consented-introductions"
 ROW_KEYS = {
     "cycle_id",
@@ -72,8 +77,9 @@ def _validate_rows(rows: object, max_rows: int, exported_at: datetime) -> list[d
     if not isinstance(rows, list) or len(rows) > max_rows:
         raise ValueError("Service returned an invalid or oversized observation export")
     seen = set()
+    normalized = []
     for row in rows:
-        if not isinstance(row, dict) or set(row) != ROW_KEYS:
+        if not isinstance(row, dict) or set(row) not in (ROW_KEYS, ROW_KEYS | {"feature_provenance"}):
             raise ValueError("Service returned an incompatible frozen observation schema")
         for key in ("cycle_id", "candidate_id", "vacancy_id", "organization_id"):
             value = row[key]
@@ -96,7 +102,22 @@ def _validate_rows(rows: object, max_rows: int, exported_at: datetime) -> list[d
         )
         if not as_of <= exposed <= observed <= exported_at:
             raise ValueError("Frozen export contains unavailable or future information")
-        validate_features(row["features"])
+        version = (
+            "mutual-pair-features-v1"
+            if isinstance(row["features"], dict) and set(row["features"]) == set(FEATURE_NAMES)
+            else FEATURE_VERSION
+        )
+        features = validate_features(row["features"], version)
+        provenance = validate_feature_provenance(
+            row.get("feature_provenance", {"text_relevance_model_id": None}), features
+        )
+        normalized.append(
+            {
+                **row,
+                "features": {name: features.get(name) for name in EXPANDED_FEATURE_NAMES},
+                "feature_provenance": provenance,
+            }
+        )
         if row["first_mover"] not in ("candidate", "employer"):
             raise ValueError("Invalid frozen first mover")
         decisions = row["decisions"]
@@ -121,7 +142,7 @@ def _validate_rows(rows: object, max_rows: int, exported_at: datetime) -> list[d
             raise ValueError("Invalid frozen eligibility state")
         if row["observation_status"] not in ("OBSERVABLE", "CANCELLED", "TERMS_CHANGED", "WITHDRAWN"):
             raise ValueError("Invalid frozen observation status")
-    return rows
+    return normalized
 
 
 def _aggregate_diagnostics(value: object) -> dict:
@@ -198,7 +219,7 @@ def export_dataset(
     if not isinstance(source_version, str) or not source_version.strip():
         raise ValueError("A frozen consent source version is required")
     manifest = {
-        "schema_version": 1,
+        "schema_version": 2,
         "target": TARGET,
         "feature_version": FEATURE_VERSION,
         "horizon_days": horizon_days,

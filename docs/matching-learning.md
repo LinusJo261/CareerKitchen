@@ -17,11 +17,13 @@ horizon after first exposure. One explicit `PASSED` decision within that horizon
 is negative. Pending, expired, cancelled, withdrawn, changed-term, late, unclear,
 and ineligible observations are excluded. Nonresponse is never a rejection.
 
-Input uses the existing ten-field `mutual-pair-features-v1` JSONL/manifest contract
-documented in [mutual-matching-research.md](mutual-matching-research.md). The trainer
-reuses its strict timestamp, sequential opt-in, duplicate-cycle and label checks.
-Only four fields currently available from the production compatibility snapshot
-are used. The other six research fields never enter this model.
+New exports use the thirteen-field `mutual-pair-features-v2` JSONL contract and
+manifest schema 2. Existing ten-field `mutual-pair-features-v1` exports remain
+readable. Both retain the strict timestamp, sequential opt-in, duplicate-cycle
+and label checks documented in
+[mutual-matching-research.md](mutual-matching-research.md). Seven frozen inputs
+enter the current outcome model; unsupported experience and other research
+fields remain excluded.
 
 | Frozen input field | Portable model field |
 | --- | --- |
@@ -29,6 +31,34 @@ are used. The other six research fields never enter this model.
 | `candidate_role_preference_alignment` | `candidate_role` |
 | `candidate_work_mode_preference_alignment` | `candidate_work_mode` |
 | `candidate_employment_type_preference_alignment` | `candidate_employment_type` |
+| `skill_precision` | `skill_precision` |
+| `skill_jaccard` | `skill_jaccard` |
+| `text_relevance` | `text_relevance` |
+
+Precision measures how much of the candidate's confirmed skill set overlaps the
+vacancy's stated preferences; Jaccard measures overlap relative to their union.
+Curated aliases of one concept count once. No preferences leave both unknown.
+These signals supplement coverage, which only measures the vacancy side of the
+overlap. They never replace essential eligibility or infer skill claims from
+documents. Role, work mode and employment type usually become constant after
+hard eligibility; a complex model cannot learn useful distinctions from those
+constants alone.
+
+Text relevance is optional and belongs to a separate relevance target. A text
+score must be paired with a 64-character lowercase immutable model hash in the
+row's `feature_provenance.text_relevance_model_id`. It is never a mutual-interest
+label or a hiring probability. Missing scores retain null scores and null hashes.
+Historical snapshots are never reconstructed from edited profiles. Training
+refuses mixed nonnull extractor hashes across an export, including excluded
+outcomes, and freezes its extractor hash in artifact provenance. Runtime falls
+back to deterministic scoring if an available text score comes from another
+extractor. Incumbent comparisons replay that same fallback and report its count.
+
+Text feature capture requires both learning opt-ins. Issuance rechecks current
+permissions and the exact consent versions recorded during planning while
+holding the registry lock. A revocation or revoke/re-opt-in between planning and
+issuance aborts before any exposure or decision is persisted. A zero text score
+is still a captured signal and requires the same versioned permissions.
 
 Values are finite numbers in `[0, 1]` or null. IDs, decisions, timestamps and
 policy names are grouping/provenance fields, never predictive inputs. Inputs must
@@ -100,12 +130,20 @@ dependence sensitivity summary, not a guarantee of joint 95% coverage.
 
 The review screen requires at least 100 rows and 20 examples of each class per
 split, at least 20 candidate and organization clusters in each evaluation cohort,
-converged training, no organization overlap, observed provenance, and strictly
+converged training, varying pre-exposure inputs, no organization overlap, observed provenance, and strictly
 negative upper interval bounds for both log-loss and Brier differences against
 every comparator in validation and test. This screen is a practical minimum,
 not a sample-size calculation or a reliability certification. Test outcomes
 cannot select parameters. Repeatedly tuning against the same test cohort makes
 it a validation cohort; use a new future holdout for the next independent claim.
+
+Each fold also reports aggregate feature availability, missingness, distinct
+known values, constant inputs, means and ranges. The refresh status includes
+training feature readiness and inputs never observed in training. These
+diagnostics reveal absent signals and distribution changes; they are not
+performance estimates. No participant identifiers, raw prose or individual
+predictions appear in these summaries. Diagnostic test-fold summaries are
+computed after selection and cannot influence fitting.
 
 ## Continual improvement and rollback
 
@@ -145,6 +183,14 @@ incumbent hash, current consent epoch and unused future test cohort, and writes
 the versioned model, audit and outbox records together. A race or failed check
 leaves the previously active model in place. No active-model file is overwritten.
 
+Unexpected errors during promotion can leave the database commit outcome
+unknown, for example if the connection fails after the server commits. The
+refresh reports `PROMOTION_STATE_UNKNOWN` with `promoted: null`; inspect the
+registry before retrying. A definitive application gate rejection reports
+`PROMOTION_REJECTED` with `promoted: false`. Local status publication failure after
+a confirmed commit also requires registry inspection and is never labeled a
+rollback.
+
 As new explicit outcomes accumulate, produce a new frozen export and train into
 a fresh directory. Never overwrite an earlier artifact. Pass the current active
 model when one exists:
@@ -177,12 +223,13 @@ eligibility, and cannot pass the runtime's normal artifact validator.
 
 ## Portable inference contract
 
-Artifacts use schema version 2, kind `reciprocal_logistic_challenger`, and feature
-version `reciprocal-structured-v1`. The four `feature_names` have the exact order
-shown above. Each feature has a training-fitted transform containing
+New artifacts use schema version 3, kind `reciprocal_logistic_challenger`, and
+feature version `reciprocal-structured-v2`. Their seven `feature_names` have the
+exact order shown above. Existing schema 2 / `reciprocal-structured-v1` artifacts
+remain readable and use only their original four inputs. Each feature has a training-fitted transform containing
 `imputation_median`, `center`, and `scale` (minimum training scale `0.05`). Its two
 interleaved inputs are `(filled_value - center) / scale` and `is_missing`.
-The eight `coefficients` follow that order. Compute:
+The fourteen `coefficients` follow that order (eight for legacy schema 2). Compute:
 
 ```text
 raw = intercept + sum(coefficient[i] * transformed_input[i])
@@ -197,10 +244,11 @@ canonical JSON of every other artifact field (`sort_keys=True`, separators
 checks every emitted artifact before it is written. Production inference needs
 no NumPy, pickle, downloaded executable model, or training dependency.
 
-Only four structured inputs may leave little variation after hard eligibility.
-Learning cannot recover experience, preferences or outcome evidence that was
-never captured. Better features require an explicitly versioned pre-exposure
-contract and genuinely observed future evaluation. Mutual-interest prediction
+The expanded contract makes additional captured signals available to learning;
+it does not establish that they improve real outcomes. Learning cannot recover
+experience, preferences or outcome evidence that was never captured. Optional
+text relevance stays unknown unless an explicitly versioned scorer supplies it.
+Mutual-interest prediction
 still requires an online controlled evaluation to establish a causal improvement
 in introductions or hires while preserving attention ceilings and double opt-in.
 

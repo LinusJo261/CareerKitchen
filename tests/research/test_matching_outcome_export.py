@@ -12,7 +12,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from scripts.export_matching_outcomes import export_dataset
-from scripts.mutual_matching_features import FEATURE_NAMES
+from scripts.mutual_matching_features import EXPANDED_FEATURE_NAMES, FEATURE_NAMES
 
 
 def fictional_result():
@@ -86,12 +86,19 @@ class MatchingOutcomeExportTests(unittest.TestCase):
         self.assertEqual(result, before)
         self.assertEqual(summary["row_count"], 1)
         rows = [json.loads(line) for line in Path(summary["input_path"]).read_text().splitlines()]
-        self.assertEqual(rows, before["rows"])
+        expected = deepcopy(before["rows"])
+        expected[0]["features"].update(
+            {name: None for name in EXPANDED_FEATURE_NAMES if name not in FEATURE_NAMES}
+        )
+        expected[0]["feature_provenance"] = {"text_relevance_model_id": None}
+        self.assertEqual(rows, expected)
         manifest = json.loads(Path(summary["manifest_path"]).read_text())
         self.assertEqual(
             set(manifest), {"schema_version", "target", "feature_version", "horizon_days", "source"}
         )
         self.assertEqual(manifest["horizon_days"], 21)
+        self.assertEqual(manifest["schema_version"], 2)
+        self.assertEqual(manifest["feature_version"], "mutual-pair-features-v2")
         self.assertEqual(manifest["source"]["kind"], "fictional_fixture")
         self.assertEqual(manifest["source"]["source_version"], result["consent_source_version"])
         self.assertEqual(manifest["source"]["dataset"], "career-kitchen-consented-introductions")
@@ -152,6 +159,23 @@ class MatchingOutcomeExportTests(unittest.TestCase):
         summary, read = self.export(observed_since=since)
         read.assert_called_once_with(self.engine, 14, 10000, observed_since=since)
         self.assertEqual(summary["observed_since"], since.isoformat())
+
+    def test_available_text_relevance_requires_matching_immutable_lineage(self):
+        for model_id in (None, "not-a-model-hash", "A" * 64):
+            with self.subTest(model_id=model_id):
+                result = fictional_result()
+                result["rows"][0]["features"].update(
+                    skill_precision=0.5, skill_jaccard=0.25, text_relevance=0.8
+                )
+                result["rows"][0]["feature_provenance"] = {"text_relevance_model_id": model_id}
+                with self.assertRaises(ValueError):
+                    self.export(result)
+                assert not (self.directory / "export").exists()
+        result["rows"][0]["feature_provenance"] = {"text_relevance_model_id": "a" * 64}
+        summary, _ = self.export(result)
+        row = json.loads(Path(summary["input_path"]).read_text())
+        assert row["features"]["text_relevance"] == 0.8
+        assert row["feature_provenance"] == {"text_relevance_model_id": "a" * 64}
 
     def test_ambiguous_or_malformed_windows_fail_before_read(self):
         for invalid in ("2000-01-01", "not-a-time", datetime(2000, 1, 1), True, {}):

@@ -35,7 +35,8 @@ from app.db.models import (
 from app.matching.attention import MarketPrices
 from app.matching.learning import apply_learned_score
 from app.matching.live import AttentionCapacity, LiveProposal, allocate_live
-from app.matching.reciprocal import ReciprocalFeatures, score_reciprocal, skill_coverage
+from app.matching.reciprocal import ReciprocalFeatures, score_reciprocal, skill_coverage, skill_overlap
+from app.matching.text_alignment import professional_text_alignment
 from app.matching.types import Side
 from app.services import matching_learning
 from app.services.common import (
@@ -58,13 +59,26 @@ def compatibility_features(
     confirmed_skills: tuple[tuple[str, tuple[str, ...]], ...],
     preferred: tuple[str, ...],
     as_of: datetime,
+    *,
+    text_learning_enabled: bool = False,
 ) -> ReciprocalFeatures:
     """Shared live/shadow feature contract for an already eligibility-checked pair.
 
     Missing experience/evidence targets stay unknown. Only confirmed taxonomy
-    skills and stated preferences enter compatibility; feasibility is a separate
-    gate that callers must apply before constructing these features.
+    skills and stated preferences enter deterministic compatibility. Consented
+    self-declared text alignment is an additional frozen learning input, never
+    a verified credential or an eligibility gate.
     """
+    precision, jaccard = skill_overlap(confirmed_skills, preferred)
+    if type(text_learning_enabled) is not bool:
+        raise ValueError("Text learning capture requires an explicit consent boolean")
+    text_value, extractor_id = (
+        professional_text_alignment(
+            candidate.headline, candidate.summary or "", vacancy.title, vacancy.description
+        )
+        if text_learning_enabled
+        else (None, None)
+    )
     return ReciprocalFeatures(
         candidate_id=candidate.id,
         vacancy_id=vacancy.id,
@@ -76,6 +90,10 @@ def compatibility_features(
         candidate_work_mode=float(vacancy.work_mode in candidate.work_modes),
         candidate_employment_type=float(vacancy.employment_type in candidate.employment_types),
         eligible=True,
+        skill_precision=precision,
+        skill_jaccard=jaccard,
+        text_relevance=text_value,
+        text_relevance_model_id=extractor_id,
     )
 
 
@@ -762,7 +780,19 @@ def reconcile(
                     )
                 )
             )
-            features = compatibility_features(candidate, vacancy, skills, preferred, utcnow())
+            organization = db.get(Organization, vacancy.org_id)
+            features = compatibility_features(
+                candidate,
+                vacancy,
+                skills,
+                preferred,
+                utcnow(),
+                text_learning_enabled=bool(
+                    candidate.matching_learning_opt_in
+                    and organization is not None
+                    and organization.matching_learning_opt_in
+                ),
+            )
             candidate_congestion = db.scalar(
                 select(CongestionPrice).where(
                     CongestionPrice.scope_id == candidate.id, CongestionPrice.side == "CANDIDATE"
@@ -789,7 +819,20 @@ def reconcile(
                 "candidate_role": features.candidate_role,
                 "candidate_work_mode": features.candidate_work_mode,
                 "candidate_employment_type": features.candidate_employment_type,
+                "skill_precision": features.skill_precision,
+                "skill_jaccard": features.skill_jaccard,
+                "text_relevance": features.text_relevance,
             }
+            trace["learning_feature_version"] = "reciprocal-structured-v2"
+            trace["learning_feature_provenance"] = {
+                "text_relevance_model_id": features.text_relevance_model_id,
+            }
+            if features.text_relevance is not None:
+                assert organization is not None
+                trace["learning_planned_consent"] = {
+                    "candidate_consent_version": candidate.matching_learning_consent_version,
+                    "organization_consent_version": organization.matching_learning_consent_version,
+                }
             if candidate.id not in candidate_capacities:
                 candidate_capacities[candidate.id] = AttentionCapacity(
                     max(0, min(10, candidate.cap) - active_count(db, candidate_id=candidate.id)),

@@ -21,7 +21,13 @@ from app.db.models import (
     User,
     Vacancy,
 )
-from app.matching.learning import FEATURE_NAMES, LearnedModel, validate_artifact
+from app.matching.learning import (
+    CURRENT_FEATURE_VERSION,
+    EXPANDED_FEATURE_NAMES,
+    FEATURE_NAMES,
+    LearnedModel,
+    validate_artifact,
+)
 from app.services.common import Actor, emit, load, lock_scopes, require_platform, require_version, utcnow
 
 COORDINATION_SCOPE = "matching-learning-registry"
@@ -30,6 +36,9 @@ INPUT_NAMES = {
     "candidate_role": "candidate_role_preference_alignment",
     "candidate_work_mode": "candidate_work_mode_preference_alignment",
     "candidate_employment_type": "candidate_employment_type_preference_alignment",
+    "skill_precision": "skill_precision",
+    "skill_jaccard": "skill_jaccard",
+    "text_relevance": "text_relevance",
 }
 UNKNOWN_INPUTS = (
     "required_skill_coverage",
@@ -149,6 +158,7 @@ def verify_evaluation(artifact: dict, evaluation: dict, incumbent_id: str | None
     model = validate_artifact(artifact)
     if (
         not isinstance(evaluation, dict)
+        or evaluation.get("schema_version") != model.schema_version
         or evaluation.get("model_id") != model.model_id
         or evaluation.get("source") != artifact["source"]
         or evaluation.get("provenance") != artifact["provenance"]
@@ -163,6 +173,8 @@ def verify_evaluation(artifact: dict, evaluation: dict, incumbent_id: str | None
     selection = _mapping(provenance.get("selection"), "model selection")
     if selection.get("training_converged") is not True:
         raise ValueError("model training has not converged")
+    if model.schema_version >= 3 and selection.get("training_has_feature_variation") is not True:
+        raise ValueError("model training requires varying pre-exposure inputs")
     split = _mapping(provenance.get("split"), "evaluation split")
     counts = _mapping(split.get("counts"), "evaluation counts")
     if set(counts) != {"train", "validation", "test"} or any(
@@ -300,7 +312,35 @@ def current_scoring_model(db: Session) -> tuple[LearnedModel | None, str]:
 
 
 def capture_learning_consent(trace: dict, candidate: Candidate, organization: Organization) -> dict:
-    if not isinstance(trace.get("learning_snapshot"), dict):
+    learning_snapshot = trace.get("learning_snapshot")
+    native_snapshot = trace.get("features")
+    has_text = any(
+        isinstance(snapshot, dict) and snapshot.get("text_relevance") is not None
+        for snapshot in (learning_snapshot, native_snapshot)
+    )
+    if has_text:
+        planned = trace.get("learning_planned_consent")
+        versions = {
+            "candidate_consent_version": candidate.matching_learning_consent_version,
+            "organization_consent_version": organization.matching_learning_consent_version,
+        }
+        if (
+            not isinstance(learning_snapshot, dict)
+            or not candidate.matching_learning_opt_in
+            or not organization.matching_learning_opt_in
+            or not isinstance(planned, dict)
+            or set(planned) != set(versions)
+            or any(
+                type(planned[name]) is not int or planned[name] != version
+                for name, version in versions.items()
+            )
+        ):
+            # Issuance holds the registry lock. A revocation or re-opt-in after
+            # planning cannot authorize persistence of the old text feature.
+            raise AppError(
+                409, "LEARNING_CONSENT_CONFLICT", "Learning consent changed; recompute text features"
+            )
+    if not isinstance(learning_snapshot, dict):
         return trace
     return {
         **trace,
@@ -362,9 +402,19 @@ def record_observation(db: Session, actor: Actor, cycle: PairCycle) -> None:
         return
     values = first.score_trace.get("learning_snapshot", {})
     snapshot = first.score_trace.get("features", {})
+    feature_version = first.score_trace.get("learning_feature_version", "reciprocal-structured-v1")
+    expected_names = (
+        {
+            "reciprocal-structured-v1": FEATURE_NAMES,
+            CURRENT_FEATURE_VERSION: EXPANDED_FEATURE_NAMES,
+        }.get(feature_version)
+        if isinstance(feature_version, str)
+        else None
+    )
     if (
         not isinstance(values, dict)
-        or set(values) != set(FEATURE_NAMES)
+        or expected_names is None
+        or set(values) != set(expected_names)
         or not isinstance(snapshot, dict)
         or type(snapshot.get("candidate_version")) is not int
         or snapshot["candidate_version"] < 1
@@ -384,6 +434,20 @@ def record_observation(db: Session, actor: Actor, cycle: PairCycle) -> None:
         return
     if as_of > first.created_at:
         return
+    lineage = first.score_trace.get("learning_feature_provenance", {"text_relevance_model_id": None})
+    if not isinstance(lineage, dict) or set(lineage) != {"text_relevance_model_id"}:
+        return
+    extractor_id = lineage["text_relevance_model_id"]
+    if extractor_id is not None and (
+        not isinstance(extractor_id, str)
+        or len(extractor_id) != 64
+        or any(c not in "0123456789abcdef" for c in extractor_id)
+    ):
+        return
+    if (values.get("text_relevance") is None) != (extractor_id is None):
+        return
+    if extractor_id is not None and snapshot.get("text_relevance_model_id") != extractor_id:
+        return
     cards = list(db.scalars(select(DecisionCard).where(DecisionCard.pair_cycle_id == cycle.id)))
     if not (
         any(card.status == "PASSED" for card in cards)
@@ -393,6 +457,9 @@ def record_observation(db: Session, actor: Actor, cycle: PairCycle) -> None:
         return
     first_card = min(cards, key=lambda card: (card.created_at, card.id))
     features = {name: None for name in UNKNOWN_INPUTS}
+    # Historical snapshots keep newly introduced signals unknown. Never rebuild
+    # them from today's edited profiles or today's relevance model.
+    features.update({INPUT_NAMES[name]: None for name in EXPANDED_FEATURE_NAMES})
     features.update({INPUT_NAMES[name]: value for name, value in values.items()})
     decisions = {
         side: {"status": "NOT_ISSUED", "issued_at": None, "answered_at": None}
@@ -423,6 +490,7 @@ def record_observation(db: Session, actor: Actor, cycle: PairCycle) -> None:
         "observation_status": "OBSERVABLE",
         "observed_at": utcnow().isoformat(),
         "features": features,
+        "feature_provenance": {"text_relevance_model_id": extractor_id},
         "decisions": decisions,
     }
     observation = MatchingObservation(

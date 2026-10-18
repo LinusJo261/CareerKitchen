@@ -19,10 +19,12 @@ from scripts.matching_learning import (
     canonical_hash,
     choose_threshold,
     compatibility_baseline,
+    feature_diagnostics,
     fit_challenger,
     fit_compatibility_probability_baseline,
     fit_logistic,
     fit_transforms,
+    incumbent_scores,
     load_incumbent,
     metrics,
     paired_confidence,
@@ -74,7 +76,7 @@ def fixture_inputs(directory: Path, count: int = 60) -> tuple[Path, Path]:
             positive = index % 10 >= 5
             exposed = f"{year}-01-01T00:00:00Z"
             features = dict.fromkeys(RESEARCH_FEATURE_NAMES)
-            features.update(dict(zip(INPUT_FEATURE_NAMES, [(index % 10) / 9, 1, 1, 1], strict=True)))
+            features.update(dict(zip(INPUT_FEATURE_NAMES[:4], [(index % 10) / 9, 1, 1, 1], strict=True)))
             rows.append(
                 {
                     "cycle_id": f"fictional-{group}-{index}",
@@ -151,7 +153,8 @@ class MatchingLearningTests(unittest.TestCase):
         assert artifact["feature_names"] == list(FEATURE_NAMES)
         assert artifact["provenance"]["split"]["policy_version"] == SPLIT_POLICY_VERSION
         assert artifact["provenance"]["split"]["grouping_entities"] == ["candidate_id", "organization_id"]
-        assert len(artifact["coefficients"]) == 8
+        assert artifact["schema_version"] == 3
+        assert len(artifact["coefficients"]) == 14
         assert artifact["fictional_data"] is True
         assert artifact["evidence"]["eligible_for_review"] is False
         assert "FICTIONAL_FIXTURE" in artifact["evidence"]["reasons"]
@@ -282,7 +285,7 @@ class MatchingLearningTests(unittest.TestCase):
         groups = fixture_groups(self.tmp_path)
         for row in groups["test"]:
             values = {
-                name: row["features"][source]
+                name: row["features"].get(source)
                 for name, source in zip(FEATURE_NAMES, INPUT_FEATURE_NAMES, strict=True)
             }
             expected = probabilities(
@@ -327,7 +330,7 @@ class MatchingLearningTests(unittest.TestCase):
         inputs, manifest = fixture_inputs(self.tmp_path)
         rows = [json.loads(line) for line in inputs.read_text().splitlines()]
         for row in rows:
-            row["features"].update(dict.fromkeys(INPUT_FEATURE_NAMES, 0.5))
+            row["features"].update(dict.fromkeys(INPUT_FEATURE_NAMES[:4], 0.5))
         inputs.write_text("".join(json.dumps(row) + "\n" for row in rows))
         report = train(
             inputs,
@@ -394,7 +397,7 @@ class MatchingLearningTests(unittest.TestCase):
         row = groups["test"][5]
         transformed = []
         for key, stats in zip(INPUT_FEATURE_NAMES, fitted["transforms"], strict=True):
-            value = row["features"][key]
+            value = row["features"].get(key)
             transformed.extend(
                 [
                     ((stats["imputation_median"] if value is None else value) - stats["center"])
@@ -465,3 +468,121 @@ class MatchingLearningTests(unittest.TestCase):
     def test_extreme_sigmoid_has_no_overflow(self):
         with np.errstate(over="raise"):
             assert sigmoid(np.array([-1e300, 0, 1e300])).tolist() == [0, 0.5, 1]
+
+    def test_expanded_contract_learns_a_new_signal_when_old_inputs_are_constant(self):
+        """Fabricated feature/outcome relation verifies fitting, never real accuracy."""
+        inputs, manifest_path = fixture_inputs(self.tmp_path)
+        manifest = json.loads(manifest_path.read_text())
+        manifest.update(schema_version=2, feature_version="mutual-pair-features-v2")
+        manifest_path.write_text(json.dumps(manifest))
+        rows = [json.loads(line) for line in inputs.read_text().splitlines()]
+        for row in rows:
+            row["feature_provenance"] = {"text_relevance_model_id": "a" * 64}
+            row["features"].update(
+                preferred_skill_coverage=0.5,
+                skill_precision=None,
+                skill_jaccard=None,
+                text_relevance=0.9 if row["decisions"]["candidate"]["status"] == "INTERESTED" else 0.1,
+            )
+        inputs.write_text("".join(json.dumps(row) + "\n" for row in rows))
+        report = train(
+            inputs,
+            manifest_path,
+            self.tmp_path / "expanded",
+            "2005-01-01T00:00:00Z",
+            "2015-01-01T00:00:00Z",
+            bootstrap_replicates=50,
+            allow_fictional=True,
+        )
+        artifact = json.loads((self.tmp_path / "expanded" / "fictional_model.json").read_text())
+        runtime = validate_artifact(artifact, require_eligible=False)
+        base = dict(zip(FEATURE_NAMES, [0.5, 1, 1, 1, None, None, 0.1], strict=True))
+        assert runtime.predict_values({**base, "text_relevance": 0.9}) > runtime.predict_values(base)
+        assert report["feature_readiness"]["training_has_feature_variation"] is True
+        assert report["feature_diagnostics"]["train"]["candidate_role"]["known_values_constant"] is True
+        assert report["feature_diagnostics"]["train"]["text_relevance"]["distinct_known_values"] == 2
+        assert report["fictional_data"] is True
+        assert report["evidence"]["eligible_for_review"] is False
+
+    def test_legacy_missing_expanded_inputs_stay_unknown_in_diagnostics_and_inference(self):
+        groups = fixture_groups(self.tmp_path)
+        diagnostics = feature_diagnostics(groups["train"])
+        for name in ("skill_precision", "skill_jaccard", "text_relevance"):
+            assert diagnostics[name] == {
+                "known_count": 0,
+                "missing_count": 60,
+                "distinct_known_values": 0,
+                "known_values_constant": False,
+                "input_varies": False,
+                "known_mean": None,
+                "known_min": None,
+                "known_max": None,
+            }
+        fitted, _ = fit_challenger(groups)
+        encoded = transform(groups["test"], fitted["transforms"])
+        assert encoded.shape == (60, 14)
+        assert np.all(encoded[:, 8::2] == 0)
+        assert np.all(encoded[:, 9::2] == 1)
+
+    def test_runtime_and_offline_transforms_keep_v2_incumbent_predictions_identical(self):
+        groups = fixture_groups(self.tmp_path)
+        fitted, _ = fit_challenger(groups)
+        legacy_transforms = fitted["transforms"][:4]
+        legacy_matrix = transform(groups["test"], legacy_transforms)
+        assert legacy_matrix.shape == (60, 8)
+        assert np.array_equal(legacy_matrix, transform(groups["test"], fitted["transforms"])[:, :8])
+
+    def test_expanded_manifest_refuses_missing_extra_inputs_and_legacy_version_mixing(self):
+        inputs, manifest_path = fixture_inputs(self.tmp_path)
+        manifest = json.loads(manifest_path.read_text())
+        manifest.update(schema_version=2, feature_version="mutual-pair-features-v2")
+        with self.assertRaisesRegex(ValueError, "documented snapshot/outcome"):
+            load_records(inputs, manifest)
+        manifest["schema_version"] = 1
+        with self.assertRaisesRegex(ValueError, "Unsupported feature version"):
+            load_records(inputs, manifest)
+
+    def test_mixed_text_extractors_are_rejected_before_any_training_or_publication(self):
+        inputs, manifest_path = fixture_inputs(self.tmp_path)
+        manifest = json.loads(manifest_path.read_text())
+        manifest.update(schema_version=2, feature_version="mutual-pair-features-v2")
+        manifest_path.write_text(json.dumps(manifest))
+        rows = [json.loads(line) for line in inputs.read_text().splitlines()]
+        for index, row in enumerate(rows):
+            row["features"].update(skill_precision=None, skill_jaccard=None, text_relevance=0.5)
+            row["feature_provenance"] = {"text_relevance_model_id": ("a" if index % 2 else "b") * 64}
+        inputs.write_text("".join(json.dumps(row) + "\n" for row in rows))
+        output = self.tmp_path / "mixed"
+        with patch("scripts.matching_learning.fit_challenger") as fit:
+            with self.assertRaisesRegex(ValueError, "Mixed text relevance extractors"):
+                train(
+                    inputs,
+                    manifest_path,
+                    output,
+                    "2005-01-01T00:00:00Z",
+                    "2015-01-01T00:00:00Z",
+                    allow_fictional=True,
+                )
+            fit.assert_not_called()
+        assert not output.exists()
+
+    def test_incumbent_comparison_replays_runtime_extractor_mismatch_fallback(self):
+        groups = fixture_groups(self.tmp_path)
+        fitted, _ = fit_challenger(groups)
+        rows = deepcopy(groups["test"][:3])
+        artifact = {
+            "schema_version": 3,
+            **fitted,
+            "provenance": {"feature_extractors": {"text_relevance_model_id": "a" * 64}},
+        }
+        for index, row in enumerate(rows):
+            row["features"]["text_relevance"] = 0.5 if index < 2 else None
+            row["feature_provenance"] = {
+                "text_relevance_model_id": "a" * 64 if index == 0 else "b" * 64 if index == 1 else None
+            }
+        expected = probabilities(fitted, transform(rows, fitted["transforms"]), fitted["calibration"])
+        scores, fallbacks = incumbent_scores(artifact, rows)
+        assert fallbacks == 1
+        assert scores[0] == expected[0]
+        assert scores[1] == compatibility_baseline(rows)[1]
+        assert scores[2] == expected[2]

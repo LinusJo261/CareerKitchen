@@ -7,7 +7,7 @@ from math import exp
 
 import pytest
 from app.matching.attention import MarketPrices
-from app.matching.learning import POPULATION, LearnedModel, apply_learned_score
+from app.matching.learning import EXPANDED_FEATURE_NAMES, POPULATION, LearnedModel, apply_learned_score
 from app.matching.reciprocal import ReciprocalFeatures, score_reciprocal
 
 NOW = datetime(2026, 10, 18, tzinfo=UTC)
@@ -107,3 +107,78 @@ def test_all_unknown_prediction_abstains_instead_of_returning_training_prevalenc
                 ("employer_skills", "candidate_role", "candidate_work_mode", "candidate_employment_type")
             )
         )
+
+
+def test_expanded_runtime_uses_seven_inputs_and_retains_old_model_contract():
+    model = fixture_model(
+        transforms=((0.5, 0.5, 0.5),) * 7,
+        coefficients=(0,) * 12 + (2, -1),
+        feature_names=EXPANDED_FEATURE_NAMES,
+        schema_version=3,
+    )
+    values = dict.fromkeys(EXPANDED_FEATURE_NAMES, 0.5)
+    assert model.predict_values({**values, "text_relevance": 0.9}) > model.predict_values(values)
+    assert model.predict_values({**values, "text_relevance": None}) != model.predict_values(values)
+    with pytest.raises(ValueError, match="versioned features"):
+        model.predict_values({name: values[name] for name in EXPANDED_FEATURE_NAMES[:4]})
+    assert fixture_model().feature_names == EXPANDED_FEATURE_NAMES[:4]
+
+
+@pytest.mark.parametrize("invalid", [True, "0.5", float("nan"), -0.1, 1.1])
+def test_expanded_relevance_input_is_strictly_bounded(invalid):
+    model = fixture_model(
+        transforms=((0.5, 0.5, 0.5),) * 7,
+        coefficients=(0,) * 14,
+        feature_names=EXPANDED_FEATURE_NAMES,
+        schema_version=3,
+    )
+    with pytest.raises(ValueError):
+        model.predict_values({**dict.fromkeys(EXPANDED_FEATURE_NAMES, 0.5), "text_relevance": invalid})
+
+
+def test_runtime_falls_back_when_a_text_extractor_changes_after_outcome_training():
+    model = fixture_model(
+        transforms=((0.5, 0.5, 0.5),) * 7,
+        coefficients=(0,) * 12 + (2, -1),
+        feature_names=EXPANDED_FEATURE_NAMES,
+        schema_version=3,
+        text_relevance_model_id="a" * 64,
+    )
+    features = replace(FEATURES, text_relevance=0.8, text_relevance_model_id="a" * 64)
+    trace = score_reciprocal(features, MarketPrices())
+    scored = apply_learned_score(trace, features, model, "unused")
+    assert scored["learning"]["active"] is True
+    assert scored["model_version"].startswith("ml-v3:")
+    changed = replace(features, text_relevance_model_id="b" * 64)
+    fallback = apply_learned_score(trace, changed, model, "unused")
+    assert fallback["learning"]["active"] is False
+    assert fallback["relevance"] == trace["relevance"]
+    assert fallback["learning"]["reason_code"] == "INVALID_INPUT_DETERMINISTIC_FALLBACK"
+
+
+@pytest.mark.parametrize(
+    "planned",
+    [
+        None,
+        [],
+        {},
+        {"candidate_consent_version": True, "organization_consent_version": 2},
+        {"candidate_consent_version": 2, "organization_consent_version": 1},
+    ],
+)
+def test_text_capture_rejects_missing_malformed_and_stale_planned_consent(planned):
+    from app.core.errors import AppError
+    from app.db.models import Candidate, Organization
+    from app.services.matching_learning import capture_learning_consent
+
+    candidate = Candidate(matching_learning_opt_in=True, matching_learning_consent_version=2)
+    organization = Organization(matching_learning_opt_in=True, matching_learning_consent_version=2)
+    # Zero is a present signal and still requires both versioned permissions.
+    trace = {
+        "features": {"text_relevance": 0},
+        "learning_snapshot": {"text_relevance": 0},
+        "learning_planned_consent": planned,
+    }
+    with pytest.raises(AppError) as error:
+        capture_learning_consent(trace, candidate, organization)
+    assert error.value.code == "LEARNING_CONSENT_CONFLICT"

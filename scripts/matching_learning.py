@@ -30,15 +30,22 @@ from scripts.mutual_matching_research import (
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "apps" / "api"))
-from app.matching.learning import validate_artifact  # noqa: E402
+from app.matching.learning import (  # noqa: E402
+    CURRENT_FEATURE_VERSION,
+    EXPANDED_FEATURE_NAMES,
+    validate_artifact,
+)
 
-FEATURE_VERSION = "reciprocal-structured-v1"
-FEATURE_NAMES = ("employer_skills", "candidate_role", "candidate_work_mode", "candidate_employment_type")
+FEATURE_VERSION = CURRENT_FEATURE_VERSION
+FEATURE_NAMES = EXPANDED_FEATURE_NAMES
 INPUT_FEATURE_NAMES = (
     "preferred_skill_coverage",
     "candidate_role_preference_alignment",
     "candidate_work_mode_preference_alignment",
     "candidate_employment_type_preference_alignment",
+    "skill_precision",
+    "skill_jaccard",
+    "text_relevance",
 )
 L2_GRID = (0.001, 0.01, 0.1, 1.0)
 SPLIT_POLICY_VERSION = "candidate-organization-forward-time-v2"
@@ -127,14 +134,40 @@ def sigmoid(value: np.ndarray) -> np.ndarray:
     return np.exp(-np.logaddexp(0, -np.asarray(value, dtype=float)))
 
 
-def _values(rows: list[dict]) -> np.ndarray:
+def _values(rows: list[dict], input_names: tuple[str, ...] = INPUT_FEATURE_NAMES) -> np.ndarray:
     return np.array(
         [
-            [np.nan if row["features"][key] is None else row["features"][key] for key in INPUT_FEATURE_NAMES]
+            [np.nan if row["features"].get(key) is None else row["features"][key] for key in input_names]
             for row in rows
         ],
         dtype=float,
     )
+
+
+def feature_diagnostics(rows: list[dict]) -> dict:
+    """Aggregate availability and variation; never reconstruct missing signals.
+
+    Missingness can vary even when the known values are constant. These counts
+    diagnose usable inputs and drift; they are not accuracy or provenance proof.
+    """
+    values = _values(rows)
+    result = {}
+    for index, name in enumerate(FEATURE_NAMES):
+        column = values[:, index]
+        known = column[np.isfinite(column)]
+        unique = len(np.unique(known))
+        missing = len(column) - len(known)
+        result[name] = {
+            "known_count": len(known),
+            "missing_count": missing,
+            "distinct_known_values": unique,
+            "known_values_constant": unique == 1,
+            "input_varies": unique > 1 or 0 < missing < len(column),
+            "known_mean": float(np.mean(known)) if len(known) else None,
+            "known_min": float(np.min(known)) if len(known) else None,
+            "known_max": float(np.max(known)) if len(known) else None,
+        }
+    return result
 
 
 def fit_transforms(rows: list[dict]) -> list[dict]:
@@ -158,8 +191,10 @@ def fit_transforms(rows: list[dict]) -> list[dict]:
 
 
 def transform(rows: list[dict], transforms: list[dict]) -> np.ndarray:
-    values = _values(rows)
-    result = np.empty((len(rows), len(FEATURE_NAMES) * 2))
+    if len(transforms) not in {4, 7}:
+        raise ValueError("Unsupported feature transform contract")
+    values = _values(rows, INPUT_FEATURE_NAMES[: len(transforms)])
+    result = np.empty((len(rows), len(transforms) * 2))
     for index, statistics in enumerate(transforms):
         column = values[:, index]
         missing = np.isnan(column)
@@ -235,7 +270,7 @@ def compatibility_baseline(rows: list[dict]) -> np.ndarray:
     """The live equal-applicable compatibility score; a ranking score, not probability."""
     result = []
     for row in rows:
-        skills, role, work, employment = [row["features"][name] for name in INPUT_FEATURE_NAMES]
+        skills, role, work, employment = [row["features"][name] for name in INPUT_FEATURE_NAMES[:4]]
         # Live preferences are known for eligible pairs. Unknown fixture inputs use
         # a declared neutral value solely to make this comparison total.
         role, work, employment = [0.5 if value is None else value for value in (role, work, employment)]
@@ -402,6 +437,7 @@ def _organization_overlap(groups: dict[str, list[dict]]) -> dict[str, int]:
 def fit_challenger(groups: dict[str, list[dict]]) -> tuple[dict, dict]:
     """Model/regularization/calibration/threshold selection cannot access test rows."""
     training, validation = groups["train"], groups["validation"]
+    training_diagnostics = feature_diagnostics(training)
     transforms = fit_transforms(training)
     train_x, valid_x = transform(training, transforms), transform(validation, transforms)
     train_y = np.array([row["label"] for row in training])
@@ -463,6 +499,8 @@ def fit_challenger(groups: dict[str, list[dict]]) -> tuple[dict, dict]:
         "calibration_selection_count": len(calibration_select),
         "calibration_cohort_policy": "strict exposure-time cut; earlier candidates and organizations purged if present later",
         "threshold_selection": "validation_balanced_accuracy",
+        "training_feature_diagnostics": training_diagnostics,
+        "training_has_feature_variation": any(item["input_varies"] for item in training_diagnostics.values()),
     }
 
 
@@ -484,12 +522,10 @@ def load_incumbent(path: Path, manifest: dict) -> dict:
     artifact = json.loads(path.read_text(encoding="utf-8"))
     validate_artifact(artifact)
     if (
-        artifact.get("schema_version") != 2
+        artifact.get("schema_version") not in {2, 3}
         or artifact.get("artifact_kind") != "reciprocal_logistic_challenger"
         or artifact.get("target") != TARGET
         or artifact.get("estimation_population") != ESTIMATION_POPULATION
-        or artifact.get("feature_version") != FEATURE_VERSION
-        or artifact.get("feature_names") != list(FEATURE_NAMES)
         or artifact.get("horizon_days") != manifest["horizon_days"]
     ):
         raise ValueError("Incumbent has incompatible feature, population, target or horizon semantics")
@@ -504,6 +540,27 @@ def load_incumbent(path: Path, manifest: dict) -> dict:
         raise ValueError("Incumbent cannot have a later source export than the challenger")
 
     return artifact
+
+
+def incumbent_scores(artifact: dict, rows: list[dict]) -> tuple[np.ndarray, int]:
+    """Replay the incumbent's runtime extractor mismatch fallback exactly.
+
+    A newly versioned text score cannot be fed to coefficients trained on an
+    unrelated extractor. Runtime uses deterministic compatibility for that pair;
+    the paired comparator must use the same behavior rather than invent inputs.
+    """
+    predicted = probabilities(artifact, transform(rows, artifact["transforms"]), artifact["calibration"])
+    if artifact["schema_version"] < 3:
+        return predicted, 0
+    expected = artifact["provenance"]["feature_extractors"]["text_relevance_model_id"]
+    fallback = np.array(
+        [
+            row["features"].get("text_relevance") is not None
+            and row.get("feature_provenance", {}).get("text_relevance_model_id") != expected
+            for row in rows
+        ]
+    )
+    return np.where(fallback, compatibility_baseline(rows), predicted), int(np.sum(fallback))
 
 
 def train(
@@ -529,7 +586,16 @@ def train(
     # Validate ownership across every structurally validated source row, including
     # censored/unresolved rows excluded from training by load_records.
     with input_path.open(encoding="utf-8") as handle:
-        source_assignments = _vacancy_organizations(json.loads(line) for line in handle if line.strip())
+        source_rows = [json.loads(line) for line in handle if line.strip()]
+    source_assignments = _vacancy_organizations(source_rows)
+    extractor_ids = {
+        row.get("feature_provenance", {}).get("text_relevance_model_id")
+        for row in source_rows
+        if row["features"].get("text_relevance") is not None
+    }
+    if len(extractor_ids) > 1:
+        raise ValueError("Mixed text relevance extractors require separate versioned training exports")
+    feature_extractors = {"text_relevance_model_id": next(iter(extractor_ids), None)}
     groups, split = split_learning_records(rows, seed, train_before, validate_before)
     split["source_vacancies_checked"] = len(source_assignments)
     split["class_counts"] = {
@@ -554,7 +620,7 @@ def train(
             "Freeze incumbent before validation exposures; a later-trained incumbent contaminates evaluation"
         )
     prevalence = float(np.mean([row["label"] for row in groups["train"]]))
-    evaluations = {}
+    evaluations: dict[str, dict] = {}
     for name in ("validation", "test"):
         current = groups[name]
         labels = np.array([row["label"] for row in current])
@@ -566,11 +632,11 @@ def train(
                 _raw(compatibility_model, compatibility_baseline(current)[:, None])
             ),
         }
+        incumbent_fallbacks = 0
         if incumbent is not None:
-            baselines["incumbent"] = probabilities(
-                incumbent, transform(current, incumbent["transforms"]), incumbent["calibration"]
-            )
+            baselines["incumbent"], incumbent_fallbacks = incumbent_scores(incumbent, current)
         evaluations[name] = {
+            "incumbent_extractor_mismatch_fallback_count": incumbent_fallbacks,
             "challenger": metrics(labels, predicted, fitted["decision_threshold"]),
             "baselines": {key: metrics(labels, value) for key, value in baselines.items()},
             "paired_comparisons": {
@@ -586,6 +652,8 @@ def train(
         reasons.append("ORGANIZATIONS_OVERLAP_ACROSS_SPLITS")
     if not selection["training_converged"]:
         reasons.append("TRAINING_DID_NOT_CONVERGE")
+    if not selection["training_has_feature_variation"]:
+        reasons.append("NO_VARYING_PRE_EXPOSURE_FEATURES")
     for name, current in groups.items():
         counts = [sum(row["label"] == label for row in current) for label in (0, 1)]
         if len(current) < 100 or min(counts) < 20:
@@ -600,6 +668,7 @@ def train(
                 reasons.append(f"NO_CONFIDENT_{name.upper()}_GAIN_VS_{baseline.upper()}")
     provenance = {
         "input_sha256": input_hash,
+        "feature_extractors": feature_extractors,
         "manifest_sha256": manifest_hash,
         "split": split,
         "selection": selection,
@@ -610,7 +679,7 @@ def train(
     }
     evidence = {"eligible_for_review": not reasons, "reasons": sorted(set(reasons))}
     artifact = {
-        "schema_version": 2,
+        "schema_version": 3,
         "artifact_kind": "reciprocal_logistic_challenger",
         "target": TARGET,
         "estimation_population": ESTIMATION_POPULATION,
@@ -626,12 +695,25 @@ def train(
     artifact["model_id"] = canonical_hash(artifact)
     validate_artifact(artifact, require_eligible=False)
     report = {
-        "schema_version": 2,
+        "schema_version": 3,
         "model_id": artifact["model_id"],
         "target": TARGET,
         "fictional_data": fictional,
         "source": manifest["source"],
         "data_quality": diagnostics,
+        "feature_diagnostics": {name: feature_diagnostics(current) for name, current in groups.items()},
+        "feature_readiness": {
+            "feature_version": FEATURE_VERSION,
+            "training_has_feature_variation": selection["training_has_feature_variation"],
+            "training_unobserved_features": [
+                name
+                for name, item in selection["training_feature_diagnostics"].items()
+                if item["known_count"] == 0
+            ],
+            "minimum_rows_per_fold": 100,
+            "minimum_examples_per_class_per_fold": 20,
+            "minimum_evaluation_candidate_and_organization_clusters": 20,
+        },
         "provenance": provenance,
         "evaluation": evaluations,
         "evidence": evidence,
@@ -644,7 +726,9 @@ def train(
             "Review eligibility is an offline evidence screen, not causal proof or automatic authorization for activation.",
             "Repeated tuning against the same test cohort invalidates its untouched-holdout interpretation.",
             "Regularization selection and calibration use validation outcomes; validation uncertainty is optimistic after selection. The untouched test provides the independent evaluation.",
-            "Four structured inputs may offer little variation after hard eligibility; outcome data cannot manufacture missing signals.",
+            "Hard preference gates may make several inputs constant; outcome data cannot manufacture missing signals.",
+            "Text relevance is a pre-exposure input from a separately versioned scorer, never an observed mutual-interest label.",
+            "Incumbent extractor mismatches replay its deterministic runtime fallback; fallback compatibility remains an uncalibrated ranking score.",
         ],
     }
     prefix = "fictional_" if fictional else "observed_"

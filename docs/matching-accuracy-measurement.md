@@ -1,5 +1,9 @@
 # Measured relevance: 18 October 2026
 
+Follow-up: [trained retrieval ML, repeated measurements and continual outcome
+learning](matching-ml-upgrade.md) now address the measured relevance weakness.
+The baseline measurements below remain unchanged.
+
 The current compatibility core, supplied through a fixed ESCO text adapter,
 underperforms straightforward text baselines on both evaluated datasets. This
 is useful evidence of a relevance weakness. It does **not** establish that live

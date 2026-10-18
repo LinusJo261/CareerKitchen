@@ -1,5 +1,8 @@
 # Live matching and outcome learning
 
+See the [trained ML measurements and expanded continual-learning
+path](matching-ml-upgrade.md) for the subsequent learning upgrade and its limits.
+
 The deterministic attention optimizer now executes live through
 `app.services.clearing`. `FEATURE_MODE=LIVE` is the default. Scenario portfolio
 research remains read-only: its modeled employment probabilities have no observed

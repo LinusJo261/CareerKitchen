@@ -1,0 +1,996 @@
+{
+  "binary_accuracy_measured": false,
+  "contact_redaction_safety_replay": {
+    "comparison": {
+      "human": {
+        "exact_equal": true,
+        "feature_values_compared": 2250,
+        "maximum_absolute_difference": 0.0
+      },
+      "talent_development": {
+        "exact_equal": true,
+        "feature_values_compared": 70800,
+        "maximum_absolute_difference": 0.0
+      },
+      "talent_test": {
+        "exact_equal": true,
+        "feature_values_compared": 285600,
+        "maximum_absolute_difference": 0.0
+      }
+    },
+    "datasets": {
+      "human": {
+        "feature_array_sha256": "73c0d8daa84ea159b191c9aad88abc322aca69dee68c6266054f764322e46b45",
+        "shape": [
+          30,
+          5,
+          15
+        ]
+      },
+      "talent_development": {
+        "feature_array_sha256": "b29537bc9dd10092fa216af64dcf1f8dd00593972b82a57f3b03c4029e84d76d",
+        "shape": [
+          10,
+          472,
+          15
+        ]
+      },
+      "talent_test": {
+        "feature_array_sha256": "516a15a51d318cc77584a90a3897d4ac3b899f15837a6324c8681177f6bd6286",
+        "shape": [
+          40,
+          476,
+          15
+        ]
+      }
+    },
+    "feature_source_sha256": "4501379cbdef3545c5bfb6a6ac9a880449dd41148c8b94647162e6f3dcaee76a",
+    "feature_version": "bounded-lexical-multiview-v2",
+    "purpose": "Contact-regex CPU safety repair; no feature engineering, model grid or labels used for choosing changes"
+  },
+  "context_of_other_experiments": "Generic frozen BGE/E5 and MS-MARCO neural comparisons did not demonstrate a robust improvement across both public benchmarks. The separately reported public ordinal model failed external retrieval transfer. These failures are retained; this task-specific surrogate was selected before seeing its outer results, on already examined development data.",
+  "final_model_policy": {
+    "inner_learner_map": {
+      "0.01": 0.8632845844859229,
+      "0.1": 0.8590874982454249,
+      "1.0": 0.8514868268060919,
+      "10.0": 0.8475354052191445,
+      "100.0": 0.846401441956346
+    },
+    "inner_tfidf_map": 0.837335752157202,
+    "inner_whole_job_folds": 10,
+    "selected_policy": "LISTWISE_ML",
+    "selected_regularization": 0.01
+  },
+  "limitations": [
+    "Exploratory nested leave-one-job-out evaluation on already examined public English development data; not an untouched external test or official leaderboard score.",
+    "The entire candidate corpus is shared seen background across folds and label-free indexing; this is transductive validation of new job labels, not an independent candidate holdout.",
+    "Candidate labels from a held-out job never enter fitting, scaling, regularization selection or the decision to use the deterministic TF-IDF fallback for that job.",
+    "Only published-positive judgments supply targets. Unlisted candidates compete in the softmax denominator as unlabeled background, not confirmed negative suitability or outcome labels.",
+    "This surrogate encourages published positives above background. Missing or selectively recorded positives can bias the ranking; no unbiased positive-unlabeled risk claim is made.",
+    "TalentCLEF documents are privacy-preserving synthetic profiles with expert relevance annotations, not consented observed applicant or employer decisions.",
+    "MAP and published-positive P@10 measure retrieval credit. Neither is binary matching accuracy, verified suitability precision, calibrated interest probability or hiring success.",
+    "Ten held-out job clusters and a shared corpus are small; query bootstrap intervals condition on fitted outer predictions and do not account for retraining uncertainty or correlated skills and organizations.",
+    "Public ML artifacts have a distinct retrieval target and OFFLINE_RESEARCH_ONLY scope. They cannot qualify for consented outcome-model promotion or bypass eligibility, consent, attention or double opt-in.",
+    "All raw learner, inner-gated policy and lexical comparisons are reported. Inner validation selects lambda and fallback; outer results never tune this protocol."
+  ],
+  "measurement_date": "2026-10-18",
+  "model_sha256": "2ef52f980246000dbd45137e207f3b358a4940b13761dfb89c5038b8a7fec751",
+  "model_target": "PUBLIC_PUBLISHED_POSITIVE_RETRIEVAL",
+  "portable_artifact_production_eligible": false,
+  "portable_artifact_scope": "OFFLINE_RESEARCH_ONLY",
+  "production_matching_accuracy": null,
+  "production_model_promoted": false,
+  "protocol_sha256": "cd99e6ab9ab4ee82cf6a3a7d1ec792504df61aa9e575a8ffe95e6b52ae7edf5b",
+  "replay": {
+    "all_outer_metrics_and_uncertainty_identical": true,
+    "all_outer_selection_counts_identical": true,
+    "final_model_bytes_identical": true,
+    "portable_json_inference_replay": true,
+    "protocol_identical": true,
+    "two_independent_complete_scoring_runs": true,
+    "two_unlabeled_test_prediction_runs_byte_identical": true
+  },
+  "results": {
+    "classification_accuracy_measured": false,
+    "cutoff": 10,
+    "definitions": {
+      "coverage": "expected fraction of full-pool top-k positions having any published suitability judgment; remaining positions have unknown suitability",
+      "map": "macro mean full-pool AP for retrieval of published relevant candidates; unlisted candidates earn no relevance credit",
+      "ndcg_at_k": "expected published-relevance binary DCG at k divided by ideal published-relevance DCG at k",
+      "precision_at_k": "expected published-relevant candidates in the first k full-pool positions divided by requested k; not verified suitability precision",
+      "recall_at_k": "expected published-relevant candidates in the first k positions divided by all published positives for that job",
+      "score_pair_tie_rate": "fraction of full-pool candidate pairs with exactly equal model scores; not an accuracy target"
+    },
+    "geometry": {
+      "evaluable_positive_queries": 10,
+      "published_relevant_pairs": 472,
+      "queries": 10,
+      "queries_with_fewer_than_cutoff_candidates": 0,
+      "scored_query_document_pairs": 4720,
+      "uncredited_pairs": 4248,
+      "zero_published_positive_queries_excluded": 0
+    },
+    "limitations": [
+      "This measures retrieval of published relevant candidates, not binary suitability classification or hiring accuracy.",
+      "Unlisted candidates earn zero relevance credit under an explicit information-retrieval convention; their suitability remains unknown, not confirmed negative.",
+      "P@k is published-relevance credit at k, not an estimate of the fraction of genuinely suitable candidates in the top k.",
+      "Sparse qrels can omit genuinely suitable candidates; selected or incomplete relevance judgments limit inference about the entire corpus.",
+      "All methods rank the identical full candidate pool for each job; every method and random baseline uses the same job resamples.",
+      "Jobs with no published positives are excluded from macro relevance metrics and counted explicitly.",
+      "Ties use exact uniform-permutation expectations, preventing source IDs or row order from generating artificial gains.",
+      "MAP follows a full-ranking published-relevance IR convention, but exact tie expectations and this subset protocol need not match an official leaderboard implementation.",
+      "Intervals resample jobs and condition on the fixed corpus, qrels and methods; they omit annotation, adapter, candidate-pool and model-selection uncertainty.",
+      "Few jobs and synthetic profiles limit generalization; exploratory intervals are unadjusted for multiple comparisons and benchmark reuse.",
+      "No observed mutual-interest, application, offer, employment-start, calibrated probability or live product outcome is measured."
+    ],
+    "measurement_target": "retrieval_of_published_relevant_candidates",
+    "methods": {
+      "bm25": {
+        "bootstrap_job_cluster_95": {
+          "map": {
+            "lower": 0.6886327964881501,
+            "upper": 0.9048282900049384
+          },
+          "ndcg_at_k": {
+            "lower": 0.7910017612832275,
+            "upper": 1.0
+          },
+          "precision_at_k": {
+            "lower": 0.79,
+            "upper": 0.97
+          },
+          "recall_at_k": {
+            "lower": 0.16920544733044734,
+            "upper": 0.45263821248196245
+          },
+          "score_pair_tie_rate": {
+            "lower": 3.868437151390838e-05,
+            "upper": 5.397819281010472e-05
+          }
+        },
+        "evaluable_queries": 10,
+        "judgment_coverage": {
+          "judged_documents_across_queries": 472,
+          "mean_top_k_judgment_coverage": 0.89,
+          "queries_with_fewer_than_cutoff_scored_documents": 0,
+          "scored_documents_across_queries": 4720,
+          "unjudged_scored_documents_across_queries": 4248
+        },
+        "mean": {
+          "map": 0.8021535773919501,
+          "ndcg_at_k": 0.9104913649097247,
+          "precision_at_k": 0.89,
+          "recall_at_k": 0.2794327200577201,
+          "score_pair_tie_rate": 4.678110043542409e-05
+        }
+      },
+      "current_structured_skill_proxy": {
+        "bootstrap_job_cluster_95": {
+          "map": {
+            "lower": 0.4576940737432604,
+            "upper": 0.6444042225076219
+          },
+          "ndcg_at_k": {
+            "lower": 0.5661152446761007,
+            "upper": 0.8736033671581183
+          },
+          "precision_at_k": {
+            "lower": 0.5364135472370767,
+            "upper": 0.8533363636363636
+          },
+          "recall_at_k": {
+            "lower": 0.12604515279481857,
+            "upper": 0.30306677173279783
+          },
+          "score_pair_tie_rate": {
+            "lower": 0.2485425887941272,
+            "upper": 0.4496108847025801
+          }
+        },
+        "evaluable_queries": 10,
+        "judgment_coverage": {
+          "judged_documents_across_queries": 472,
+          "mean_top_k_judgment_coverage": 0.6981782531194296,
+          "queries_with_fewer_than_cutoff_scored_documents": 0,
+          "scored_documents_across_queries": 4720,
+          "unjudged_scored_documents_across_queries": 4248
+        },
+        "mean": {
+          "map": 0.5563294283931325,
+          "ndcg_at_k": 0.7264072240715814,
+          "precision_at_k": 0.6981782531194296,
+          "recall_at_k": 0.20140275141277816,
+          "score_pair_tie_rate": 0.34070675447119364
+        }
+      },
+      "lexical_jaccard": {
+        "bootstrap_job_cluster_95": {
+          "map": {
+            "lower": 0.6790646982417653,
+            "upper": 0.8920989870062644
+          },
+          "ndcg_at_k": {
+            "lower": 0.839747421269337,
+            "upper": 0.9845425660421603
+          },
+          "precision_at_k": {
+            "lower": 0.78,
+            "upper": 0.96
+          },
+          "recall_at_k": {
+            "lower": 0.16551226551226553,
+            "upper": 0.4557720057720058
+          },
+          "score_pair_tie_rate": {
+            "lower": 0.0005982583036453273,
+            "upper": 0.0007520961531541257
+          }
+        },
+        "evaluable_queries": 10,
+        "judgment_coverage": {
+          "judged_documents_across_queries": 472,
+          "mean_top_k_judgment_coverage": 0.8800000000000001,
+          "queries_with_fewer_than_cutoff_scored_documents": 0,
+          "scored_documents_across_queries": 4720,
+          "unjudged_scored_documents_across_queries": 4248
+        },
+        "mean": {
+          "map": 0.7888899840854775,
+          "ndcg_at_k": 0.9204379870593236,
+          "precision_at_k": 0.8800000000000001,
+          "recall_at_k": 0.28117784992784994,
+          "score_pair_tie_rate": 0.0006774263197668142
+        }
+      },
+      "listwise_inner_selected_tfidf_fallback_nested_oof": {
+        "bootstrap_job_cluster_95": {
+          "map": {
+            "lower": 0.7621446890002306,
+            "upper": 0.9446428505881385
+          },
+          "ndcg_at_k": {
+            "lower": 0.7871436625920556,
+            "upper": 1.0
+          },
+          "precision_at_k": {
+            "lower": 0.8,
+            "upper": 1.0
+          },
+          "recall_at_k": {
+            "lower": 0.16996460137085137,
+            "upper": 0.45933464105339106
+          },
+          "score_pair_tie_rate": {
+            "lower": 0.0,
+            "upper": 0.0
+          }
+        },
+        "evaluable_queries": 10,
+        "judgment_coverage": {
+          "judged_documents_across_queries": 472,
+          "mean_top_k_judgment_coverage": 0.9,
+          "queries_with_fewer_than_cutoff_scored_documents": 0,
+          "scored_documents_across_queries": 4720,
+          "unjudged_scored_documents_across_queries": 4248
+        },
+        "mean": {
+          "map": 0.8593441635750205,
+          "ndcg_at_k": 0.9195189000790661,
+          "precision_at_k": 0.9,
+          "recall_at_k": 0.2852362914862915,
+          "score_pair_tie_rate": 0.0
+        }
+      },
+      "listwise_published_positive_nested_oof": {
+        "bootstrap_job_cluster_95": {
+          "map": {
+            "lower": 0.7621446890002306,
+            "upper": 0.9446428505881385
+          },
+          "ndcg_at_k": {
+            "lower": 0.7871436625920556,
+            "upper": 1.0
+          },
+          "precision_at_k": {
+            "lower": 0.8,
+            "upper": 1.0
+          },
+          "recall_at_k": {
+            "lower": 0.16996460137085137,
+            "upper": 0.45933464105339106
+          },
+          "score_pair_tie_rate": {
+            "lower": 0.0,
+            "upper": 0.0
+          }
+        },
+        "evaluable_queries": 10,
+        "judgment_coverage": {
+          "judged_documents_across_queries": 472,
+          "mean_top_k_judgment_coverage": 0.9,
+          "queries_with_fewer_than_cutoff_scored_documents": 0,
+          "scored_documents_across_queries": 4720,
+          "unjudged_scored_documents_across_queries": 4248
+        },
+        "mean": {
+          "map": 0.8593441635750205,
+          "ndcg_at_k": 0.9195189000790661,
+          "precision_at_k": 0.9,
+          "recall_at_k": 0.2852362914862915,
+          "score_pair_tie_rate": 0.0
+        }
+      },
+      "pairwise_ordinal_external_transfer": {
+        "bootstrap_job_cluster_95": {
+          "map": {
+            "lower": 0.055243461853961694,
+            "upper": 0.18834518621254775
+          },
+          "ndcg_at_k": {
+            "lower": 0.023519480693602598,
+            "upper": 0.376133688841792
+          },
+          "precision_at_k": {
+            "lower": 0.03,
+            "upper": 0.33999999999999997
+          },
+          "recall_at_k": {
+            "lower": 0.006818181818181818,
+            "upper": 0.04500811688311688
+          },
+          "score_pair_tie_rate": {
+            "lower": 0.0,
+            "upper": 0.0
+          }
+        },
+        "evaluable_queries": 10,
+        "judgment_coverage": {
+          "judged_documents_across_queries": 472,
+          "mean_top_k_judgment_coverage": 0.16,
+          "queries_with_fewer_than_cutoff_scored_documents": 0,
+          "scored_documents_across_queries": 4720,
+          "unjudged_scored_documents_across_queries": 4248
+        },
+        "mean": {
+          "map": 0.11250961170197313,
+          "ndcg_at_k": 0.1778033584459731,
+          "precision_at_k": 0.16,
+          "recall_at_k": 0.024228896103896103,
+          "score_pair_tie_rate": 0.0
+        }
+      },
+      "tfidf_cosine": {
+        "bootstrap_job_cluster_95": {
+          "map": {
+            "lower": 0.7161085091181121,
+            "upper": 0.9374149315243706
+          },
+          "ndcg_at_k": {
+            "lower": 0.7424806834357396,
+            "upper": 1.0
+          },
+          "precision_at_k": {
+            "lower": 0.74,
+            "upper": 1.0
+          },
+          "recall_at_k": {
+            "lower": 0.1629236562049062,
+            "upper": 0.4580359397546898
+          },
+          "score_pair_tie_rate": {
+            "lower": 0.0,
+            "upper": 0.0
+          }
+        },
+        "evaluable_queries": 10,
+        "judgment_coverage": {
+          "judged_documents_across_queries": 472,
+          "mean_top_k_judgment_coverage": 0.8800000000000001,
+          "queries_with_fewer_than_cutoff_scored_documents": 0,
+          "scored_documents_across_queries": 4720,
+          "unjudged_scored_documents_across_queries": 4248
+        },
+        "mean": {
+          "map": 0.837335752157202,
+          "ndcg_at_k": 0.895367279222239,
+          "precision_at_k": 0.8800000000000001,
+          "recall_at_k": 0.2816648629148629,
+          "score_pair_tie_rate": 0.0
+        }
+      }
+    },
+    "official_full_corpus_leaderboard_score": false,
+    "paired_comparisons": {
+      "bm25": {
+        "bootstrap_job_cluster_95": {
+          "map": {
+            "lower": -0.08417582741595389,
+            "upper": 0.016522420037381167
+          },
+          "ndcg_at_k": {
+            "lower": -0.060680110842746715,
+            "upper": 0.10605236790520356
+          },
+          "precision_at_k": {
+            "lower": -0.08999999999999997,
+            "upper": 0.12
+          },
+          "recall_at_k": {
+            "lower": -0.02812500000000001,
+            "upper": 0.021428571428571408
+          },
+          "score_pair_tie_rate": {
+            "lower": 3.868437151390838e-05,
+            "upper": 5.397819281010472e-05
+          }
+        },
+        "delta_method_minus_reference": {
+          "map": -0.03518217476525187,
+          "ndcg_at_k": 0.015124085687485689,
+          "precision_at_k": 0.009999999999999898,
+          "recall_at_k": -0.002232142857142849,
+          "score_pair_tie_rate": 4.678110043542409e-05
+        },
+        "reference_method": "tfidf_cosine"
+      },
+      "current_structured_skill_proxy": {
+        "bootstrap_job_cluster_95": {
+          "map": {
+            "lower": -0.3914367184066966,
+            "upper": -0.17841353388273257
+          },
+          "ndcg_at_k": {
+            "lower": -0.3265083804889231,
+            "upper": 0.006834099885277074
+          },
+          "precision_at_k": {
+            "lower": -0.3382545454545455,
+            "upper": -0.036666666666666736
+          },
+          "recall_at_k": {
+            "lower": -0.16908154597927325,
+            "upper": -0.008233580392671302
+          },
+          "score_pair_tie_rate": {
+            "lower": 0.2485425887941272,
+            "upper": 0.4496108847025801
+          }
+        },
+        "delta_method_minus_reference": {
+          "map": -0.28100632376406953,
+          "ndcg_at_k": -0.1689600551506576,
+          "precision_at_k": -0.1818217468805705,
+          "recall_at_k": -0.08026211150208476,
+          "score_pair_tie_rate": 0.34070675447119364
+        },
+        "reference_method": "tfidf_cosine"
+      },
+      "lexical_jaccard": {
+        "bootstrap_job_cluster_95": {
+          "map": {
+            "lower": -0.09047949871973293,
+            "upper": -0.008421576021858238
+          },
+          "ndcg_at_k": {
+            "lower": -0.04558765233555173,
+            "upper": 0.11616705506904446
+          },
+          "precision_at_k": {
+            "lower": -0.05999999999999994,
+            "upper": 0.06000000000000005
+          },
+          "recall_at_k": {
+            "lower": -0.01874999999999999,
+            "upper": 0.018262987012987036
+          },
+          "score_pair_tie_rate": {
+            "lower": 0.0005982583036453273,
+            "upper": 0.0007520961531541257
+          }
+        },
+        "delta_method_minus_reference": {
+          "map": -0.048445768071724515,
+          "ndcg_at_k": 0.025070707837084538,
+          "precision_at_k": 0.0,
+          "recall_at_k": -0.00048701298701298024,
+          "score_pair_tie_rate": 0.0006774263197668142
+        },
+        "reference_method": "tfidf_cosine"
+      },
+      "listwise_inner_selected_tfidf_fallback_nested_oof": {
+        "bootstrap_job_cluster_95": {
+          "map": {
+            "lower": 0.0033287569830745545,
+            "upper": 0.050899328240424487
+          },
+          "ndcg_at_k": {
+            "lower": 0.0,
+            "upper": 0.06612533973640833
+          },
+          "precision_at_k": {
+            "lower": 0.0,
+            "upper": 0.06000000000000005
+          },
+          "recall_at_k": {
+            "lower": 0.0,
+            "upper": 0.010714285714285732
+          },
+          "score_pair_tie_rate": {
+            "lower": 0.0,
+            "upper": 0.0
+          }
+        },
+        "delta_method_minus_reference": {
+          "map": 0.022008411417818508,
+          "ndcg_at_k": 0.024151620856827094,
+          "precision_at_k": 0.019999999999999907,
+          "recall_at_k": 0.0035714285714285587,
+          "score_pair_tie_rate": 0.0
+        },
+        "reference_method": "tfidf_cosine"
+      },
+      "listwise_published_positive_nested_oof": {
+        "bootstrap_job_cluster_95": {
+          "map": {
+            "lower": 0.0033287569830745545,
+            "upper": 0.050899328240424487
+          },
+          "ndcg_at_k": {
+            "lower": 0.0,
+            "upper": 0.06612533973640833
+          },
+          "precision_at_k": {
+            "lower": 0.0,
+            "upper": 0.06000000000000005
+          },
+          "recall_at_k": {
+            "lower": 0.0,
+            "upper": 0.010714285714285732
+          },
+          "score_pair_tie_rate": {
+            "lower": 0.0,
+            "upper": 0.0
+          }
+        },
+        "delta_method_minus_reference": {
+          "map": 0.022008411417818508,
+          "ndcg_at_k": 0.024151620856827094,
+          "precision_at_k": 0.019999999999999907,
+          "recall_at_k": 0.0035714285714285587,
+          "score_pair_tie_rate": 0.0
+        },
+        "reference_method": "tfidf_cosine"
+      },
+      "pairwise_ordinal_external_transfer": {
+        "bootstrap_job_cluster_95": {
+          "map": {
+            "lower": -0.8515350931383167,
+            "upper": -0.5817728716073058
+          },
+          "ndcg_at_k": {
+            "lower": -0.9135363735458011,
+            "upper": -0.4857671901362422
+          },
+          "precision_at_k": {
+            "lower": -0.91,
+            "upper": -0.49000000000000005
+          },
+          "recall_at_k": {
+            "lower": -0.4426136363636363,
+            "upper": -0.12597673160173167
+          },
+          "score_pair_tie_rate": {
+            "lower": 0.0,
+            "upper": 0.0
+          }
+        },
+        "delta_method_minus_reference": {
+          "map": -0.7248261404552289,
+          "ndcg_at_k": -0.717563920776266,
+          "precision_at_k": -0.7200000000000001,
+          "recall_at_k": -0.2574359668109668,
+          "score_pair_tie_rate": 0.0
+        },
+        "reference_method": "tfidf_cosine"
+      }
+    },
+    "paired_comparisons_vs_uniform_random": {
+      "bm25": {
+        "bootstrap_job_cluster_95": {
+          "map": {
+            "lower": 0.5751317562241831,
+            "upper": 0.8005549318840942
+          },
+          "ndcg_at_k": {
+            "lower": 0.6973875303119588,
+            "upper": 0.8962314680399073
+          },
+          "precision_at_k": {
+            "lower": 0.7013559322033899,
+            "upper": 0.8666144067796608
+          },
+          "recall_at_k": {
+            "lower": 0.14801900665248124,
+            "upper": 0.43145177180399635
+          },
+          "score_pair_tie_rate": {
+            "lower": -0.9999613156284861,
+            "upper": -0.9999460218071899
+          }
+        },
+        "delta_method_minus_reference": {
+          "map": 0.691194494082778,
+          "ndcg_at_k": 0.810238381555214,
+          "precision_at_k": 0.79,
+          "recall_at_k": 0.258246279379754,
+          "score_pair_tie_rate": -0.9999532188995646
+        },
+        "reference_method": "uniform_random_expected"
+      },
+      "current_structured_skill_proxy": {
+        "bootstrap_job_cluster_95": {
+          "map": {
+            "lower": 0.3539719825170642,
+            "upper": 0.527155165397606
+          },
+          "ndcg_at_k": {
+            "lower": 0.4716850254099969,
+            "upper": 0.7639968026523302
+          },
+          "precision_at_k": {
+            "lower": 0.4514468110819058,
+            "upper": 0.7382533550862563
+          },
+          "recall_at_k": {
+            "lower": 0.10485871211685248,
+            "upper": 0.28188033105483173
+          },
+          "score_pair_tie_rate": {
+            "lower": -0.7514574112058728,
+            "upper": -0.5503891152974199
+          }
+        },
+        "delta_method_minus_reference": {
+          "map": 0.44537034508396034,
+          "ndcg_at_k": 0.6261542407170707,
+          "precision_at_k": 0.5981782531194296,
+          "recall_at_k": 0.18021631073481206,
+          "score_pair_tie_rate": -0.6592932455288063
+        },
+        "reference_method": "uniform_random_expected"
+      },
+      "lexical_jaccard": {
+        "bootstrap_job_cluster_95": {
+          "map": {
+            "lower": 0.560700940183055,
+            "upper": 0.7894194799080605
+          },
+          "ndcg_at_k": {
+            "lower": 0.7347937298885301,
+            "upper": 0.8907707599558277
+          },
+          "precision_at_k": {
+            "lower": 0.6754194915254237,
+            "upper": 0.8589872881355931
+          },
+          "recall_at_k": {
+            "lower": 0.14432582483429943,
+            "upper": 0.43458556509403967
+          },
+          "score_pair_tie_rate": {
+            "lower": -0.9994017416963547,
+            "upper": -0.9992479038468459
+          }
+        },
+        "delta_method_minus_reference": {
+          "map": 0.6779309007763054,
+          "ndcg_at_k": 0.8201850037048128,
+          "precision_at_k": 0.7800000000000001,
+          "recall_at_k": 0.25999140924988384,
+          "score_pair_tie_rate": -0.9993225736802331
+        },
+        "reference_method": "uniform_random_expected"
+      },
+      "listwise_inner_selected_tfidf_fallback_nested_oof": {
+        "bootstrap_job_cluster_95": {
+          "map": {
+            "lower": 0.6480351575000105,
+            "upper": 0.8397251182861188
+          },
+          "ndcg_at_k": {
+            "lower": 0.6973131541174793,
+            "upper": 0.9133063386793876
+          },
+          "precision_at_k": {
+            "lower": 0.6940677966101695,
+            "upper": 0.888135593220339
+          },
+          "recall_at_k": {
+            "lower": 0.14877816069288527,
+            "upper": 0.43814820037542496
+          },
+          "score_pair_tie_rate": {
+            "lower": -1.0,
+            "upper": -1.0
+          }
+        },
+        "delta_method_minus_reference": {
+          "map": 0.7483850802658484,
+          "ndcg_at_k": 0.8192659167245554,
+          "precision_at_k": 0.8,
+          "recall_at_k": 0.2640498508083254,
+          "score_pair_tie_rate": -1.0
+        },
+        "reference_method": "uniform_random_expected"
+      },
+      "listwise_published_positive_nested_oof": {
+        "bootstrap_job_cluster_95": {
+          "map": {
+            "lower": 0.6480351575000105,
+            "upper": 0.8397251182861188
+          },
+          "ndcg_at_k": {
+            "lower": 0.6973131541174793,
+            "upper": 0.9133063386793876
+          },
+          "precision_at_k": {
+            "lower": 0.6940677966101695,
+            "upper": 0.888135593220339
+          },
+          "recall_at_k": {
+            "lower": 0.14877816069288527,
+            "upper": 0.43814820037542496
+          },
+          "score_pair_tie_rate": {
+            "lower": -1.0,
+            "upper": -1.0
+          }
+        },
+        "delta_method_minus_reference": {
+          "map": 0.7483850802658484,
+          "ndcg_at_k": 0.8192659167245554,
+          "precision_at_k": 0.8,
+          "recall_at_k": 0.2640498508083254,
+          "score_pair_tie_rate": -1.0
+        },
+        "reference_method": "uniform_random_expected"
+      },
+      "pairwise_ordinal_external_transfer": {
+        "bootstrap_job_cluster_95": {
+          "map": {
+            "lower": -0.03592582508135737,
+            "upper": 0.0467554034418437
+          },
+          "ndcg_at_k": {
+            "lower": -0.056296475732577275,
+            "upper": 0.24106942625312638
+          },
+          "precision_at_k": {
+            "lower": -0.05779661016949154,
+            "upper": 0.20508898305084738
+          },
+          "recall_at_k": {
+            "lower": -0.014368258859784287,
+            "upper": 0.02382167620515078
+          },
+          "score_pair_tie_rate": {
+            "lower": -1.0,
+            "upper": -1.0
+          }
+        },
+        "delta_method_minus_reference": {
+          "map": 0.001550528392800954,
+          "ndcg_at_k": 0.07755037509146241,
+          "precision_at_k": 0.06,
+          "recall_at_k": 0.0030424554259300025,
+          "score_pair_tie_rate": -1.0
+        },
+        "reference_method": "uniform_random_expected"
+      },
+      "tfidf_cosine": {
+        "bootstrap_job_cluster_95": {
+          "map": {
+            "lower": 0.6017554186455087,
+            "upper": 0.8317892722927364
+          },
+          "ndcg_at_k": {
+            "lower": 0.6475615201684986,
+            "upper": 0.912458881052269
+          },
+          "precision_at_k": {
+            "lower": 0.6391525423728813,
+            "upper": 0.888135593220339
+          },
+          "recall_at_k": {
+            "lower": 0.1417372155269401,
+            "upper": 0.4368494990767237
+          },
+          "score_pair_tie_rate": {
+            "lower": -1.0,
+            "upper": -1.0
+          }
+        },
+        "delta_method_minus_reference": {
+          "map": 0.7263766688480299,
+          "ndcg_at_k": 0.7951142958677283,
+          "precision_at_k": 0.7800000000000001,
+          "recall_at_k": 0.2604784222368968,
+          "score_pair_tie_rate": -1.0
+        },
+        "reference_method": "uniform_random_expected"
+      }
+    },
+    "primary_metric": "map",
+    "protocol_version": "published-relevant-retrieval-paired-job-cluster-v1",
+    "reference_method": "tfidf_cosine",
+    "source_judgments": {
+      "explicit_unsuitable_pairs": 0,
+      "published_relevant_pairs": 472,
+      "scored_query_document_pairs": 4720,
+      "unjudged_scored_pairs": 4248
+    },
+    "status": "PUBLISHED_QRELS_RETRIEVAL_MEASURED",
+    "uncertainty": {
+      "all_methods_use_identical_query_resamples": true,
+      "bootstrap_replicates": 10000,
+      "candidates_resampled_independently": false,
+      "confidence_level": 0.95,
+      "method": "paired_percentile_bootstrap_linear_interpolation",
+      "multiple_comparison_adjustment": "none",
+      "seed": 20261018,
+      "unit": "job_query_cluster"
+    },
+    "uniform_random_expected": {
+      "bootstrap_job_cluster_95": {
+        "map": {
+          "lower": 0.07914782640309734,
+          "upper": 0.14863030859268184
+        },
+        "ndcg_at_k": {
+          "lower": 0.06855556023302353,
+          "upper": 0.13838857657484965
+        },
+        "precision_at_k": {
+          "lower": 0.06779661016949154,
+          "upper": 0.13813559322033897
+        },
+        "recall_at_k": {
+          "lower": 0.0211864406779661,
+          "upper": 0.021186440677966104
+        },
+        "score_pair_tie_rate": {
+          "lower": 1.0,
+          "upper": 1.0
+        }
+      },
+      "evaluable_queries": 10,
+      "expectation": "uniform_permutation_of_the_same_full_candidate_pool_per_query",
+      "mean": {
+        "map": 0.11095908330917217,
+        "ndcg_at_k": 0.10025298335451067,
+        "precision_at_k": 0.1,
+        "recall_at_k": 0.0211864406779661,
+        "score_pair_tie_rate": 1.0
+      },
+      "tie_rate_semantics": "one_all_tied_score_group_is_used_to_compute_exact_uniform_permutation_expectations"
+    },
+    "universe_scope": "common_full_scored_candidate_pool",
+    "unlisted_candidate_policy": "uncredited_not_confirmed_negative"
+  },
+  "runtime": {
+    "cpu_run_elapsed_seconds": [
+      50.14416659999961,
+      53.453711199999816
+    ],
+    "numpy": "2.3.5",
+    "python": "3.12.14"
+  },
+  "schema": 1,
+  "source": {
+    "archive_sha256": "3437ef0437b0f603a15c5e3f8e62e3450ba24cb2bbbdbc5ad328829bbce0e179",
+    "dataset": "TalentCLEF 2026 Task A",
+    "document_kind": "SYNTHETIC_HUMAN_REVIEWED_TEXT",
+    "evaluated_corpus_count": 472,
+    "evaluated_query_count": 10,
+    "explicit_negative_judgments": 0,
+    "explicit_positive_judgments": 472,
+    "judgment_coverage": 0.1,
+    "label_kind": "HUMAN_EXPERT_RELEVANCE",
+    "language": "en",
+    "license": "CC-BY-4.0",
+    "metadata_sha256": "252834d03eb99aea2e25fbbf8dd093ed9d2fda622d1deaf76cbf183c0db7586f",
+    "partition": "development",
+    "possible_pairs": 4720,
+    "record_id": 19652670,
+    "source_url": "https://zenodo.org/records/19652670",
+    "unjudged_pairs": 4248,
+    "version": "0.3.0"
+  },
+  "source_files_sha256": {
+    "apps/api/app/matching/attention.py": "b27b5e321e483a37d3736ccc6576410e1602b8621d97bafb1c94362e8b764435",
+    "apps/api/app/matching/reciprocal.py": "a3c8cecd93f2e2fac7b1c92aea96e38a3d2be6dcf3cb3a6524f217bd0ba5b0e6",
+    "apps/api/app/matching/retrieval_relevance.py": "8d6db0634c030dda8b47b9cd500302bfc1197825034a998f3f082426563c1a11",
+    "apps/api/app/matching/score.py": "ec636c42bdb427485e06a86d68b3a74d4a30be455896cd944dc7bf15708282f5",
+    "apps/api/app/matching/text_relevance.py": "4501379cbdef3545c5bfb6a6ac9a880449dd41148c8b94647162e6f3dcaee76a",
+    "apps/api/app/matching/types.py": "e7108580750426bd57d6da2fedde43cad305e12213163ff433e29803e3430241",
+    "scripts/benchmark_retrieval_relevance.py": "7e9f0a4ef3ac914b98010e55f1d9bfd8146fa1fb7357a9d64488f4eb2a4e02d2",
+    "scripts/esco_source.py": "d9e4e17d2d56b10350fb2098b507b388adba9b17d5f5dde0be3f902dc94ec892",
+    "scripts/matching_accuracy_metrics.py": "f7fa1328f6385d27d48e97d312d312f29128884628a428e7448aa94c5a199aff",
+    "scripts/matching_binary_metrics.py": "bdc55d295585f7f508978d72835382f1a02991ea2c36b071071ac0963bfe022e",
+    "scripts/matching_skill_proxy.py": "83727df5534407fe8b67387c792845155ed19e8c12ea2eb2e0f5099420420a6e",
+    "scripts/matching_text_benchmark.py": "510f8ba628364d4b278437fd0dc803f8459f0010ac6b591131c8e73c7478e24c",
+    "scripts/talentclef_source.py": "07740adbd4d7d6aa0d4c382ef5c83ef89914195e076f7d03af713c7b8fa6573b",
+    "scripts/train_retrieval_relevance.py": "b9413f47376e0ae71c152e36a403fe4c5eebda70cf62314dd06c235e08980d56",
+    "scripts/train_text_relevance.py": "86eb94c3a6659f3ded240f9ae54427a9510326817f4d229ad5e72fa11f0b9605"
+  },
+  "status": "EXPLORATORY_PUBLIC_POSITIVE_RETRIEVAL_ML",
+  "training_protocol": {
+    "candidate_corpus": "all 472 candidates are shared seen background; transductive indexing; no independent candidate holdout",
+    "fallback": "TF-IDF when best inner learner MAP is not strictly greater than inner TF-IDF MAP by 1e-12",
+    "features": "bounded-lexical-multiview-v2",
+    "gradient_tolerance": 1e-08,
+    "indexing": "label-free document IDF uses shared candidate corpus only; query/document direction retained",
+    "inner_folds": "leave one whole training job out; nine folds inside each outer fold",
+    "labels": "published positives only; unlisted candidates are competing unlabeled background, not confirmed negatives",
+    "learner": "L2 listwise softmax cross entropy; full-batch damped Newton; no intercept",
+    "maximum_newton_iterations": 100,
+    "objective": "equal-job mean(logsumexp(all candidate scores) - mean(published positive scores)) + lambda*||w||^2/2",
+    "outer_folds": "leave one whole job out; ten folds for the pinned English development corpus",
+    "post_outer_result_tuning": false,
+    "regularization_grid": [
+      0.01,
+      0.1,
+      1.0,
+      10.0,
+      100.0
+    ],
+    "scaling": "means and population standard deviations fitted only to training-job feature rows; constant features use scale 1",
+    "scope": "exploratory nested cross-validation of previously examined public development data",
+    "selection_metric": "inner leave-one-job-out published-positive MAP; largest regularization wins ties rounded to 12 decimals",
+    "surrogate_bias": "Encourages published positives above background; incomplete or selectively observed positives can bias the learned relevance order.",
+    "validation_labels": "held-out job labels are inaccessible to fitting and policy selection"
+  },
+  "unlabeled_official_test_predictions": {
+    "candidate_pool": 476,
+    "external_accuracy": null,
+    "external_submission_performed": false,
+    "format": "TREC: query_id Q0 candidate_id rank score run_tag; tab separated",
+    "implementation_sha256": "a823e120e8c4915eb4b5a9c3e810fac56c4c9c94d75dce52dd0b19910f98ca1d",
+    "labels_available": false,
+    "model_sha256": "2ef52f980246000dbd45137e207f3b358a4940b13761dfb89c5038b8a7fec751",
+    "prediction_rows": 19040,
+    "production_eligible": false,
+    "queries": 40,
+    "run_tag": "ck_public_positive_v1",
+    "selected_policy": "LISTWISE_ML",
+    "source_archive_sha256": "3437ef0437b0f603a15c5e3f8e62e3450ba24cb2bbbdbc5ad328829bbce0e179",
+    "submission_sha256": "4ec4cdd4039611401f970825638e3da3115a59eb3e4ef1984f6864e50c9dbf84",
+    "target": "PUBLIC_PUBLISHED_POSITIVE_RETRIEVAL",
+    "tie_break": "candidate ID only for unlabeled submission formatting; scored development metrics use tie expectations"
+  },
+  "validation": {
+    "candidate_holdout": false,
+    "every_job_scored_without_its_training_or_selection_labels": true,
+    "inner_whole_job_folds_per_outer": 9,
+    "ml_selected_outer_jobs": 10,
+    "outer_whole_job_folds": 10,
+    "selected_regularization_counts": {
+      "0.01": 8,
+      "0.1": 2
+    },
+    "shared_candidate_background": true,
+    "tfidf_selected_outer_jobs": 0
+  },
+  "verification": {
+    "independent_central_difference_hessian_max_absolute_error": 3.38e-11,
+    "independent_gradient_max_absolute_error": 1.11e-16,
+    "independent_scipy_bfgs_max_coefficient_error": 1.38e-08,
+    "lint_and_format_passed": true,
+    "mypy_source_modules_passed": 4,
+    "new_backend_tests_passed": 8,
+    "new_research_tests_passed": 13,
+    "outcome_registry_rejects_retrieval_target_with_or_without_eligibility_requirement": true,
+    "stdlib_inference_python_no_site_packages_test_passed": true
+  }
+}

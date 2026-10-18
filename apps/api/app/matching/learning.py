@@ -13,6 +13,8 @@ from math import exp, isfinite
 from .reciprocal import ReciprocalFeatures
 
 FEATURE_NAMES = ("employer_skills", "candidate_role", "candidate_work_mode", "candidate_employment_type")
+EXPANDED_FEATURE_NAMES = (*FEATURE_NAMES, "skill_precision", "skill_jaccard", "text_relevance")
+CURRENT_FEATURE_VERSION = "reciprocal-structured-v2"
 TARGET = "mutual_opt_in_within_horizon"
 POPULATION = "eligible_issued_introductions_with_explicit_resolution_within_horizon"
 
@@ -47,13 +49,16 @@ class LearnedModel:
     horizon_days: int
     exported_at: datetime
     fictional_data: bool
+    feature_names: tuple[str, ...] = FEATURE_NAMES
+    schema_version: int = 2
+    text_relevance_model_id: str | None = None
 
     def predict_values(self, values: dict) -> float:
-        if set(values) != set(FEATURE_NAMES):
-            raise ValueError("model input must contain exactly the four declared features")
+        if set(values) != set(self.feature_names):
+            raise ValueError("model input must contain exactly the declared versioned features")
         logit = self.intercept
         known = False
-        for index, name in enumerate(FEATURE_NAMES):
+        for index, name in enumerate(self.feature_names):
             median, center, scale = self.transforms[index]
             missing = values[name] is None
             value = median if missing else _number(values[name], 0, 1)
@@ -75,7 +80,13 @@ class LearnedModel:
         as_of = datetime.fromisoformat(features.as_of.replace("Z", "+00:00"))
         if as_of < self.exported_at:
             raise ValueError("model unavailable at feature observation time")
-        return self.predict_values({name: getattr(features, name) for name in FEATURE_NAMES})
+        if (
+            self.schema_version >= 3
+            and features.text_relevance is not None
+            and (features.text_relevance_model_id != self.text_relevance_model_id)
+        ):
+            raise ValueError("text relevance extractor differs from the trained feature contract")
+        return self.predict_values({name: getattr(features, name, None) for name in self.feature_names})
 
 
 def apply_learned_score(
@@ -106,7 +117,7 @@ def apply_learned_score(
         }
     best = max((result["candidate_first"], result["employer_first"]), key=lambda item: item["net_surplus"])
     result.update(
-        model_version=f"ml-v2:{model.model_id}",
+        model_version=f"ml-v{model.schema_version}:{model.model_id}",
         estimate_kind="CONDITIONAL_OBSERVED_RESOLUTION_RANKING",
         weights_version=model.model_id,
         net_surplus=best["net_surplus"],
@@ -150,14 +161,18 @@ def validate_artifact(artifact: dict, *, require_eligible: bool = True) -> Learn
     }
     if not isinstance(artifact, dict) or set(artifact) != expected:
         raise ValueError("invalid learned model schema")
-    if type(artifact["schema_version"]) is not int or artifact["schema_version"] != 2:
+    if type(artifact["schema_version"]) is not int or artifact["schema_version"] not in {2, 3}:
         raise ValueError("unsupported learned model schema version")
+    names = FEATURE_NAMES if artifact["schema_version"] == 2 else EXPANDED_FEATURE_NAMES
+    feature_version = (
+        "reciprocal-structured-v1" if artifact["schema_version"] == 2 else CURRENT_FEATURE_VERSION
+    )
     if (
         artifact["artifact_kind"] != "reciprocal_logistic_challenger"
         or artifact["target"] != TARGET
         or artifact["estimation_population"] != POPULATION
-        or artifact["feature_version"] != "reciprocal-structured-v1"
-        or artifact["feature_names"] != list(FEATURE_NAMES)
+        or artifact["feature_version"] != feature_version
+        or artifact["feature_names"] != list(names)
     ):
         raise ValueError("model target or features do not match routing contract")
     if not isinstance(artifact["model_id"], str) or artifact_hash(artifact) != artifact["model_id"]:
@@ -167,6 +182,18 @@ def validate_artifact(artifact: dict, *, require_eligible: bool = True) -> Learn
     source, evidence, provenance = artifact["source"], artifact["evidence"], artifact["provenance"]
     if not isinstance(source, dict) or not isinstance(evidence, dict) or not isinstance(provenance, dict):
         raise ValueError("model source, evidence and provenance required")
+    extractor_id = None
+    if artifact["schema_version"] >= 3:
+        extractors = provenance.get("feature_extractors")
+        if not isinstance(extractors, dict) or set(extractors) != {"text_relevance_model_id"}:
+            raise ValueError("versioned model feature extractors required")
+        extractor_id = extractors["text_relevance_model_id"]
+        if extractor_id is not None and (
+            not isinstance(extractor_id, str)
+            or len(extractor_id) != 64
+            or any(c not in "0123456789abcdef" for c in extractor_id)
+        ):
+            raise ValueError("text relevance extractor must be an immutable model hash")
     if set(source) != {"kind", "dataset", "source_version", "exported_at"}:
         raise ValueError("invalid model source schema")
     if any(not isinstance(source[key], str) or not source[key].strip() for key in source):
@@ -193,8 +220,8 @@ def validate_artifact(artifact: dict, *, require_eligible: bool = True) -> Learn
     if type(horizon) is not int or not 1 <= horizon <= 365:
         raise ValueError("invalid model outcome horizon")
     raw_transforms, raw_weights = artifact["transforms"], artifact["coefficients"]
-    if not isinstance(raw_transforms, list) or len(raw_transforms) != 4:
-        raise ValueError("four feature transforms required")
+    if not isinstance(raw_transforms, list) or len(raw_transforms) != len(names):
+        raise ValueError("one transform per versioned feature required")
     transforms = []
     for value in raw_transforms:
         if not isinstance(value, dict) or set(value) != {"imputation_median", "center", "scale"}:
@@ -206,8 +233,8 @@ def validate_artifact(artifact: dict, *, require_eligible: bool = True) -> Learn
                 _number(value["scale"], 0.000001, 1),
             )
         )
-    if not isinstance(raw_weights, list) or len(raw_weights) != 8:
-        raise ValueError("eight model coefficients required")
+    if not isinstance(raw_weights, list) or len(raw_weights) != 2 * len(names):
+        raise ValueError("two coefficients per versioned feature required")
     calibration = artifact["calibration"]
     if not isinstance(calibration, dict) or set(calibration) != {"kind", "slope", "intercept"}:
         raise ValueError("invalid model calibration")
@@ -228,4 +255,7 @@ def validate_artifact(artifact: dict, *, require_eligible: bool = True) -> Learn
         horizon,
         exported,
         artifact["fictional_data"],
+        names,
+        artifact["schema_version"],
+        extractor_id,
     )

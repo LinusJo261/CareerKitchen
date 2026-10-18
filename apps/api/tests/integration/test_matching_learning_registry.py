@@ -20,7 +20,7 @@ from app.db.models import (
     MatchingObservation,
     PairCycle,
 )
-from app.matching.learning import FEATURE_NAMES, POPULATION, TARGET, artifact_hash
+from app.matching.learning import EXPANDED_FEATURE_NAMES, FEATURE_NAMES, POPULATION, TARGET, artifact_hash
 from app.services import matching_learning as learning
 from app.services.common import lock_scopes, utcnow
 from sqlalchemy import func, select, update
@@ -401,7 +401,17 @@ def test_revocation_and_new_opt_in_exclude_prior_resolutions(market):
 
 @pytest.mark.parametrize(
     "malformation",
-    ["missing_features", "list_features", "invalid_as_of", "invalid_native", "list_consent", "list_snapshot"],
+    [
+        "missing_features",
+        "list_features",
+        "invalid_as_of",
+        "invalid_native",
+        "list_consent",
+        "list_snapshot",
+        "wrong_feature_version",
+        "list_feature_version",
+        "unversioned_text_score",
+    ],
 )
 def test_corrupt_frozen_learning_metadata_cannot_break_a_participant_decision(market, malformation):
     enable_learning(market)
@@ -419,6 +429,13 @@ def test_corrupt_frozen_learning_metadata_cannot_break_a_participant_decision(ma
             trace["learning_snapshot"]["employer_skills"] = True
         elif malformation == "list_consent":
             trace["learning_consent"] = []
+        elif malformation == "wrong_feature_version":
+            trace["learning_feature_version"] = "unknown-future-version"
+        elif malformation == "list_feature_version":
+            trace["learning_feature_version"] = []
+        elif malformation == "unversioned_text_score":
+            trace["learning_snapshot"]["text_relevance"] = 0.8
+            trace.pop("learning_feature_provenance", None)
         else:
             trace["learning_snapshot"] = []
         # Deliberately simulate a corrupt legacy database row. Normal ORM event
@@ -434,6 +451,191 @@ def test_corrupt_frozen_learning_metadata_cannot_break_a_participant_decision(ma
     assert response.status_code == 200, response.text
     with Session(market.engine) as db:
         assert db.scalar(select(func.count()).select_from(MatchingObservation)) == 0
+
+
+def test_expanded_model_registry_requires_variation_and_preserves_legacy_activation(market):
+    """Fabricated qualification metadata exercises v3 gates, never real evidence."""
+    artifact, report = qualification_fixture()
+    artifact.update(
+        schema_version=3,
+        feature_version="reciprocal-structured-v2",
+        feature_names=list(EXPANDED_FEATURE_NAMES),
+        transforms=artifact["transforms"] + deepcopy(artifact["transforms"][:3]),
+        coefficients=artifact["coefficients"] + [0] * 6,
+    )
+    artifact["provenance"]["feature_extractors"] = {"text_relevance_model_id": None}
+    report["schema_version"] = 3
+    synchronize(artifact, report)
+    rejected = activate(market, artifact, report)
+    assert rejected.status_code == 422
+    assert "varying pre-exposure" in rejected.json()["error"]["message"]
+    artifact["provenance"]["selection"]["training_has_feature_variation"] = True
+    synchronize(artifact, report)
+    activated = activate(market, artifact, report)
+    assert activated.status_code == 200, activated.text
+    with Session(market.engine) as db:
+        model, reason = learning.current_scoring_model(db)
+        assert reason == "OBSERVED_MODEL_ACTIVE"
+        assert model.schema_version == 3
+        assert model.feature_names == EXPANDED_FEATURE_NAMES
+
+
+@pytest.mark.parametrize("text_feature", [None, 0.8])
+def test_expanded_frozen_features_survive_profile_edits_and_read_only_export(
+    market, tmp_path, monkeypatch, text_feature
+):
+    """Only fictional participants and parameters exercise the complete export path."""
+    import json
+    from dataclasses import replace
+
+    from app.db.models import CandidateSkill, Requirement, Skill
+    from app.services import clearing
+
+    from scripts.export_matching_outcomes import export_dataset
+
+    edited_summary = "Edited after exposure; never reconstruct historical model inputs."
+    extractor = "a" * 64 if text_feature is not None else None
+    original_features = clearing.compatibility_features
+
+    def parameter_only_features(*args, **kwargs):
+        # Fixed fabricated feature tests snapshot lineage, not a real ranker.
+        return replace(
+            original_features(*args, **kwargs),
+            text_relevance=text_feature,
+            text_relevance_model_id=extractor,
+        )
+
+    monkeypatch.setattr(clearing, "compatibility_features", parameter_only_features)
+    enable_learning(market)
+    with Session(market.engine) as db, db.begin():
+        skill = Skill(name="Fictional requested skill", aliases=["Fictional alias"])
+        extra = Skill(name="Fictional extra skill", aliases=[])
+        db.add_all([skill, extra])
+        db.flush()
+        db.add_all(
+            [CandidateSkill(candidate_id=market.candidate.id, skill_id=item.id) for item in (skill, extra)]
+        )
+        for key in (skill.name, "Fictional missing skill"):
+            db.add(Requirement(vacancy_id=market.vacancy.id, key=key, description=key, kind="PREFERENCE"))
+    resolve(market)
+    with Session(market.engine) as db, db.begin():
+        observation = db.scalar(select(MatchingObservation))
+        frozen = deepcopy(observation.observation)
+        assert frozen["features"]["preferred_skill_coverage"] == 0.5
+        assert frozen["features"]["skill_precision"] == 0.5
+        assert frozen["features"]["skill_jaccard"] == pytest.approx(1 / 3)
+        assert frozen["features"]["text_relevance"] == text_feature
+        assert frozen["feature_provenance"] == {"text_relevance_model_id": extractor}
+        candidate = db.get(Candidate, market.candidate.id)
+        candidate.summary = edited_summary
+    summary = export_dataset(market.engine, tmp_path / "expanded", environment="test")
+    exported = json.loads((tmp_path / "expanded" / "introductions.jsonl").read_text())
+    manifest = json.loads((tmp_path / "expanded" / "manifest.json").read_text())
+    assert summary["row_count"] == 1
+    assert exported["features"] == frozen["features"]
+    assert exported["feature_provenance"] == frozen["feature_provenance"]
+    assert manifest["schema_version"] == 2
+    assert manifest["feature_version"] == "mutual-pair-features-v2"
+    assert edited_summary not in (tmp_path / "expanded" / "introductions.jsonl").read_text()
+
+
+@pytest.mark.parametrize(
+    "candidate_consent,organization_consent", [(False, False), (True, False), (False, True), (True, True)]
+)
+def test_fixed_text_alignment_requires_both_consents_and_preserves_frozen_export(
+    market, tmp_path, candidate_consent, organization_consent
+):
+    """Fictional profiles exercise real consent, extraction, resolution and export."""
+    import json
+    from unittest.mock import patch
+
+    from app.db.models import Organization, Vacancy
+    from app.matching.text_alignment import EXTRACTOR_ID, professional_text_alignment
+
+    from scripts.export_matching_outcomes import export_dataset
+
+    for actor, path, enabled in (
+        (0, "/candidates/me/learning-consent", candidate_consent),
+        (1, f"/organizations/{market.org.id}/learning-consent", organization_consent),
+    ):
+        if enabled:
+            current = market.call(actor, "GET", path).json()["data"]
+            response = market.call(
+                actor, "PUT", path, {"enabled": True, "expected_version": current["version"]}
+            )
+            assert response.status_code == 200, response.text
+    private_fixture_prose = "Distributed systems fictional profile marker"
+    with Session(market.engine) as db, db.begin():
+        candidate = db.get(Candidate, market.candidate.id)
+        vacancy = db.get(Vacancy, market.vacancy.id)
+        candidate.headline, candidate.summary = "Python SQL", private_fixture_prose
+        vacancy.title, vacancy.description = "Python SQL", private_fixture_prose
+    consented = candidate_consent and organization_consent
+    expected_value = pytest.approx(1) if consented else None
+    with patch(
+        "app.services.clearing.professional_text_alignment", wraps=professional_text_alignment
+    ) as extract:
+        resolve(market)
+        if consented:
+            assert extract.call_count > 0
+        else:
+            extract.assert_not_called()
+    with Session(market.engine) as db, db.begin():
+        exposure = db.scalar(select(Exposure))
+        assert exposure.score_trace["learning_snapshot"]["text_relevance"] == expected_value
+        assert exposure.score_trace["learning_feature_provenance"] == {
+            "text_relevance_model_id": EXTRACTOR_ID if consented else None
+        }
+        assert exposure.score_trace["relevance"] == 1
+        observation = db.scalar(select(MatchingObservation))
+        if consented:
+            assert observation.observation["features"]["text_relevance"] == expected_value
+            assert observation.observation["feature_provenance"] == {"text_relevance_model_id": EXTRACTOR_ID}
+        else:
+            assert observation is None
+        # The export must not recompute alignment from these later edits.
+        db.get(Candidate, market.candidate.id).summary = "Rust"
+        db.get(Vacancy, market.vacancy.id).description = "Go"
+        assert db.get(Organization, market.org.id).matching_learning_opt_in == organization_consent
+    summary = export_dataset(market.engine, tmp_path / "text-export", environment="test")
+    serialized = (tmp_path / "text-export" / "introductions.jsonl").read_text()
+    assert summary["row_count"] == int(consented)
+    assert private_fixture_prose not in serialized
+    if consented:
+        exported = json.loads(serialized)
+        assert exported["features"]["text_relevance"] == expected_value
+        assert exported["feature_provenance"] == {"text_relevance_model_id": EXTRACTOR_ID}
+
+
+@pytest.mark.parametrize("reopt_in", [False, True])
+def test_organization_consent_change_after_text_planning_aborts_before_exposure(
+    market, monkeypatch, reopt_in
+):
+    """A separate transaction changes consent between real planning and issuance."""
+    from app.db.models import Organization
+    from app.services import clearing
+
+    enable_learning(market)
+    original_allocate = clearing.allocate_live
+
+    def allocate_then_change_consent(*args, **kwargs):
+        allocation = original_allocate(*args, **kwargs)
+        assert allocation.proposals
+        with Session(market.engine) as db, db.begin():
+            org = db.get(Organization, market.org.id)
+            learning.set_learning_consent(db, market.actor(1), org, False, org.version)
+            if reopt_in:
+                learning.set_learning_consent(db, market.actor(1), org, True, org.version)
+        return allocation
+
+    monkeypatch.setattr(clearing, "allocate_live", allocate_then_change_consent)
+    response = market.call(2, "POST", "/internal/reconcile")
+    assert response.status_code == 409, response.text
+    assert response.json()["error"]["code"] == "LEARNING_CONSENT_CONFLICT"
+    with Session(market.engine) as db:
+        assert db.get(Organization, market.org.id).matching_learning_opt_in == reopt_in
+        for model in (Exposure, DecisionCard, PairCycle, MatchingObservation):
+            assert db.scalar(select(func.count()).select_from(model)) == 0
 
 
 def test_pending_and_expired_introductions_are_never_negative_training_examples(market):

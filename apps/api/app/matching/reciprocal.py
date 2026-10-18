@@ -29,6 +29,39 @@ def skill_coverage(
     return len(wanted & known) / len(wanted)
 
 
+def skill_overlap(
+    confirmed_skills: tuple[tuple[str, tuple[str, ...]], ...],
+    preferred: tuple[str, ...],
+) -> tuple[float | None, float | None]:
+    """Precision and Jaccard over confirmed concepts and stated preferences.
+
+    Synonyms of one confirmed concept count once. An ambiguous alias cannot
+    silently assert multiple skills. Unknown preference text remains unmatched
+    in the union; no preferences means not applicable, as in skill_coverage.
+    """
+    wanted = {normalize_skill(value) for value in preferred}
+    if not wanted:
+        return None, None
+    concepts: dict[str, set[str]] = {}
+    for name, aliases in confirmed_skills:
+        canonical = normalize_skill(name)
+        concepts.setdefault(canonical, set()).update(normalize_skill(value) for value in (name, *aliases))
+    index: dict[str, set[str]] = {}
+    for canonical, concept_aliases in concepts.items():
+        for alias in concept_aliases:
+            index.setdefault(alias, set()).add(canonical)
+    wanted_concepts = set()
+    for value in wanted:
+        if value in concepts:
+            wanted_concepts.add(("confirmed", value))
+            continue
+        matches = index.get(value, set())
+        wanted_concepts.add(("confirmed", next(iter(matches))) if len(matches) == 1 else ("unmatched", value))
+    known = {("confirmed", canonical) for canonical in concepts}
+    overlap = len(known & wanted_concepts)
+    return overlap / len(known) if known else 0.0, overlap / len(known | wanted_concepts)
+
+
 @dataclass(frozen=True)
 class ReciprocalFeatures:
     candidate_id: str
@@ -41,6 +74,10 @@ class ReciprocalFeatures:
     candidate_work_mode: float
     candidate_employment_type: float
     eligible: bool
+    skill_precision: float | None = None
+    skill_jaccard: float | None = None
+    text_relevance: float | None = None
+    text_relevance_model_id: str | None = None
 
     def __post_init__(self) -> None:
         for name in ("candidate_id", "vacancy_id"):
@@ -64,13 +101,29 @@ class ReciprocalFeatures:
             "candidate_role",
             "candidate_work_mode",
             "candidate_employment_type",
+            "skill_precision",
+            "skill_jaccard",
+            "text_relevance",
         ):
             value = getattr(self, name)
-            if value is None and name == "employer_skills":
+            if value is None and name in {
+                "employer_skills",
+                "skill_precision",
+                "skill_jaccard",
+                "text_relevance",
+            }:
                 continue
             if isinstance(value, bool) or not isinstance(value, (int, float)):
                 raise ValueError(f"{name} must be numeric, not boolean")
             probability(value, name)
+        if (self.text_relevance is None) != (self.text_relevance_model_id is None):
+            raise ValueError("text relevance and its immutable model identity must be supplied together")
+        if self.text_relevance_model_id is not None and (
+            not isinstance(self.text_relevance_model_id, str)
+            or len(self.text_relevance_model_id) != 64
+            or any(value not in "0123456789abcdef" for value in self.text_relevance_model_id)
+        ):
+            raise ValueError("text relevance model identity must be a SHA256 digest")
 
 
 def score_reciprocal(features: ReciprocalFeatures, prices: MarketPrices) -> dict:

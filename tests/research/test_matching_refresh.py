@@ -180,7 +180,7 @@ class MatchingRefreshTests(unittest.TestCase):
                 assert not self.output.exists()
                 read.assert_not_called()
 
-    def test_promotion_race_or_error_preserves_challenger_without_logging_secrets(self):
+    def test_unexpected_promotion_error_reports_unknown_commit_without_logging_secrets(self):
         with (
             patch.object(refresh_module, "_read_active", return_value=self.active),
             patch.object(refresh_module, "_export_dataset", return_value=self.exported()),
@@ -190,11 +190,30 @@ class MatchingRefreshTests(unittest.TestCase):
             ),
         ):
             result = refresh_module.refresh(object(), self.output, **self.options, promote=True)
-        assert result["status"] == "PROMOTION_REJECTED"
-        assert not result["promoted"]
+        assert result["status"] == "PROMOTION_STATE_UNKNOWN"
+        assert result["promoted"] is None
         assert (self.output / "challenger" / "observed_model.json").exists()
         assert "password" not in (self.output / "refresh_status.json").read_text()
         assert result["reason_codes"] == ["STEP_FAILED"]
+
+    def test_definitive_registry_gate_rejection_stays_rejected_after_transaction_rollback(self):
+        from app.core.errors import AppError
+
+        with (
+            patch.object(refresh_module, "_read_active", return_value=self.active),
+            patch.object(refresh_module, "_export_dataset", return_value=self.exported()),
+            patch.object(refresh_module, "train", side_effect=self.fake_train),
+            patch.object(
+                refresh_module,
+                "_promote",
+                side_effect=AppError(409, "MODEL_VERSION_CONFLICT", "Sensitive detail is not exported"),
+            ),
+        ):
+            result = refresh_module.refresh(object(), self.output, **self.options, promote=True)
+        assert result["status"] == "PROMOTION_REJECTED"
+        assert result["promoted"] is False
+        assert result["reason_codes"] == ["MODEL_VERSION_CONFLICT"]
+        assert "Sensitive detail" not in json.dumps(result)
 
     def test_status_write_failure_after_commit_is_not_reported_as_rollback(self):
         with (
